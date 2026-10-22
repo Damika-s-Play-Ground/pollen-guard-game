@@ -1,3 +1,5 @@
+import { masteryChallengeText } from './mission-mastery.js';
+
 export const ACHIEVEMENT_DEFINITIONS = [
   ['first-pop','First bloom','Scatter your first mite.'],
   ['builder','Master gardener','Place eight defenders in one run.'],
@@ -37,7 +39,7 @@ export function renderMapOptions({ document, select, maps, unlockedMaps, selecte
   select.value = selectedMap;
 }
 
-export function renderCampaignMap({ document, root, missions, profile, selectedMap }) {
+export function renderCampaignMap({ document, root, missions, profile, selectedMap, difficulty='standard' }) {
   root.replaceChildren();
   const completed=new Set(profile.completedMissions||[]);
   for(let chapter=1;chapter<=3;chapter++){
@@ -56,7 +58,15 @@ export function renderCampaignMap({ document, root, missions, profile, selectedM
         unlocked?'Available':`Locked · clear ${missions[missions.indexOf(mission)-1]?.name||'the previous mission'}`;
       button.textContent=`${completed.has(mission.id)?'✦ ':unlocked?'○ ':'🔒 '}${mission.name} · ${status}`;
       const detail=document.createElement('p');detail.textContent=`${mission.brief} Objective: ${mission.objective}`;
-      card.append(button,detail);group.append(card);
+      const mastery=profile.missionMastery?.[mission.id]?.[difficulty]||{};
+      const masteryLine=document.createElement('p');masteryLine.className='mission-mastery';
+      const tierCount=['completion','objective','efficiency'].filter(tier=>mastery[tier]===true).length;
+      const optional=mastery.efficiency===true?'earned':mastery.objective===true
+        ?`available · ${mission.masteryMaxTowers} or fewer defenders`
+        :`locked until objective · ${mission.masteryMaxTowers} or fewer defenders`;
+      masteryLine.textContent=`${difficulty[0].toUpperCase()+difficulty.slice(1)} mastery ${tierCount}/3 · Clear ${mastery.completion?'earned':'open'} · Objective ${mastery.objective?'earned':'open'} · Optional efficiency ${optional}.`;
+      const challenge=document.createElement('p');challenge.className='mission-mastery-challenge';challenge.textContent=masteryChallengeText(mission);
+      card.append(button,detail,masteryLine,challenge);group.append(card);
     }
     root.append(group);
   }

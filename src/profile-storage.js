@@ -1,10 +1,11 @@
 import { DEFAULT_KEY_BINDINGS, normalizeKeyBindings } from './keyboard-bindings.js';
 import { DEFAULT_SPELL_LOADOUT, normalizeSpellLoadout } from './spells.js';
+import { DIFFICULTIES } from './challenge-rules.js';
 
 export const PROFILE_STORAGE_KEY = 'pollen-guard.profile.v2';
 export const UI_SETTINGS_STORAGE_KEY = 'pollen-guard.ui.v1';
 
-export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlockedMissions:['meadow'], completedMissions:[], missionRecords:{}, achievements: [], bestWave: {} });
+export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlockedMissions:['meadow'], completedMissions:[], missionRecords:{}, missionMastery:{}, achievements: [], bestWave: {} });
 export const DEFAULT_UI_SETTINGS = Object.freeze({
   animation: 'full', shake: true, flashes: true, compact: false, palette: 'garden',
   textSize: 'normal', tutorialSeen: false, tutorialInProgress: false, tutorialReturnToSavedRun: false, sound: false,
@@ -13,6 +14,22 @@ export const DEFAULT_UI_SETTINGS = Object.freeze({
 });
 
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+export function normalizeMissionMastery(value,{ missionIds=[] }={}){
+  const source=isRecord(value)?value:{},validMissions=new Set(missionIds),validDifficulties=new Set(Object.keys(DIFFICULTIES)),normalized={};
+  for(const [missionId,byDifficulty] of Object.entries(source)){
+    if(!validMissions.has(missionId)||!isRecord(byDifficulty))continue;
+    const records={};
+    for(const [difficulty,record] of Object.entries(byDifficulty)){
+      if(!validDifficulties.has(difficulty)||!isRecord(record))continue;
+      const tiers=['completion','objective','efficiency'];
+      const safe=Object.fromEntries(tiers.map(tier=>[tier,record[tier]===true]));
+      if(tiers.some(tier=>safe[tier]))records[difficulty]=safe;
+    }
+    if(Object.keys(records).length)normalized[missionId]=records;
+  }
+  return normalized;
+}
 
 export function normalizeProfile(value, { mapIds = [], achievementIds = [] } = {}) {
   const source = isRecord(value) ? value : {};
@@ -46,7 +63,7 @@ export function normalizeProfile(value, { mapIds = [], achievementIds = [] } = {
       if (key.length <= 120 && Number.isSafeInteger(wave) && wave >= 0) bestWave[key] = wave;
     }
   }
-  return { ...source, unlockedMaps, unlockedMissions, completedMissions, missionRecords, achievements, bestWave };
+  return { ...source, unlockedMaps, unlockedMissions, completedMissions, missionRecords, missionMastery:normalizeMissionMastery(source.missionMastery,{missionIds:[...missionIds]}), achievements, bestWave };
 }
 
 export function normalizeUiSettings(value) {

@@ -29,6 +29,7 @@ import { towerArtSvg } from './src/tower-art.js';
 import { createProfileStorage, UI_SETTINGS_STORAGE_KEY } from './src/profile-storage.js';
 import { buildBestWaveRecord, buildRunProgressEvents } from './src/profile-progression.js';
 import { CAMPAIGN_MISSIONS, CAMPAIGN_MISSION_BY_ID, buildMissionCompletion } from './src/campaign.js';
+import { buildMissionMasteryProgress, missionMasteryResultText } from './src/mission-mastery.js';
 import { ENEMY_INTEL, enemyIntelFor, firstEncounterIntel } from './src/enemy-intel.js';
 import { buildEnemyBriefingView, filterEnemyGuide as filterEnemyGuideCards, renderEnemyBriefing, renderEnemyGuide } from './src/enemy-guide-ui.js';
 import { buildPlacementHintView, renderPlacementHint } from './src/placement-ui.js';
@@ -182,7 +183,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     }
     apply();
   }
-  function showResults(won) {
+  function showResults(won,masteryResult) {
     renderResultsScreen({
       kicker:byId('resultsKicker'), title:byId('resultsTitle'), description:byId('resultsText'),
       wave:byId('resultWave'), popped:byId('resultPopped'), petals:byId('resultPetals'), record:byId('resultRecord'),
@@ -193,6 +194,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       report:buildRunDebrief(combatPerformance,{mapName:maps[selectedMap].name,challengeLabel:challengeDisplayLabel(),won})
     }, document);
     const mission=CAMPAIGN_MISSION_BY_ID[selectedMap];
+    const masteryElement=byId('missionMasteryResult');
+    masteryElement.hidden=!mission;
+    masteryElement.textContent=mission?missionMasteryResultText(masteryResult,{difficulty,mission}):'';
     if(mission){
       const record=profile.missionRecords?.[mission.id];
       byId('resultsText').textContent+=` ${mission.name}: ${mission.objective} ${won?(record?.objectiveMet?'Objective met.':'Mission cleared; objective not met this run.'):'Mission incomplete.'}`;
@@ -415,7 +419,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     renderCampaignMap();
   }
   function renderCampaignMap() {
-    renderProfileCampaignMap({document,root:byId('campaignMapNodes'),missions:CAMPAIGN_MISSIONS,profile,selectedMap});
+    renderProfileCampaignMap({document,root:byId('campaignMapNodes'),missions:CAMPAIGN_MISSIONS,profile,selectedMap,difficulty});
     byId('campaignMapSummary').textContent=`Campaign map · ${profile.completedMissions.length} of ${CAMPAIGN_MISSIONS.length} cleared`;
   }
   function selectCampaignMission(mapId) {
@@ -747,15 +751,19 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function finishRun(won) {
     if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}
     transitionRun({type:won?'WIN':'LOSE'});updateGatePanel();const record=buildBestWaveRecord(profile,{challenge,selectedMap,wave});profile.bestWave[record.key]=record.value;persistProfile();
-    const mission=CAMPAIGN_MISSION_BY_ID[selectedMap];
+    const mission=CAMPAIGN_MISSION_BY_ID[selectedMap];let masteryResult=null;
     if(mission&&won){
       const progress=buildMissionCompletion(profile,mission.id,{won,lives,leaks:combatPerformance.leaks.total});
       if(progress){profile={...profile,...progress};persistProfile();renderMapOptions();}
     }
+    if(mission){
+      masteryResult=buildMissionMasteryProgress(profile,{missionId:mission.id,difficulty,challenge,challengeRules,guardianMode,won,lives,leaks:combatPerformance.leaks.total,towerCount:towers.length});
+      if(masteryResult.changed){profile={...profile,missionMastery:masteryResult.mastery};persistProfile();renderCampaignMap();}
+    }
     byId('waveInfo').textContent=won?'All waves cleared! This garden is thriving.':'The seed pod was overrun. Try another layout or challenge rule.';
     if(won)unlock('guardian');else shakeBoard();
     if(!isUnsupportedRunVersion(loadJson(RUN_KEY,null))){try{localStorage.removeItem(RUN_KEY);}catch{}clearCompatibleBackup();}
-    updateHud();renderAchievements();setToast(won?'Meadow saved!':combatPerformance.leaks.total?`Run ended after ${combatPerformance.leaks.total} leak${combatPerformance.leaks.total===1?'':'s'}; your best wave has been saved.`:'Run ended. Your best wave has been saved.');playCue(won?'victory':'defeat');showResults(won);
+    updateHud();renderAchievements();setToast(won?'Meadow saved!':combatPerformance.leaks.total?`Run ended after ${combatPerformance.leaks.total} leak${combatPerformance.leaks.total===1?'':'s'}; your best wave has been saved.`:'Run ended. Your best wave has been saved.');playCue(won?'victory':'defeat');showResults(won,masteryResult);
   }
   let gameTime=0;
   const gameLoop=createGameLoop({
@@ -835,7 +843,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('gateRouteOptions').addEventListener('click',event=>{if(event.target.closest('.route-gate-option'))draw();});
   byId('campaignMapNodes').addEventListener('click',event=>{const mapId=event.target.closest('[data-campaign-mission]')?.dataset.campaignMission;if(mapId)selectCampaignMission(mapId);});
   byId('modeSelect').onchange=event=>{const previous=challenge,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the rules',()=>{challenge=next;challengeRules=challengeRules.filter(rule=>!(next==='fog'&&rule==='shortReach')&&!(next==='thrifty'&&rule==='noSunflowers'));byId('modeSelect').value=challenge;document.querySelectorAll('[data-challenge-rule]').forEach(input=>input.checked=challengeRules.includes(input.dataset.challengeRule));updatePlayOptionsLabel();applyChallenge();explainFreshGarden(`${config().label} rules selected.`);});};
-  byId('difficultySelect').onchange=event=>{const previous=difficulty,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the difficulty',()=>{difficulty=next;byId('difficultySelect').value=difficulty;updatePlayOptionsLabel();applyChallenge();explainFreshGarden(`${DIFFICULTIES[difficulty].label} difficulty selected.`);});};
+  byId('difficultySelect').onchange=event=>{const previous=difficulty,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the difficulty',()=>{difficulty=next;byId('difficultySelect').value=difficulty;updatePlayOptionsLabel();applyChallenge();renderCampaignMap();explainFreshGarden(`${DIFFICULTIES[difficulty].label} difficulty selected.`);});};
   document.querySelectorAll('[data-challenge-rule]').forEach(input=>input.addEventListener('change',()=>{
     const next=[...document.querySelectorAll('[data-challenge-rule]:checked')].map(control=>control.dataset.challengeRule),normalized=normalizeChallengeRules(next,challenge);
     if(!normalized){input.checked=false;setToast(challenge==='fog'?'Short Reach is already active in these rules.':'Thrifty already disables Sunflowers.');return;}
