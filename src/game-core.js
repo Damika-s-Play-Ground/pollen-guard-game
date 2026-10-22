@@ -3,7 +3,7 @@ import { combinationForPair } from './tower-combinations.js';
 import { ACTION_LOG_VERSION, isValidActionLog, migrateActionLogV1 } from './action-log.js';
 import { normalizeCombatPerformance } from './combat-performance.js';
 import { DEFAULT_GAME_SPEED, GAME_SPEEDS, normalizeGameSpeed } from './simulation-speed.js';
-import { LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_SHIELD_CARRIER_SCHEDULE_VERSION, PRE_BURROWER_SCHEDULE_VERSION, PRE_MIXED_TACTICAL_SCHEDULE_VERSION, PRE_AIR_ROUTE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION } from './waves.js';
+import { LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_SHIELD_CARRIER_SCHEDULE_VERSION, PRE_BURROWER_SCHEDULE_VERSION, PRE_MIXED_TACTICAL_SCHEDULE_VERSION, PRE_AIR_ROUTE_SCHEDULE_VERSION, PRE_RIDGE_BALANCE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION } from './waves.js';
 import { validateGuardian } from './meadow-guardian.js';
 import { DEFAULT_SPELL_LOADOUT, normalizeSpellLoadout, validSpellLoadout } from './spells.js';
 import { DEFAULT_DIFFICULTY, difficultyFor, normalizeChallengeRules } from './challenge-rules.js';
@@ -367,7 +367,7 @@ export function normalizeRunSave(value, maps, modes) {
       Number.isFinite(rejuvenationField.y) && rejuvenationField.y>=0 && rejuvenationField.y<=540 && Number.isFinite(rejuvenationField.duration) && rejuvenationField.duration>0 && rejuvenationField.duration<=6)
     : !Object.hasOwn(value,'spellLoadout') && !Object.hasOwn(value,'rejuvenationField');
   const waveScheduleVersion = value.waveScheduleVersion === undefined
-    ? (value.version >= 8 ? WAVE_SCHEDULE_VERSION : value.version === 7 ? PRE_TACTICAL_ENEMY_SCHEDULE_VERSION : value.version === 6 ? PRE_BOSS_WAVE_SCHEDULE_VERSION : LEGACY_WAVE_SCHEDULE_VERSION)
+    ? (value.version >= 8 ? PRE_RIDGE_BALANCE_SCHEDULE_VERSION : value.version === 7 ? PRE_TACTICAL_ENEMY_SCHEDULE_VERSION : value.version === 6 ? PRE_BOSS_WAVE_SCHEDULE_VERSION : LEGACY_WAVE_SCHEDULE_VERSION)
     : value.waveScheduleVersion;
   const optionalFinite = (key, min, max) => value[key] === undefined || finite(value[key], min, max);
   if ((value.selectedMap !== undefined && (typeof value.selectedMap !== 'string' || !Object.hasOwn(maps, value.selectedMap))) || !gateFieldsValid || !guardianFieldsValid ||
@@ -379,7 +379,7 @@ export function normalizeRunSave(value, maps, modes) {
       (value.speed !== undefined && !GAME_SPEEDS.includes(value.speed)) ||
       (sourceVersion>=11 && (!Object.hasOwn(value,'terrainRulesVersion') || ![0,1].includes(terrainRulesVersion))) ||
       (sourceVersion<11 && terrainRulesVersion!==undefined && ![0,1].includes(terrainRulesVersion)) ||
-      ![LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_SHIELD_CARRIER_SCHEDULE_VERSION, PRE_BURROWER_SCHEDULE_VERSION, PRE_MIXED_TACTICAL_SCHEDULE_VERSION, PRE_AIR_ROUTE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION].includes(waveScheduleVersion) ||
+      ![LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_SHIELD_CARRIER_SCHEDULE_VERSION, PRE_BURROWER_SCHEDULE_VERSION, PRE_MIXED_TACTICAL_SCHEDULE_VERSION, PRE_AIR_ROUTE_SCHEDULE_VERSION, PRE_RIDGE_BALANCE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION].includes(waveScheduleVersion) ||
       ['running', 'paused'].some(key => value[key] !== undefined && typeof value[key] !== 'boolean')) return null;
   if (!finite(value.cash, 0, 1_000_000) || !finite(value.lives, 0, 100_000) ||
       !finite(value.wave, 0, 100_000) || !finite(value.popped, 0, 10_000_000)) return null;

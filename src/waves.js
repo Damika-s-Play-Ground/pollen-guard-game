@@ -28,7 +28,8 @@ export const PRE_BURROWER_SCHEDULE_VERSION = 4;
 export const PRE_MIXED_TACTICAL_SCHEDULE_VERSION = 5;
 export const PRE_AIR_ROUTE_SCHEDULE_VERSION = 6;
 export const MIXED_ROLE_SCHEDULE_VERSION = 6;
-export const WAVE_SCHEDULE_VERSION = AIR_ROUTE_SCHEDULE_VERSION;
+export const PRE_RIDGE_BALANCE_SCHEDULE_VERSION = AIR_ROUTE_SCHEDULE_VERSION;
+export const WAVE_SCHEDULE_VERSION = PRE_RIDGE_BALANCE_SCHEDULE_VERSION + 1;
 
 const threatWeights = { mite: 1, zip: 1.3, armored: 3, shield: 2.5, splitter: 2.4, flyer: 2.2, boss: 18, healer:3, carrier:4, burrower:2.3 };
 const enemyBounties = { mite: 2, zip: 3, armored: 6, shield: 5, splitter: 5, flyer: 6, crumb: 1, boss: 35, healer:5, carrier:6, burrower:5 };
@@ -191,9 +192,36 @@ function airRouteSchedules(schedules) {
 
 export const AIR_ROUTE_CAMPAIGN_WAVES = Object.freeze(airRouteSchedules(MIXED_ROLE_CAMPAIGN_WAVES));
 
+function replaceAuthoredWave(schedule, waveNumber, cue, groups) {
+  const copy=schedule.map(wave=>({...wave,groups:wave.groups.map(group=>({...group}))}));
+  const authoredGroups=groups.map(group=>({ ...group, lane:group.type==='flyer'?'air':'ground', telegraph:cue }));
+  copy[waveNumber-1]={cue,groups:authoredGroups,budget:authoredGroups.reduce((sum,group)=>sum+(threatWeights[group.type]||0)*group.count,0)};
+  return copy;
+}
+
+const ridgeApproachBalanced=replaceAuthoredWave(
+  replaceAuthoredWave(
+    replaceAuthoredWave(AIR_ROUTE_CAMPAIGN_WAVES.ridge,10,'A Bramble boss leads a mixed ridge escort.',[
+      {type:'boss',count:1,interval:.85},{type:'flyer',count:2,interval:.48},{type:'armored',count:1,interval:.5}
+    ]),13,'The ridge narrows under a boss and a fast air escort.',[
+      {type:'boss',count:1,interval:.9},{type:'zip',count:6,interval:.24},{type:'flyer',count:4,interval:.42},{type:'splitter',count:2,interval:.54}
+    ]),15,'Final ridge defense: a Colossus leads splitters and a relentless air escort.',[
+      {type:'boss',count:1,interval:.8},{type:'splitter',count:3,interval:.5},{type:'armored',count:4,interval:.48},{type:'flyer',count:5,interval:.4},{type:'zip',count:6,interval:.23}
+    ]);
+const ridgeSummitBalanced=replaceAuthoredWave(AIR_ROUTE_CAMPAIGN_WAVES['ridge-summit'],15,
+  'Summit finale: the Colossus leads an armored and airborne escort.',[
+    {type:'boss',count:1,interval:.8},{type:'armored',count:4,interval:.5},{type:'flyer',count:7,interval:.38}
+  ]);
+export const BALANCED_CAMPAIGN_WAVES=Object.freeze({
+  ...AIR_ROUTE_CAMPAIGN_WAVES,
+  ridge:ridgeApproachBalanced,
+  'ridge-summit':ridgeSummitBalanced
+});
+
 export function waveSchedulesForMap(mapId = 'meadow', version = WAVE_SCHEDULE_VERSION) {
   if (version === LEGACY_WAVE_SCHEDULE_VERSION) return AUTHORED_WAVES;
-  const schedules = version >= AIR_ROUTE_SCHEDULE_VERSION ? AIR_ROUTE_CAMPAIGN_WAVES :
+  const schedules = version >= WAVE_SCHEDULE_VERSION ? BALANCED_CAMPAIGN_WAVES :
+    version >= AIR_ROUTE_SCHEDULE_VERSION ? AIR_ROUTE_CAMPAIGN_WAVES :
     version >= MIXED_ROLE_SCHEDULE_VERSION ? MIXED_ROLE_CAMPAIGN_WAVES :
       version >= PRE_MIXED_TACTICAL_SCHEDULE_VERSION ? BURROWER_CAMPAIGN_WAVES :
       version >= PRE_BURROWER_SCHEDULE_VERSION ? CARRIER_CAMPAIGN_WAVES :

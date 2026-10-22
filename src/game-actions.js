@@ -1,5 +1,5 @@
 import { maps, modes, towersDef, targetModes } from './game-data.js';
-import { buildWaveQueue, LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION, waveSchedulesForMap } from './waves.js';
+import { buildWaveQueue, LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_RIDGE_BALANCE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION, waveSchedulesForMap } from './waves.js';
 import { canActivateTowerAbility, saleRefund, towerUpgradeCost } from './game-core.js';
 import { normalizeGameSpeed } from './simulation-speed.js';
 import { resolveGlobalCombatAbility, resolveTowerAbility, TOWER_ABILITY_COOLDOWN_SECONDS } from './combat-actions.js';
@@ -186,7 +186,7 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
   const challengeRules=normalizeChallengeRules(run.challengeRules??[],run.challenge);
   if(!difficulty||!challengeRules)throw new TypeError('Replay challenge rules are invalid.');
   const replayMap=map??maps[run.selectedMap];
-  const waveScheduleVersion = run.waveScheduleVersion ?? (run.version >= 8 ? WAVE_SCHEDULE_VERSION : run.version === 7 ? PRE_TACTICAL_ENEMY_SCHEDULE_VERSION : run.version === 6 ? PRE_BOSS_WAVE_SCHEDULE_VERSION : LEGACY_WAVE_SCHEDULE_VERSION);
+  const waveScheduleVersion = run.waveScheduleVersion ?? (run.version >= 8 ? PRE_RIDGE_BALANCE_SCHEDULE_VERSION : run.version === 7 ? PRE_TACTICAL_ENEMY_SCHEDULE_VERSION : run.version === 6 ? PRE_BOSS_WAVE_SCHEDULE_VERSION : LEGACY_WAVE_SCHEDULE_VERSION);
   let activeGateRoute=defaultGateRoute(replayMap);
   let activePath=pathForGateRoute(replayMap,activeGateRoute);
   let activeGeometry=replayMap?.gateRoutes?createEnemyRouteGeometry({...replayMap,path:activePath},waveScheduleVersion):null;
