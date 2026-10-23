@@ -25,16 +25,18 @@ export function runTowerTestRange({ towerType='sprout', towerLevel=1, branch=0, 
     simulationTick:0,gameTime:0,cash:modes[challenge].cash+difficultyPreset.cashDelta,lives:modes[challenge].lives,popped:0,wave:1,bloomCharge:0,towers:practiceTowers,enemies:[enemy],shots:[],spawnQueue:[],spawnClock:0,
     nextEntityId:practiceTowers.length+2,intermission:0,speed:1,performance,combatPerformance:performance,rejuvenationField:null,seedObjective:null};
   for(const tower of practiceTowers)registerCombatTower(performance,tower);
-  const initialHealth=enemy.hp+enemy.shield;
+  const initialHealth=enemy.hp+enemy.shield;let terminalEnemy=null;
   for(let tick=0;tick<maxTicks&&state.enemies.length;tick++){
     state.gameTime+=SIMULATION_STEP;
-    stepCombat(state,SIMULATION_STEP,{pathLength:routeGeometry.pathLengthFor,positionOf:routeGeometry.positionOf});
+    stepCombat(state,SIMULATION_STEP,{pathLength:routeGeometry.pathLengthFor,positionOf:routeGeometry.positionOf,
+      onDefeat:resolved=>{terminalEnemy=resolved;},onLeak:resolved=>{terminalEnemy=resolved;}});
     state.simulationTick++;
   }
   const damage=practiceTowers.reduce((sum,tower)=>sum+(Number(performance.towers?.[tower.id]?.damage)||0),0);
+  const finalEnemy=state.enemies[0]||terminalEnemy;
   return {ok:true,practiceOnly:true,mapId,challenge,difficulty,towerType,towerLevel,branch,enemyType,armor,shield,initialHealth:Math.round(initialHealth*100)/100,
-    damage:Math.round(damage*100)/100,remainingHp:Math.max(0,Math.round(((state.enemies[0]?.hp||0)+(state.enemies[0]?.shield||0))*100)/100),
-    defeated:state.enemies.length===0,leaked:state.lives<modes[challenge].lives,simulatedSeconds:Math.round(state.simulationTick*SIMULATION_STEP*100)/100,
+    damage:Math.round(damage*100)/100,remainingHp:Math.max(0,Math.round(((finalEnemy?.hp||0)+(finalEnemy?.shield||0))*100)/100),
+    defeated:state.popped>0,leaked:state.lives<modes[challenge].lives,simulatedSeconds:Math.round(state.simulationTick*SIMULATION_STEP*100)/100,
     attackStats:getEffectiveTowerStats(practiceTowers[0],{challenge,challengeRules,terrain:terrainZoneAt(mapId,practiceTowers[0]),linked:false,researchLoadout,relicLoadout},towersDef[practiceTowers[0].type]),
-    defenderBreakdown:practiceTowers.map(tower=>({type:tower.type,level:tower.level,damage:Number(performance.towers?.[tower.id]?.damage)||0})),events:state.enemies.length?state.enemies[0]:null};
+    defenderBreakdown:practiceTowers.map(tower=>({type:tower.type,level:tower.level,damage:Number(performance.towers?.[tower.id]?.damage)||0})),events:finalEnemy};
 }
