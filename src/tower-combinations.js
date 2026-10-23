@@ -63,9 +63,16 @@ export const TOWER_COMBINATIONS = Object.freeze([
   })
 ]);
 
+const combinationsByTowerType = new Map();
+for (const combination of TOWER_COMBINATIONS) {
+  const [first, second] = combination.towerTypes;
+  if (!combinationsByTowerType.has(first)) combinationsByTowerType.set(first, new Map());
+  if (!combinationsByTowerType.has(second)) combinationsByTowerType.set(second, new Map());
+  combinationsByTowerType.get(first).set(second, combination);
+  combinationsByTowerType.get(second).set(first, combination);
+}
+
 export function combinationForPair(a, b) {
   if (!a || !b || a === b || a.type === b.type || (a.id !== undefined && a.id === b.id)) return null;
-  return TOWER_COMBINATIONS.find(combo =>
-    combo.towerTypes.includes(a.type) && combo.towerTypes.includes(b.type)
-  ) || null;
+  return combinationsByTowerType.get(a.type)?.get(b.type) || null;
 }

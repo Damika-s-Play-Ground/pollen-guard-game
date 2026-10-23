@@ -403,23 +403,30 @@ export function enemyCueStackRanks(centers) {
   if (cellCoordinates.some(({ x, y }) => !Number.isSafeInteger(x) || !Number.isSafeInteger(y) || Math.abs(x) >= Number.MAX_SAFE_INTEGER || Math.abs(y) >= Number.MAX_SAFE_INTEGER)) {
     return countCueOverlaps(centers, ranks);
   }
-  const cells = new Map(), cellFor = ({ x, y }) => `${x},${y}`;
+  const cells = new Map();
   for (let index = 0; index < centers.length; index++) {
-    const key = cellFor(cellCoordinates[index]), cell = cells.get(key) || [];
+    const { x, y } = cellCoordinates[index];
+    let row = cells.get(y);
+    if (!row) { row = new Map(); cells.set(y, row); }
+    const cell = row.get(x) || [];
     cell.push(index);
-    cells.set(key, cell);
+    row.set(x,cell);
   }
   for (let left = 0; left < centers.length; left++) {
     const a = centers[left], { x: cellX, y: cellY } = cellCoordinates[left];
-    for (let y = cellY - 1; y <= cellY + 1; y++) for (let x = cellX - 1; x <= cellX + 1; x++) {
-      for (const right of cells.get(`${x},${y}`) || []) {
-        if (right <= left) continue;
-        const b = centers[right];
-        if (a.id === b.id) continue;
-        const reach = a.radius + b.radius + 18, dx = a.x - b.x, dy = a.y - b.y;
-        if (!(Math.hypot(dx, dy) < reach)) continue;
-        const higher = a.id > b.id ? a.id : b.id;
-        ranks.set(higher, ranks.get(higher) + 1);
+    for (let y = cellY - 1; y <= cellY + 1; y++) {
+      const row = cells.get(y);
+      if (!row) continue;
+      for (let x = cellX - 1; x <= cellX + 1; x++) {
+        for (const right of row.get(x) || []) {
+          if (right <= left) continue;
+          const b = centers[right];
+          if (a.id === b.id) continue;
+          const reach = a.radius + b.radius + 18, dx = a.x - b.x, dy = a.y - b.y;
+          if (!(Math.hypot(dx, dy) < reach)) continue;
+          const higher = a.id > b.id ? a.id : b.id;
+          ranks.set(higher, ranks.get(higher) + 1);
+        }
       }
     }
   }
