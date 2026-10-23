@@ -229,6 +229,12 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       const seedResult=won?(objectiveMet?'Seed objective met.':'Garden cleared; seed objective not met.'):(objectiveMet?'Seed condition met, but the garden was lost.':'Run ended before recovering enough seeds.');
       byId('resultsText').textContent+=` Seed Recovery: ${tally.safe}/${tally.total} seeds safe (${tally.recovered} recovered, ${tally.escaped} escaped). ${seedResult}`;
     }
+    if(maps[selectedMap]?.customMap){
+      const objective=maps[selectedMap].customObjective;
+      byId('resultsText').textContent+=won
+        ?` Custom objective met: ${lives} seeds remain (target ${objective.minLives}).`
+        :` Custom objective missed: keep ${objective.minLives} seeds through wave 15; ${lives} remain.`;
+    }
     byId('resultsDialog').showModal();transitionRun({type:'DIALOG_OPEN'});
   }
   function updateTutorial() {
