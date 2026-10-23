@@ -14,7 +14,7 @@ export function renderRunHistory(container, entries, document, { onVerifyReplay 
       if(!selected){selected=entry;compare.textContent='Selected';compare.setAttribute('aria-pressed','true');compareStatus.textContent='Choose another compatible run to compare.';return;}
       if(selected.id===entry.id){selected=null;compare.textContent='Select to compare';compare.setAttribute('aria-pressed','false');compareStatus.textContent='Comparison selection cleared.';return;}
       const result=onCompare(selected,entry);compareStatus.textContent=result?.compatible
-        ? `${selected.mapName} · ${selected.challenge}/${selected.difficulty}: wave ${selected.wave} vs ${entry.wave}; ${selected.leaks} vs ${entry.leaks} leaks; ${selected.popped} vs ${entry.popped} defeated; ${selected.towers.length} vs ${entry.towers.length} defenders; ${(selected.milestones||[]).length} vs ${(entry.milestones||[]).length} milestones.`
+        ? `${selected.mapName} · ${selected.challenge}/${selected.difficulty}: wave ${selected.wave} vs ${entry.wave}; ${selected.leaks} vs ${entry.leaks} leaks; ${selected.popped} vs ${entry.popped} defeated; ${selected.towers.length} vs ${entry.towers.length} defenders; ${result.firstOnly?.length||0} vs ${result.secondOnly?.length||0} milestones differ.${result.firstOnly?.length?` First run only: ${result.firstOnly.join(', ')}.`:''}${result.secondOnly?.length?` Second run only: ${result.secondOnly.join(', ')}.`:''}`
         : (result?.reason||'These runs cannot be compared.');
       selected=null;for(const button of container.querySelectorAll('[aria-pressed="true"]')){button.setAttribute('aria-pressed','false');button.textContent='Select to compare';}
     });actions.append(compare);

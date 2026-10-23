@@ -18,7 +18,7 @@ import { createRunSaveSnapshot } from './src/run-save.js';
 import { projectSavedRunToRuntime } from './src/run-restore.js';
 import { runSaveFailureMessage } from './src/run-save-ui.js';
 import { registerOfflineSupport } from './src/offline-support.js';
-import { compareRunCompatibility, normalizeRunHistory, recordCompletedRun, RUN_HISTORY_STORAGE_KEY, verifyRecordedReplay } from './src/run-history.js';
+import { compareRunSummaries, normalizeRunHistory, recordCompletedRun, RUN_HISTORY_STORAGE_KEY, verifyRecordedReplay } from './src/run-history.js';
 import { renderRunHistory } from './src/run-history-ui.js';
 import { runTowerTestRange, towerTestRangeChoices } from './src/tower-test-range.js';
 import { renderTowerTestRange } from './src/tower-test-range-ui.js';
@@ -322,7 +322,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function renderLocalRunHistory() {
     renderRunHistory(byId('runHistory'),loadRunHistory().entries,document,{
-      onCompare:compareRunCompatibility,
+      onCompare:compareRunSummaries,
       onVerifyReplay(entry){
         const map=maps[entry.mapId];if(!map)return {verified:false,reason:'This map is not available in the current build.'};
         const activePath=pathForGateRoute(map,entry.gateRoute),geometry=createEnemyRouteGeometry({...map,path:activePath},entry.waveScheduleVersion);

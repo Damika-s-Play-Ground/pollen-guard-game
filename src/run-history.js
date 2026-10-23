@@ -54,6 +54,13 @@ export function compareRunCompatibility(a, b) {
   return same ? { compatible: true } : { compatible: false, reason: 'Runs use different maps, rules, or simulation versions.' };
 }
 
+export function compareRunSummaries(a, b) {
+  const compatibility=compareRunCompatibility(a,b);
+  if(!compatibility.compatible)return compatibility;
+  const first=new Set(a.milestones||[]),second=new Set(b.milestones||[]);
+  return {compatible:true,firstOnly:[...first].filter(id=>!second.has(id)).sort(),secondOnly:[...second].filter(id=>!first.has(id)).sort()};
+}
+
 export function verifyRecordedReplay(entry, context) {
   if (!validEntry(entry) || !entry.actionLogComplete || !entry.run?.actionLogComplete) return { verified: false, reason: 'This run has no complete deterministic action log.' };
   try {
