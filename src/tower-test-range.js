@@ -2,7 +2,8 @@ import { maps, modes, towersDef } from './game-data.js';
 import { createEnemy, stepCombat } from './combat-simulation.js';
 import { createCombatPerformance, registerCombatTower } from './combat-performance.js';
 import { difficultyFor } from './challenge-rules.js';
-import { createPathSampler, calculatePathLength } from './path-geometry.js';
+import { createEnemyRouteGeometry } from './air-routes.js';
+import { WAVE_SCHEDULE_VERSION } from './waves.js';
 import { getEffectiveTowerStats, SIMULATION_STEP } from './game-core.js';
 import { terrainZoneAt } from './terrain.js';
 
@@ -16,7 +17,7 @@ export function runTowerTestRange({ towerType='sprout', towerLevel=1, branch=0, 
   const roster=defenders===null?[{type:towerType,level:towerLevel,branch,x:180,y:140}]:defenders;
   if(!map||!towerDef||!TESTABLE_TOWERS.includes(towerType)||!Number.isSafeInteger(towerLevel)||towerLevel<1||towerLevel>3||!Number.isInteger(branch)||branch<0||branch>1||!Array.isArray(roster)||roster.length<1||roster.length>4||roster.some((entry,index)=>!entry||!TESTABLE_TOWERS.includes(entry.type)||!Number.isSafeInteger(entry.level)||entry.level<1||entry.level>3||!Number.isInteger(entry.branch)||entry.branch<0||entry.branch>1||!Number.isSafeInteger(entry.x)||!Number.isSafeInteger(entry.y)||entry.x<0||entry.x>900||entry.y<0||entry.y>540||roster.findIndex(other=>other.x===entry.x&&other.y===entry.y)!==index)||!enemyAllowed||!Number.isFinite(armor)||armor<0||armor>20||!Number.isFinite(shield)||shield<0||shield>40||!Number.isSafeInteger(maxTicks)||maxTicks<1||maxTicks>12000)
     return {ok:false,reason:'Choose a supported defender, pest and bounded armor/shield setup.'};
-  const path=map.path,pathLength=calculatePathLength(path),positionOf=createPathSampler(path),difficultyPreset=difficultyFor(difficulty,challenge);
+  const routeGeometry=createEnemyRouteGeometry(map,WAVE_SCHEDULE_VERSION),difficultyPreset=difficultyFor(difficulty,challenge);
   if(!modes[challenge]||!difficultyPreset)return {ok:false,reason:'The selected practice rules are invalid.'};
   const performance=createCombatPerformance(),practiceTowers=roster.map((entry,index)=>{const def=towersDef[entry.type];return{id:index+1,type:entry.type,level:entry.level,branch:entry.level>=2?entry.branch:null,branchChoice:entry.level===1?entry.branch:null,x:entry.x,y:entry.y,cooldown:0,targetMode:'First',abilityReadyAt:0,abilityUsedWave:-1,invested:def.cost};});
   const enemy=createEnemy(enemyType,1,2,enemyType==='flyer'?'air':'ground');enemy.progress=70;enemy.armor=armor;enemy.shield=shield;enemy.maxShield=shield;
@@ -27,7 +28,7 @@ export function runTowerTestRange({ towerType='sprout', towerLevel=1, branch=0, 
   const initialHealth=enemy.hp+enemy.shield;
   for(let tick=0;tick<maxTicks&&state.enemies.length;tick++){
     state.gameTime+=SIMULATION_STEP;
-    stepCombat(state,SIMULATION_STEP,{pathLength,positionOf:enemy=>positionOf(enemy.progress)});
+    stepCombat(state,SIMULATION_STEP,{pathLength:routeGeometry.pathLengthFor,positionOf:routeGeometry.positionOf});
     state.simulationTick++;
   }
   const damage=practiceTowers.reduce((sum,tower)=>sum+(Number(performance.towers?.[tower.id]?.damage)||0),0);
