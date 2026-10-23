@@ -7,7 +7,7 @@ import { WAVE_SCHEDULE_VERSION } from './waves.js';
 import { getEffectiveTowerStats, SIMULATION_STEP } from './game-core.js';
 import { terrainZoneAt } from './terrain.js';
 import { validateTowerPlacement } from './game-actions.js';
-import { distanceToPath } from './path-geometry.js';
+import { pointOnPath } from './path-geometry.js';
 
 export const TOWER_TEST_MAX_SECONDS = 20;
 export const TOWER_TEST_MAX_TICKS = Math.floor(TOWER_TEST_MAX_SECONDS / SIMULATION_STEP);
@@ -23,7 +23,8 @@ export function findTowerTestPlacements(types, mapId='meadow', path=null) {
   const candidates=[];
   for(let y=24;y<=516;y+=8)for(let x=24;x<=876;x+=8)candidates.push({x,y});
   const preferred={meadow:{x:180,y:140}}[mapId];
-  candidates.sort((a,b)=>Math.abs(distanceToPath(a.x,a.y,activePath)-68)-Math.abs(distanceToPath(b.x,b.y,activePath)-68));
+  const sampleTarget=pointOnPath(activePath,70);
+  candidates.sort((a,b)=>Math.hypot(a.x-sampleTarget.x,a.y-sampleTarget.y)-Math.hypot(b.x-sampleTarget.x,b.y-sampleTarget.y));
   if(preferred){let index=candidates.findIndex(point=>point.x===preferred.x&&point.y===preferred.y);if(index<0){candidates.unshift(preferred);index=0;}else if(index>0)candidates.unshift(...candidates.splice(index,1));}
   const placements=[];
   for(const type of types){
