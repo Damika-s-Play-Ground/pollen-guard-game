@@ -9,6 +9,7 @@ export function createRunSaveSnapshot(fields) {
     ...(runFields.version >= 14 ? { seedObjective:runFields.seedObjective ?? null } : {}),
     ...(runFields.version >= 15 ? { researchLoadout:runFields.researchLoadout ?? [] } : {}),
     ...(runFields.version >= 16 ? { relicLoadout:runFields.relicLoadout ?? [] } : {}),
+    ...(runFields.version >= 17 ? { challengeBoardId:runFields.challengeBoardId ?? null } : {}),
     shots: shots.map(({ target, ...shot }) => ({ ...shot, targetId: shot.targetId ?? target?.id }))
   };
   run.stateHash = hashGameplayState(run);

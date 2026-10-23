@@ -2,8 +2,8 @@ import { restoredRunMapId } from './game-core.js';
 import { assignEnemyCombatProfile } from './combat-rules.js';
 import { DEFAULT_SPELL_LOADOUT } from './spells.js';
 
-export function projectSavedRunToRuntime(run, { maps, towerDefinitions, enemyCombatProfiles, currentNextEntityId = 1 }) {
-  let nextEntityId = Math.max(run.nextEntityId || 1, currentNextEntityId);
+export function projectSavedRunToRuntime(run, { maps, towerDefinitions, enemyCombatProfiles }) {
+  let nextEntityId = run.nextEntityId || 1;
   const towers = run.towers.filter(tower => tower && towerDefinitions[tower.type])
     .map(tower => ({ ...tower, id:tower.id ?? nextEntityId++, invested:Number.isFinite(tower.invested) ? tower.invested : towerDefinitions[tower.type].cost }));
   const enemies = run.enemies.filter(enemy => enemy && typeof enemy.type === 'string')
@@ -14,7 +14,7 @@ export function projectSavedRunToRuntime(run, { maps, towerDefinitions, enemyCom
     .filter(shot => shot.target);
 
   return {
-    selectedMap:restoredRunMapId(run,maps), gateRoute:run.gateRoute??'default',gateSwitchesRemaining:run.gateSwitchesRemaining??0,terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion:run.waveScheduleVersion, challenge:run.challenge, difficulty:run.difficulty??'standard',challengeRules:[...(run.challengeRules??[])],seedObjective:run.seedObjective?{...run.seedObjective,seeds:run.seedObjective.seeds.map(seed=>({...seed}))}:null,cash:run.cash, lives:run.lives,
+    selectedMap:restoredRunMapId(run,maps), gateRoute:run.gateRoute??'default',gateSwitchesRemaining:run.gateSwitchesRemaining??0,terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion:run.waveScheduleVersion, challenge:run.challenge, difficulty:run.difficulty??'standard',challengeRules:[...(run.challengeRules??[])],challengeBoardId:run.challengeBoardId??null,seedObjective:run.seedObjective?{...run.seedObjective,seeds:run.seedObjective.seeds.map(seed=>({...seed}))}:null,cash:run.cash, lives:run.lives,
     popped:run.popped, wave:run.wave, combatPerformance:run.combatPerformance, bloomCharge:run.bloomCharge,
     towers, enemies, spawnQueue, shots, gameTime:run.gameTime,
     nextEntityId:Math.max(run.nextEntityId || 1,nextEntityId), spawnClock:run.spawnClock,

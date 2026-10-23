@@ -63,6 +63,8 @@ import { createMissionKitState } from './src/mission-kit.js';
 import { buildSpellPreview, DEFAULT_SPELL_LOADOUT, normalizeSpellLoadout, SPELLS } from './src/spells.js';
 import { terrainBonusForTower, terrainZoneAt } from './src/terrain.js';
 import { advanceDroppedSeeds, createSeedObjective, SEED_RECOVERY_RULE, seedObjectiveTally } from './src/seed-objective.js';
+import { boardChallengeForRun, CHALLENGE_SPELL_LOADOUT, importChallengeCode, recordChallengeBest } from './src/challenge-board.js';
+import { renderChallengeBoard } from './src/challenge-board-ui.js';
 
 for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const waveValidation=validateWaveSchedules(schedules);
@@ -116,7 +118,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const uiSettings = profileStorage.loadSettings();
   let explicitAnimationPreference=false;try{const saved=JSON.parse(localStorage.getItem(UI_SETTINGS_STORAGE_KEY)||'null');explicitAnimationPreference=['full','reduced','off'].includes(saved?.animation);}catch{}
   if(!explicitAnimationPreference&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){uiSettings.animation='reduced';uiSettings.shake=false;}
-  let selectedMap = 'meadow', gateRoute='default',gateSwitchesRemaining=0,terrainRulesVersion=1, challenge = 'classic', difficulty=DEFAULT_DIFFICULTY, challengeRules=[], path = maps.meadow.path, pathLength = 0, routeGeometry = createEnemyRouteGeometry(maps.meadow,WAVE_SCHEDULE_VERSION);
+  let selectedMap = 'meadow', gateRoute='default',gateSwitchesRemaining=0,terrainRulesVersion=1, challenge = 'classic', difficulty=DEFAULT_DIFFICULTY, challengeRules=[], challengeBoardId=null, importedBoardChallenge=null, challengeImportPreview=null, path = maps.meadow.path, pathLength = 0, routeGeometry = createEnemyRouteGeometry(maps.meadow,WAVE_SCHEDULE_VERSION);
   const terrainAt=point=>terrainRulesVersion>=1?terrainZoneAt(selectedMap,point):'ground';
   const initialResearchStart=researchStartingAdjustment(researchLoadout);
   let cash=220+initialResearchStart.cash, lives=Math.max(1,20+initialResearchStart.lives), popped=0, wave=0, bloomCharge=0, waveScheduleVersion=WAVE_SCHEDULE_VERSION, towers=[], enemies=[], shots=[], particles=[];
@@ -184,20 +186,20 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function changeRulesOrTrail(label,apply) {
     if(tutorialPractice.active){setToast('Finish or end practice before changing the trail or rules.');return;}
-    if(wave||towers.length){
+    if(wave||towers.length||hasPendingSavedGarden()){
       requestConfirmation('Start a fresh garden?',`Changing ${label} resets your current wave and defenders. Continue?`,apply,'Start fresh');
       return;
     }
     apply();
   }
-  function showResults(won,masteryResult) {
+  function showResults(won,masteryResult,{profileSaved=true}={}) {
     renderResultsScreen({
       kicker:byId('resultsKicker'), title:byId('resultsTitle'), description:byId('resultsText'),
       wave:byId('resultWave'), popped:byId('resultPopped'), petals:byId('resultPetals'), record:byId('resultRecord'),
       debrief:byId('runDebrief')
     }, {
       won, wave, popped, petals:Math.floor(cash),
-      record:`Personal best: wave ${Math.max(0,...Object.values(profile.bestWave||{}))}`,
+      record:!profileSaved?'This result could not be saved on this device. Free browser storage and try again.':challengeBoardId?'Challenge result saved as a local personal best on this device. Challenge codes do not verify scores.':`Personal best: wave ${Math.max(0,...Object.values(profile.bestWave||{}))}`,
       report:buildRunDebrief(combatPerformance,{mapName:maps[selectedMap].name,challengeLabel:challengeDisplayLabel(),won})
     }, document);
     const mission=CAMPAIGN_MISSION_BY_ID[selectedMap];
@@ -229,7 +231,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function beginTutorialPractice() {
     byId('tutorialDialog').close();tutorialPractice=beginTutorialPracticeState(tutorialPractice);
     uiSettings.tutorialInProgress=true;uiSettings.tutorialReturnToSavedRun=tutorialReturnToSavedRun;saveUiSettings();
-    challenge='classic';difficulty=DEFAULT_DIFFICULTY;challengeRules=[];selectedMap='meadow';byId('mapSelect').value=selectedMap;byId('modeSelect').value=challenge;byId('difficultySelect').value=difficulty;document.querySelectorAll('[data-challenge-rule]').forEach(input=>input.checked=false);path=maps.meadow.path;calcPath();updatePlayOptionsLabel();renderMapOptions();resetRun();
+    challenge='classic';difficulty=DEFAULT_DIFFICULTY;challengeRules=[];challengeBoardId=null;importedBoardChallenge=null;challengeImportPreview=null;selectedMap='meadow';byId('mapSelect').value=selectedMap;byId('modeSelect').value=challenge;byId('difficultySelect').value=difficulty;document.querySelectorAll('[data-challenge-rule]').forEach(input=>input.checked=false);path=maps.meadow.path;calcPath();updatePlayOptionsLabel();renderMapOptions();resetRun();
     if(mobileLayout.matches)setDefenderSheetOpen(true);
     updateTutorialCoach();
     byId('towerList').querySelector('[data-type="sprout"]')?.focus({preventScroll:true});
@@ -283,7 +285,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     futureSaveProtected=false;
     const gateSetupChanged=gateRoute!==defaultGateRoute(maps[selectedMap])||gateSwitchesRemaining!==gateSwitchesForMap(maps[selectedMap]);
     if (runIsOver() || (!wave && !towers.length && guardianMode==='none'&&!gateSetupChanged)) { try{localStorage.removeItem(RUN_KEY);}catch{} byId('resumeBtn').disabled=hasSavedRun(); return false; }
-    const run=createRunSaveSnapshot({version:RUN_SAVE_VERSION,terrainRulesVersion,waveScheduleVersion,seedVersion:1,runSeed,simulationTick,actionLogVersion:ACTION_LOG_VERSION,actionLog,actionLogComplete,selectedMap,gateRoute,gateSwitchesRemaining,challenge,difficulty,challengeRules,seedObjective,guardianMode,guardian,spellLoadout,rejuvenationField,researchLoadout,relicLoadout,cash,lives,popped,wave,bloomCharge,towers,enemies,shots,spawnQueue,spawnClock,combatPerformance,...runStateSaveFlags(runState),intermission,speed,gameTime,nextEntityId});
+    const run=createRunSaveSnapshot({version:RUN_SAVE_VERSION,terrainRulesVersion,waveScheduleVersion,seedVersion:1,runSeed,simulationTick,actionLogVersion:ACTION_LOG_VERSION,actionLog,actionLogComplete,selectedMap,gateRoute,gateSwitchesRemaining,challenge,difficulty,challengeRules,challengeBoardId,seedObjective,guardianMode,guardian,spellLoadout,rejuvenationField,researchLoadout,relicLoadout,cash,lives,popped,wave,bloomCharge,towers,enemies,shots,spawnQueue,spawnClock,combatPerformance,...runStateSaveFlags(runState),intermission,speed,gameTime,nextEntityId});
     const result=writeRunWithBackup(localStorage,RUN_KEY,RUN_BACKUP_KEY,JSON.stringify(run),maps,modes);
     if(result.saved){byId('resumeBtn').disabled=false;storageErrorShown=false;return true;}
     if(result.reason==='future-primary'){futureSaveProtected=true;setToast(`This run uses a newer game version; this version ${RUN_SAVE_VERSION} will not overwrite it.`);return false;}
@@ -296,8 +298,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     try{primaryRaw=localStorage.getItem(RUN_KEY);backupRaw=localStorage.getItem(RUN_BACKUP_KEY);}catch{setToast('Saved run storage is unavailable. Your current garden was kept.');return;}
     const selection=selectRecoverableRun(primaryRaw,backupRaw,maps,modes),run=selection.run&&assignRunEntityIds(selection.run);
     if(!run){setToast(selection.source==='future'||selection.source==='future-backup'?'This run uses a newer game version. Your saved garden was kept.':'Saved run is invalid. Your current garden was kept.');return;}
-    const restored=projectSavedRunToRuntime(run,{maps,towerDefinitions:towersDef,enemyCombatProfiles,currentNextEntityId:nextEntityId});
-    selectedMap=restored.selectedMap;gateRoute=restored.gateRoute;gateSwitchesRemaining=restored.gateSwitchesRemaining; terrainRulesVersion=restored.terrainRulesVersion; waveScheduleVersion=restored.waveScheduleVersion; challenge=restored.challenge; difficulty=restored.difficulty;challengeRules=restored.challengeRules;seedObjective=restored.seedObjective;cash=restored.cash; lives=restored.lives; popped=restored.popped; wave=restored.wave;
+    const restored=projectSavedRunToRuntime(run,{maps,towerDefinitions:towersDef,enemyCombatProfiles});
+    selectedMap=restored.selectedMap;gateRoute=restored.gateRoute;gateSwitchesRemaining=restored.gateSwitchesRemaining; terrainRulesVersion=restored.terrainRulesVersion; waveScheduleVersion=restored.waveScheduleVersion; challenge=restored.challenge; difficulty=restored.difficulty;challengeRules=restored.challengeRules;challengeBoardId=restored.challengeBoardId;importedBoardChallenge=challengeBoardId?boardChallengeForRun({id:challengeBoardId,mode:challenge,difficulty,rules:challengeRules,mapId:selectedMap,spellLoadout:restored.spellLoadout,guardianMode:restored.guardianMode,researchLoadout:restored.researchLoadout,relicLoadout:restored.relicLoadout}):null;seedObjective=restored.seedObjective;cash=restored.cash; lives=restored.lives; popped=restored.popped; wave=restored.wave;
     guardianMode=restored.guardianMode; guardian=restored.guardian;guardianMoveActive=false;guardianMoveOrigin=null;byId('guardianLoadout').value=guardianMode;
     spellLoadout=restored.spellLoadout;rejuvenationField=restored.rejuvenationField;syncSpellLoadoutChecks();
     combatPerformance=restored.combatPerformance; bloomCharge=restored.bloomCharge; towers=restored.towers;researchLoadout=[...restored.researchLoadout];relicLoadout=[...(restored.relicLoadout??[])];
@@ -415,6 +417,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const playCue=(cue,variant)=>gameAudio.play(cue,variant);
   function unlock(id) { if(!profile.achievements.includes(id)){profile.achievements.push(id);persistProfile();renderAchievements();setToast(`Milestone earned: ${ACHIEVEMENT_DEFINITIONS.find(a=>a[0]===id)?.[1]||id}`);playCue('achievement');} }
   function checkProgress() {
+    if(challengeBoardId)return;
     for(const event of buildRunProgressEvents(profile,{challenge,selectedMap,wave,popped,towerCount:towers.length})){
       if(event.type==='achievement'){unlock(event.id);continue;}
       if(event.type==='map'){
@@ -430,7 +433,35 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function renderAchievements() {
     renderProfileAchievements({document,root:byId('achievements'),count:byId('achievementCount'),recordInfo:byId('recordInfo'),definitions:ACHIEVEMENT_DEFINITIONS,profile});
   }
-  const researchRulesEligible=()=>!tutorialPractice.active&&challenge==='classic'&&difficulty==='standard'&&challengeRules.length===0;
+  function renderChallenges(now=new Date()) {
+    const root=byId('challengeBoard'),active=document.activeElement;
+    const restore= root.contains(active)
+      ? active.matches('[data-challenge-code]')?{kind:'challenge',value:active.dataset.challengeCode}
+        :active.matches('[data-copy-challenge-code]')?{kind:'copy',value:active.closest('.challenge-board-card')?.querySelector('input')?.value}
+          :active.id==='challengeImportBtn'?{kind:'import-button'}:active.id==='challengeCodeImport'?{kind:'import-input',value:active.value}:null
+      :null;
+    renderChallengeBoard({document,root,bests:profile.challengeBests,now,imported:challengeImportPreview,activeId:challengeBoardId});
+    if(!restore)return;
+    const controls=restore.kind==='challenge'?[...root.querySelectorAll('[data-challenge-code]')]
+      :restore.kind==='copy'?[...root.querySelectorAll('[data-copy-challenge-code]')]
+        :restore.kind==='import-button'?[byId('challengeImportBtn')]:[byId('challengeCodeImport')];
+    const target=restore.kind==='challenge'?controls.find(item=>item.dataset.challengeCode===restore.value)
+      :restore.kind==='copy'?controls.find(item=>item.closest('.challenge-board-card')?.querySelector('input')?.value===restore.value):controls[0];
+    if(target&&restore.kind==='import-input')target.value=restore.value;
+    target?.focus({preventScroll:true});
+  }
+  function activateBoardChallenge(descriptor) {
+    if(challengeBoardId===descriptor.id)return;
+    changeRulesOrTrail('the challenge',()=>{
+      challenge=descriptor.mode;difficulty=descriptor.difficulty;challengeRules=[...descriptor.rules];selectedMap=descriptor.mapId;spellLoadout=[...descriptor.spellLoadout];
+      challengeBoardId=descriptor.id;importedBoardChallenge=descriptor;
+      guardianMode='none';byId('guardianLoadout').value='none';byId('mapSelect').value=selectedMap;byId('modeSelect').value=challenge;byId('difficultySelect').value=difficulty;
+      document.querySelectorAll('[data-challenge-rule]').forEach(input=>input.checked=challengeRules.includes(input.dataset.challengeRule));
+      byId('modeSelect').value=challenge;updatePlayOptionsLabel();renderMapOptions();applyChallenge();
+      renderChallenges();setToast(`${descriptor.cadence==='daily'?'Daily':'Weekly'} garden selected for ${descriptor.period} UTC. The challenge date stays with this run.`);
+    });
+  }
+  const researchRulesEligible=()=>!tutorialPractice.active&&!challengeBoardId&&challenge==='classic'&&difficulty==='standard'&&challengeRules.length===0;
   const relicRulesEligible=researchRulesEligible;
   const researchCanRespec=()=>researchRulesEligible()&&!tutorialPractice.active&&!hasPendingSavedGarden()&&(runIsOver()||(!wave&&!towers.length&&!runIsActivelyRunning()));
   function renderResearch() {
@@ -467,11 +498,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     byId('mapSelect').dispatchEvent(new Event('change',{bubbles:true}));
   }
   function challengeDisplayLabel() { return challenge==='sudden'&&guardianMode==='ward'?'Sudden death · 3 seeds with Pollen Ward':config().label; }
-  function syncSpellLoadoutChecks(){document.querySelectorAll('input[data-spell]').forEach(input=>{input.checked=spellLoadout.includes(input.dataset.spell);const preview=buildSpellPreview(input.dataset.spell);input.parentElement.querySelector('[data-spell-preview]').textContent=`${preview.range} · ${preview.area} · ${preview.duration} · ${preview.cost}`;});byId('spellLoadoutCount').textContent=`${spellLoadout.length} of 3 selected`;}
+  function syncSpellLoadoutChecks(){document.querySelectorAll('input[data-spell]').forEach(input=>{input.checked=spellLoadout.includes(input.dataset.spell);input.disabled=Boolean(challengeBoardId);const preview=buildSpellPreview(input.dataset.spell);input.parentElement.querySelector('[data-spell-preview]').textContent=`${preview.range} · ${preview.area} · ${preview.duration} · ${preview.cost}`;});byId('spellLoadoutCount').textContent=`${spellLoadout.length} of 3 selected${challengeBoardId?' · shared challenge kit':''}`;}
   function updatePlayOptionsLabel() {
     const suddenOption=byId('modeSelect').querySelector('option[value="sudden"]');
     suddenOption.textContent=guardianMode==='ward'?'Sudden death · 3 seeds with Pollen Ward':'Sudden death · 1 seed';
-    byId('playOptionsLabel').textContent=`Trail & rules · ${maps[selectedMap].name} · ${challengeDisplayLabel()} · ${DIFFICULTIES[difficulty].label}${challengeRules.length?` · ${challengeRules.map(rule=>CHALLENGE_RULES[rule].label).join(' + ')}`:''} · ${guardianMode==='guardian'?'Meadow Guardian':guardianMode==='ward'?'Pollen Ward':'No kit'}`;
+    byId('playOptionsLabel').textContent=`Trail & rules · ${maps[selectedMap].name} · ${challengeDisplayLabel()} · ${DIFFICULTIES[difficulty].label}${challengeRules.length?` · ${challengeRules.map(rule=>CHALLENGE_RULES[rule].label).join(' + ')}`:''}${challengeBoardId?` · ${importedBoardChallenge?.cadence==='weekly'?'Weekly':'Daily'} ${importedBoardChallenge?.period||'challenge'} UTC`:''} · ${guardianMode==='guardian'?'Meadow Guardian':guardianMode==='ward'?'Pollen Ward':'No kit'}`;
     byId('spellLoadoutConfig').querySelector('summary').textContent=`Equipped spells · ${spellLoadout.length}/3`;
   }
   function createSpellControls(){
@@ -784,25 +815,29 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function applyChallenge() {
     const hadRun=Boolean(wave||towers.length||guardian||hasSavedRun());
     gateRoute=defaultGateRoute(maps[selectedMap]);gateSwitchesRemaining=gateSwitchesForMap(maps[selectedMap]);path=pathForGateRoute(maps[selectedMap],gateRoute);
-    const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];relicLoadout=relicRulesEligible()?relicLoadoutIds(profile.relics):[];const researchStart=researchStartingAdjustment(researchLoadout);lives=Math.max(1,kit.lives+preset.livesDelta+researchStart.lives);guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;cash=Math.max(0,config().cash+preset.cashDelta+researchStart.cash);towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;wave=0;popped=0;bloomCharge=0;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();combatPerformance=createCombatPerformance();transitionRun({type:'RESET'});intermission=0;updateGatePanel();gameTime=0;simulationTick=0;actionLog=[];actionLogComplete=true;actionLogLimitShown=false;runSeed=createRunSeed();selectedTower=null;selectedType='sprout';simulationClock.reset();resetRenderSnapshots();syncSpellLoadoutChecks();updatePlayOptionsLabel();renderTowerOptions();renderSelected();updateHud();updatePreview();saveRun();draw();
+    const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];relicLoadout=relicRulesEligible()?relicLoadoutIds(profile.relics):[];const researchStart=researchStartingAdjustment(researchLoadout);terrainRulesVersion=1;lives=Math.max(1,kit.lives+preset.livesDelta+researchStart.lives);guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=challengeBoardId?[...CHALLENGE_SPELL_LOADOUT]:normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;cash=Math.max(0,config().cash+preset.cashDelta+researchStart.cash);towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;wave=0;popped=0;bloomCharge=0;nextEntityId=1;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();combatPerformance=createCombatPerformance();transitionRun({type:'RESET'});intermission=0;updateGatePanel();gameTime=0;simulationTick=0;actionLog=[];actionLogComplete=true;actionLogLimitShown=false;runSeed=createRunSeed();selectedTower=null;selectedType='sprout';simulationClock.reset();resetRenderSnapshots();syncSpellLoadoutChecks();updatePlayOptionsLabel();renderTowerOptions();renderSelected();updateHud();updatePreview();saveRun();draw();
     if(hadRun)clearCompatibleBackup();
   }
   function finishRun(won) {
     if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}
-    transitionRun({type:won?'WIN':'LOSE'});updateGatePanel();const record=buildBestWaveRecord(profile,{challenge,selectedMap,wave});profile.bestWave[record.key]=record.value;persistProfile();
+    transitionRun({type:won?'WIN':'LOSE'});updateGatePanel();
+    let profileSaved=true;
+    const persistCompletion=()=>{try{persistProfile();return true;}catch{return false;}};
+    if(challengeBoardId){profile.challengeBests=recordChallengeBest(profile.challengeBests,challengeBoardId,{won,wave,popped,lives});profileSaved=persistCompletion();renderChallenges();}
+    else {const record=buildBestWaveRecord(profile,{challenge,selectedMap,wave});profile.bestWave[record.key]=record.value;profileSaved=persistCompletion();}
     const mission=CAMPAIGN_MISSION_BY_ID[selectedMap];let masteryResult=null;
-    if(mission&&won){
+    if(mission&&won&&!challengeBoardId){
       const progress=buildMissionCompletion(profile,mission.id,{won,lives,leaks:combatPerformance.leaks.total});
-      if(progress){profile={...profile,...progress};profile.research=normalizeResearchState(profile.research,earnedResearchPoints(profile));profile.relics=normalizeRelicState(profile.relics,profile.completedMissions);persistProfile();renderMapOptions();renderResearch();}
+      if(progress){profile={...profile,...progress};profile.research=normalizeResearchState(profile.research,earnedResearchPoints(profile));profile.relics=normalizeRelicState(profile.relics,profile.completedMissions);profileSaved=persistCompletion()&&profileSaved;renderMapOptions();renderResearch();}
     }
-    if(mission){
+    if(mission&&!challengeBoardId){
       masteryResult=buildMissionMasteryProgress(profile,{missionId:mission.id,difficulty,challenge,challengeRules,guardianMode,won,lives,leaks:combatPerformance.leaks.total,towerCount:towers.length});
-      if(masteryResult.changed){profile={...profile,missionMastery:masteryResult.mastery};profile.research=normalizeResearchState(profile.research,earnedResearchPoints(profile));persistProfile();renderCampaignMap();renderResearch();}
+      if(masteryResult.changed){profile={...profile,missionMastery:masteryResult.mastery};profile.research=normalizeResearchState(profile.research,earnedResearchPoints(profile));profileSaved=persistCompletion()&&profileSaved;renderCampaignMap();renderResearch();}
     }
     byId('waveInfo').textContent=won?'All waves cleared! This garden is thriving.':'The seed pod was overrun. Try another layout or challenge rule.';
-    if(won)unlock('guardian');else shakeBoard();
+    if(won&&!challengeBoardId)unlock('guardian');else if(!won)shakeBoard();
     if(!isUnsupportedRunVersion(loadJson(RUN_KEY,null))){try{localStorage.removeItem(RUN_KEY);}catch{}clearCompatibleBackup();}
-    updateHud();renderAchievements();setToast(won?'Meadow saved!':combatPerformance.leaks.total?`Run ended after ${combatPerformance.leaks.total} leak${combatPerformance.leaks.total===1?'':'s'}; your best wave has been saved.`:'Run ended. Your best wave has been saved.');playCue(won?'victory':'defeat');showResults(won,masteryResult);
+    updateHud();renderAchievements();setToast(profileSaved?(won?'Meadow saved!':combatPerformance.leaks.total?`Run ended after ${combatPerformance.leaks.total} leak${combatPerformance.leaks.total===1?'':'s'}; your best wave has been saved.`:'Run ended. Your best wave has been saved.'):'Run completed, but local progress could not be saved. Free browser storage and try again.');playCue(won?'victory':'defeat');showResults(won,masteryResult,{profileSaved});
   }
   let gameTime=0;
   const gameLoop=createGameLoop({
@@ -842,7 +877,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function resetRun() {
     const hadRun=Boolean(wave||towers.length||guardianMode!=='none'||hasSavedRun());
     gateRoute=defaultGateRoute(maps[selectedMap]);gateSwitchesRemaining=gateSwitchesForMap(maps[selectedMap]);path=pathForGateRoute(maps[selectedMap],gateRoute);
-    const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];relicLoadout=relicRulesEligible()?relicLoadoutIds(profile.relics):[];const researchStart=researchStartingAdjustment(researchLoadout);terrainRulesVersion=1;cash=tutorialPractice.active?1200:Math.max(0,config().cash+preset.cashDelta+researchStart.cash);lives=tutorialPractice.active?99:Math.max(1,kit.lives+preset.livesDelta+researchStart.lives);popped=0;wave=0;bloomCharge=0;guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;combatPerformance=createCombatPerformance();
+    const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];relicLoadout=relicRulesEligible()?relicLoadoutIds(profile.relics):[];const researchStart=researchStartingAdjustment(researchLoadout);terrainRulesVersion=1;cash=tutorialPractice.active?1200:Math.max(0,config().cash+preset.cashDelta+researchStart.cash);lives=tutorialPractice.active?99:Math.max(1,kit.lives+preset.livesDelta+researchStart.lives);popped=0;wave=0;bloomCharge=0;guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=challengeBoardId?[...CHALLENGE_SPELL_LOADOUT]:normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;nextEntityId=1;combatPerformance=createCombatPerformance();
     transitionRun({type:'RESET'});intermission=0;updateGatePanel();selectedTower=null;selectedType='sprout';speed=DEFAULT_GAME_SPEED;gameTime=0;simulationTick=0;actionLog=[];actionLogComplete=true;actionLogLimitShown=false;runSeed=createRunSeed();simulationClock.reset();resetRenderSnapshots();
     if(tutorialPractice.active)tutorialPractice=resetTutorialPracticeState(tutorialPractice);
     syncSpellLoadoutChecks();updatePlayOptionsLabel();renderTowerOptions();renderSelected();updateHud();updatePreview();draw();
@@ -856,7 +891,14 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('pauseBtn').onclick=()=>{transitionRun({type:'TOGGLE_USER_PAUSE'});updateHud();updateGatePanel();saveRun();};
   byId('speedBtn').onclick=()=>{speed=toggleGameSpeed(speed);updateHud();};
   defenderSheetToggle.onclick=()=>setDefenderSheetOpen(!defenderSheet.classList.contains('open'));
-  byId('guideOpenBtn').onclick=()=>{renderResearch();byId('guideDialog').showModal();transitionRun({type:'DIALOG_OPEN'});updateHud();};
+  byId('guideOpenBtn').onclick=()=>{renderChallenges();renderResearch();byId('guideDialog').showModal();transitionRun({type:'DIALOG_OPEN'});updateHud();};
+  byId('challengeBoard').addEventListener('click',async event=>{
+    const copy=event.target.closest('[data-copy-challenge-code]');
+    if(copy){const input=copy.closest('.challenge-board-card')?.querySelector('input');if(!input)return;input.select();input.setSelectionRange(0,input.value.length);try{await navigator.clipboard.writeText(input.value);byId('challengeImportStatus').textContent='Challenge code copied. It contains rules only, not a score.';}catch{byId('challengeImportStatus').textContent='Challenge code selected. Copy it with your device’s copy command.';}return;}
+    const play=event.target.closest('[data-challenge-code]');if(play){const result=importChallengeCode(play.dataset.challengeCode);if(result.ok)activateBoardChallenge(result.challenge);else setToast(result.reason);return;}
+    if(event.target.closest('#challengeImportBtn')){const input=byId('challengeCodeImport'),result=importChallengeCode(input.value.trim());if(!result.ok){input.setAttribute('aria-invalid','true');byId('challengeImportStatus').textContent=result.reason;return;}input.removeAttribute('aria-invalid');challengeImportPreview=result.challenge;renderChallenges();byId('challengeImportStatus').textContent=`Challenge code checked for ${result.challenge.period} UTC. It does not verify results.`;}
+  });
+  byId('challengeBoard').addEventListener('input',event=>{if(event.target.id!=='challengeCodeImport')return;event.target.removeAttribute('aria-invalid');byId('challengeImportStatus').textContent='';});
   byId('researchTree').addEventListener('click',event=>{
     if(!researchCanRespec()){setToast('Research can only be refit between missions in a standard Classic garden.');return;}
     let next;
@@ -909,19 +951,19 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('contextUpgradeBtn').onclick=()=>byId('upgradeBtn').click();
   byId('contextSellBtn').onclick=()=>byId('sellBtn').click();
   byId('resetBtn').onclick=()=>requestConfirmation('Restart this garden?',`Restart the ${config().label} run on ${maps[selectedMap].name}? Current towers and wave progress will be lost.`,()=>{resetRun();explainFreshGarden('Fresh garden. Choose your trail and defenders.');},'Restart run');
-  byId('mapSelect').onchange=event=>{const previous=selectedMap,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the trail',()=>{selectedMap=next;path=maps[selectedMap].path;calcPath();renderMapOptions();updatePlayOptionsLabel();applyChallenge();explainFreshGarden(`${maps[selectedMap].name} selected.`);});};
+  byId('mapSelect').onchange=event=>{const previous=selectedMap,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the trail',()=>{selectedMap=next;challengeBoardId=null;path=maps[selectedMap].path;calcPath();renderMapOptions();updatePlayOptionsLabel();applyChallenge();renderChallenges();explainFreshGarden(`${maps[selectedMap].name} selected.`);});};
   byId('routeGatePanel').addEventListener('toggle',()=>{draw();});
   byId('gateRouteOptions').addEventListener('click',event=>{if(event.target.closest('.route-gate-option'))draw();});
   byId('campaignMapNodes').addEventListener('click',event=>{const mapId=event.target.closest('[data-campaign-mission]')?.dataset.campaignMission;if(mapId)selectCampaignMission(mapId);});
-  byId('modeSelect').onchange=event=>{const previous=challenge,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the rules',()=>{challenge=next;challengeRules=challengeRules.filter(rule=>!(next==='fog'&&rule==='shortReach')&&!(next==='thrifty'&&rule==='noSunflowers'));byId('modeSelect').value=challenge;document.querySelectorAll('[data-challenge-rule]').forEach(input=>input.checked=challengeRules.includes(input.dataset.challengeRule));updatePlayOptionsLabel();applyChallenge();explainFreshGarden(`${config().label} rules selected.`);});};
-  byId('difficultySelect').onchange=event=>{const previous=difficulty,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the difficulty',()=>{difficulty=next;byId('difficultySelect').value=difficulty;updatePlayOptionsLabel();applyChallenge();renderCampaignMap();explainFreshGarden(`${DIFFICULTIES[difficulty].label} difficulty selected.`);});};
+  byId('modeSelect').onchange=event=>{const previous=challenge,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the rules',()=>{challenge=next;challengeBoardId=null;challengeRules=challengeRules.filter(rule=>!(next==='fog'&&rule==='shortReach')&&!(next==='thrifty'&&rule==='noSunflowers'));byId('modeSelect').value=challenge;document.querySelectorAll('[data-challenge-rule]').forEach(input=>input.checked=challengeRules.includes(input.dataset.challengeRule));updatePlayOptionsLabel();applyChallenge();renderChallenges();explainFreshGarden(`${config().label} rules selected.`);});};
+  byId('difficultySelect').onchange=event=>{const previous=difficulty,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the difficulty',()=>{difficulty=next;challengeBoardId=null;byId('difficultySelect').value=difficulty;updatePlayOptionsLabel();applyChallenge();renderChallenges();renderCampaignMap();explainFreshGarden(`${DIFFICULTIES[difficulty].label} difficulty selected.`);});};
   document.querySelectorAll('[data-challenge-rule]').forEach(input=>input.addEventListener('change',()=>{
     const next=[...document.querySelectorAll('[data-challenge-rule]:checked')].map(control=>control.dataset.challengeRule),normalized=normalizeChallengeRules(next,challenge);
     if(!normalized){input.checked=false;setToast(challenge==='fog'?'Short Reach is already active in these rules.':'Thrifty already disables Sunflowers.');return;}
     document.querySelectorAll('[data-challenge-rule]').forEach(control=>control.checked=challengeRules.includes(control.dataset.challengeRule));
-    changeRulesOrTrail('the challenge rules',()=>{challengeRules=normalized;document.querySelectorAll('[data-challenge-rule]').forEach(control=>control.checked=challengeRules.includes(control.dataset.challengeRule));updatePlayOptionsLabel();applyChallenge();explainFreshGarden(`${normalized.length?normalized.map(rule=>CHALLENGE_RULES[rule].label).join(' + '):'No extra challenge rules'} selected.`);});
+    changeRulesOrTrail('the challenge rules',()=>{challengeRules=normalized;challengeBoardId=null;document.querySelectorAll('[data-challenge-rule]').forEach(control=>control.checked=challengeRules.includes(control.dataset.challengeRule));updatePlayOptionsLabel();applyChallenge();renderChallenges();explainFreshGarden(`${normalized.length?normalized.map(rule=>CHALLENGE_RULES[rule].label).join(' + '):'No extra challenge rules'} selected.`);});
   }));
-  byId('guardianLoadout').onchange=event=>{const previous=guardianMode,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the mission kit',()=>{guardianMode=next;byId('guardianLoadout').value=guardianMode;updatePlayOptionsLabel();applyChallenge();explainFreshGarden(next==='guardian'?'Meadow Guardian selected. Move it over safe grass and use Pollen Pulse to slow nearby ground pests.':next==='ward'?'Pollen Ward selected. Begin with two extra seeds.':'Mission kit removed. The core mission remains fully playable.');});};
+  byId('guardianLoadout').onchange=event=>{const previous=guardianMode,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the mission kit',()=>{guardianMode=next;challengeBoardId=null;importedBoardChallenge=null;byId('guardianLoadout').value=guardianMode;updatePlayOptionsLabel();applyChallenge();renderChallenges();explainFreshGarden(next==='guardian'?'Meadow Guardian selected. Move it over safe grass and use Pollen Pulse to slow nearby ground pests.':next==='ward'?'Pollen Ward selected. Begin with two extra seeds.':'Mission kit removed. The core mission remains fully playable.');});};
   byId('spellLoadoutConfig').addEventListener('change',event=>{
     const input=event.target.closest('[data-spell]');if(!input)return;
     const next=[...byId('spellLoadoutConfig').querySelectorAll('[data-spell]:checked')].map(option=>option.dataset.spell);

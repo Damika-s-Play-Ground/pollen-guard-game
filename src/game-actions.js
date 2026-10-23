@@ -199,7 +199,7 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
   const researchStart=researchStartingAdjustment(researchLoadout);
   const trackContributions = run.combatPerformance?.complete === true;
   const state = {
-    selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
+    selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,challengeBoardId:run.challengeBoardId??null,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
     researchLoadout,relicLoadout, simulationTick: 0, gameTime: 0, cash: configuration.cash+difficulty.cashDelta+researchStart.cash, lives: Math.max(1,loadout.lives+difficulty.livesDelta+researchStart.lives), popped: 0, wave: 0, bloomCharge: 0,
     combatPerformance: trackContributions ? createCombatPerformance(true) : null,
     towers: [], enemies: [], shots: [], spawnQueue: [], spawnClock: 0, running: false, gameOver: false, paused: false,
@@ -251,7 +251,8 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
     ...(run.version>=10?{spellLoadout:state.spellLoadout,rejuvenationField:state.rejuvenationField}: {}),
     ...(run.version>=14?{seedObjective:state.seedObjective}: {}),
     ...(run.version>=15?{researchLoadout:state.researchLoadout}: {}),
-    ...(Object.hasOwn(run,'relicLoadout')?{relicLoadout:state.relicLoadout}: {})
+    ...(Object.hasOwn(run,'relicLoadout')?{relicLoadout:state.relicLoadout}: {}),
+    ...(run.version>=17?{challengeBoardId:state.challengeBoardId}: {})
   };
   return { run: replayedRun, state, hash: hashGameplayState(replayedRun) };
 }

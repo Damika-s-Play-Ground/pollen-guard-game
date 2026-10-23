@@ -11,9 +11,10 @@ import { defaultGateRoute, gateSwitchesForMap } from './gate-routes.js';
 import { validSeedObjective } from './seed-objective.js';
 import { applyResearchToTowerStats, validResearchLoadout } from './research-tree.js';
 import { applyRelicsToTowerStats, validRelicLoadout } from './relics.js';
+import { boardChallengeForRun, validChallengeId } from './challenge-board.js';
 
 export const SIMULATION_STEP = 1 / 60;
-export const RUN_SAVE_VERSION = 16;
+export const RUN_SAVE_VERSION = 17;
 const SUPPORT_STRUCTURE_SAVE_VERSION = 8;
 const GUARDIAN_SAVE_VERSION = 9;
 const TARGETED_SPELL_SAVE_VERSION = 10;
@@ -337,7 +338,7 @@ export function assignRunEntityIds(run) {
 
 export function normalizeRunSave(value, maps, modes) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  if (value.version !== undefined && ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, RUN_SAVE_VERSION].includes(value.version)) return null;
+  if (value.version !== undefined && ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, RUN_SAVE_VERSION].includes(value.version)) return null;
   const sourceVersion = value.version ?? 0;
   const finite = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
   const selectedMap = value.selectedMap === undefined ? 'meadow' : value.selectedMap;
@@ -356,6 +357,7 @@ export function normalizeRunSave(value, maps, modes) {
   const seedRecoveryEnabled=Boolean(normalizedRules?.includes('seedRecovery'));
   const researchLoadout=sourceVersion>=15?value.researchLoadout:[];
   const relicLoadout=sourceVersion>=16?value.relicLoadout:[];
+  const challengeBoardId=sourceVersion>=17?value.challengeBoardId:null;
   const seedObjective=value.seedObjective;
   const seedObjectiveFieldsValid=sourceVersion>=14
     ? Object.hasOwn(value,'seedObjective')&&(seedRecoveryEnabled?validSeedObjective(seedObjective):seedObjective===null)
@@ -382,6 +384,7 @@ export function normalizeRunSave(value, maps, modes) {
       !difficultyFor(difficulty,challenge) || !normalizedRules || !seedObjectiveFieldsValid ||
       (sourceVersion>=15?(!Object.hasOwn(value,'researchLoadout')||!validResearchLoadout(researchLoadout)||researchLoadout.length>0&&(challenge!=='classic'||difficulty!=='standard'||normalizedRules.length>0)):Object.hasOwn(value,'researchLoadout')) ||
       (sourceVersion>=16?(!Object.hasOwn(value,'relicLoadout')||!validRelicLoadout(relicLoadout)||relicLoadout.length>0&&(challenge!=='classic'||difficulty!=='standard'||normalizedRules.length>0)):Object.hasOwn(value,'relicLoadout')) ||
+      (sourceVersion>=17?(!Object.hasOwn(value,'challengeBoardId')||challengeBoardId!==null&&(!validChallengeId(challengeBoardId)||!boardChallengeForRun({id:challengeBoardId,mode:challenge,difficulty,rules:normalizedRules,mapId:selectedMap,spellLoadout,guardianMode,researchLoadout,relicLoadout}))):Object.hasOwn(value,'challengeBoardId')) ||
       !optionalFinite('bloomCharge', 0, 100) || !optionalFinite('spawnClock', 0, 60) ||
       !optionalFinite('intermission', 0, 3600) || !optionalFinite('gameTime', 0, 1e9) ||
       (value.speed !== undefined && !GAME_SPEEDS.includes(value.speed)) ||
@@ -461,6 +464,7 @@ export function normalizeRunSave(value, maps, modes) {
     seedObjective:sourceVersion>=14?seedObjective:null,
     researchLoadout:sourceVersion>=15?[...researchLoadout]:[],
     relicLoadout:sourceVersion>=16?[...relicLoadout]:[],
+    challengeBoardId:sourceVersion>=17?challengeBoardId:null,
     cash: Math.floor(value.cash),
     lives: Math.floor(value.lives),
     wave: Math.floor(value.wave),

@@ -3,11 +3,12 @@ import { DEFAULT_SPELL_LOADOUT, normalizeSpellLoadout } from './spells.js';
 import { DIFFICULTIES } from './challenge-rules.js';
 import { earnedResearchPoints, normalizeResearchState } from './research-tree.js';
 import { normalizeRelicState } from './relics.js';
+import { normalizeChallengeBests } from './challenge-board.js';
 
 export const PROFILE_STORAGE_KEY = 'pollen-guard.profile.v2';
 export const UI_SETTINGS_STORAGE_KEY = 'pollen-guard.ui.v1';
 
-export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlockedMissions:['meadow'], completedMissions:[], missionRecords:{}, missionMastery:{}, research:{unlocked:[],loadout:{}}, relics:{unlocked:[],loadout:[]}, achievements: [], bestWave: {} });
+export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlockedMissions:['meadow'], completedMissions:[], missionRecords:{}, missionMastery:{}, research:{unlocked:[],loadout:{}}, relics:{unlocked:[],loadout:[]}, achievements: [], bestWave: {}, challengeBests:{} });
 export const DEFAULT_UI_SETTINGS = Object.freeze({
   animation: 'full', shake: true, flashes: true, compact: false, palette: 'garden',
   textSize: 'normal', tutorialSeen: false, tutorialInProgress: false, tutorialReturnToSavedRun: false, sound: false,
@@ -69,7 +70,8 @@ export function normalizeProfile(value, { mapIds = [], achievementIds = [] } = {
   const researchProfile={completedMissions:[...completedMissions],missionMastery};
   return { ...source, unlockedMaps, unlockedMissions, completedMissions, missionRecords, missionMastery,
     research:normalizeResearchState(source.research,earnedResearchPoints(researchProfile)),
-    relics:normalizeRelicState(source.relics,completedMissions), achievements, bestWave };
+    relics:normalizeRelicState(source.relics,completedMissions), achievements, bestWave,
+    challengeBests:normalizeChallengeBests(source.challengeBests) };
 }
 
 export function normalizeUiSettings(value) {
