@@ -1,4 +1,6 @@
-export function renderTowerTestRange(container, document, { towerTypes, enemyTypes, onMeasure, challenge='classic', difficulty='standard', challengeRules=[], researchLoadout=[], relicLoadout=[] } = {}) {
+import { TOWER_TEST_MAX_TICKS } from './tower-test-range.js';
+
+export function renderTowerTestRange(container, document, { towerTypes, enemyTypes, onMeasure, onFindPlacements, challenge='classic', difficulty='standard', challengeRules=[], researchLoadout=[], relicLoadout=[] } = {}) {
   container.replaceChildren();
   const title=document.createElement('p');title.className='wave-info';title.textContent='Isolated practice only · each measurement starts from fresh conditions · no campaign progress, achievements, challenge score or saved-run changes.';container.append(title);
   const form=document.createElement('div');form.className='test-range-controls';
@@ -11,7 +13,7 @@ export function renderTowerTestRange(container, document, { towerTypes, enemyTyp
   const reset=document.createElement('button');reset.type='button';reset.textContent='Restart test';form.append(reset);
   const status=document.createElement('p');status.className='test-range-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   container.append(form,status);
-  const run=()=>{status.textContent='Running isolated production combat…';const chosen=[...extras.selectedOptions].slice(0,3).map((option,index)=>({type:option.value,level:1,branch:0,x:180+((index+1)%2)*78,y:90+index*78}));const defenders=[{type:tower.value,level:Number(level.value),branch:Number(branch.value),x:180,y:140},...chosen];const result=onMeasure({towerType:tower.value,towerLevel:Number(level.value),branch:Number(branch.value),defenders,enemyType:enemy.value,armor:Number(armor.value),shield:Number(shield.value),challenge,difficulty,challengeRules,researchLoadout,relicLoadout,maxTicks:2400});status.textContent=result.ok
+  const run=()=>{status.textContent='Running isolated production combat…';const types=[tower.value,...[...extras.selectedOptions].slice(0,3).map(option=>option.value)],spots=onFindPlacements?.(types);if(!spots){status.textContent='No legal practice layout is available for this roster on the selected trail.';return;}const defenders=types.map((type,index)=>({type,level:index===0?Number(level.value):1,branch:index===0?Number(branch.value):0,...spots[index]}));const result=onMeasure({towerType:tower.value,towerLevel:Number(level.value),branch:Number(branch.value),defenders,enemyType:enemy.value,armor:Number(armor.value),shield:Number(shield.value),challenge,difficulty,challengeRules,researchLoadout,relicLoadout,maxTicks:TOWER_TEST_MAX_TICKS});status.textContent=result.ok
     ? `${result.defenderBreakdown.map(t=>`${t.type} L${t.level}: ${Math.round(t.damage*100)/100}`).join(' · ')} · ${result.enemyType} · ${result.damage} combined damage in ${result.simulatedSeconds}s · ${result.defeated?'pest defeated':result.leaked?`pest escaped with ${result.remainingHp} HP remaining`:`pest remains with ${result.remainingHp} HP`} · first defender: ${result.attackStats.range} range, ${result.attackStats.damage} base damage. Practice only; no score saved.`
     : result.reason;};
   measure.addEventListener('click',run);

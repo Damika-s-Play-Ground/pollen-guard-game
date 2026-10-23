@@ -20,7 +20,7 @@ import { runSaveFailureMessage } from './src/run-save-ui.js';
 import { registerOfflineSupport } from './src/offline-support.js';
 import { compareRunSummaries, normalizeRunHistory, recordCompletedRun, RUN_HISTORY_STORAGE_KEY, verifyRecordedReplay } from './src/run-history.js';
 import { renderRunHistory } from './src/run-history-ui.js';
-import { runTowerTestRange, towerTestRangeChoices } from './src/tower-test-range.js';
+import { findTowerTestPlacements, runTowerTestRange, towerTestRangeChoices } from './src/tower-test-range.js';
 import { renderTowerTestRange } from './src/tower-test-range-ui.js';
 import { addCustomMapToCollection, customMapToRuntimeMap, customMapWaveSchedules, normalizeCustomMapCollection, CUSTOM_MAP_STORAGE_KEY } from './src/map-editor.js';
 import { renderMapEditor } from './src/map-editor-ui.js';
@@ -360,7 +360,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const choices=towerTestRangeChoices();
     renderTowerTestRange(byId('towerTestRange'),document,{challenge,difficulty,challengeRules,researchLoadout,relicLoadout,
       towerTypes:choices.towers.map(id=>({id,label:towersDef[id].name})),enemyTypes:choices.enemies.map(id=>({id,label:ENEMY_INTEL[id]?.name||id})),
-      onMeasure:scenario=>runTowerTestRange({...scenario,mapId:selectedMap})});
+      onFindPlacements:types=>findTowerTestPlacements(types,selectedMap,path),
+      onMeasure:scenario=>runTowerTestRange({...scenario,mapId:selectedMap,path})});
   }
   function restoreRun() {
     let primaryRaw=null,backupRaw=null;
