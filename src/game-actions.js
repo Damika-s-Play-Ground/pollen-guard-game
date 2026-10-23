@@ -19,11 +19,12 @@ import { createSeedObjective, SEED_RECOVERY_RULE } from './seed-objective.js';
 import { researchStartingAdjustment } from './research-tree.js';
 import { endlessChoiceRequired, isEndlessChoice } from './endless-mode.js';
 
-export function validateTowerPlacement(state, type, point, { path, width = 900, height = 500 } = {}) {
+export function validateTowerPlacement(state, type, point, { path, width = 900, height = 500, map } = {}) {
   if (!towersDef[type]) return 'Choose a defender from the catalog first.';
   const def = towersDef[type];
   if ((state.challenge === 'thrifty' || state.challengeRules?.includes('noSunflowers')) && type === 'sunflower') return 'Sunflowers are disabled by the selected rules.';
   if (state.cash < def.cost) return `You need ${def.cost} petals for ${def.name}.`;
+  if(map?.customMap && !map.buildZones.some(zone=>point.x>=zone.x+(def.footprint||19)&&point.x<=zone.x+zone.width-(def.footprint||19)&&point.y>=zone.y+(def.footprint||19)&&point.y<=zone.y+zone.height-(def.footprint||19)))return 'Place defenders inside a marked build zone on this authored map.';
   const footprint = def.footprint || 19, edgeClearance = def.supportStructure ? footprint : 16;
   if (!path?.length || distanceToPath(point.x, point.y, path) < (def.supportStructure ? 25 + footprint : 44) || point.x < edgeClearance || point.x > width - edgeClearance || point.y < edgeClearance || point.y > height - edgeClearance) return 'That spot overlaps the trail or map edge.';
   if (state.towers.some(tower => Math.hypot(tower.x - point.x, tower.y - point.y) <

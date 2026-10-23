@@ -150,6 +150,7 @@ function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath
     ctx.globalAlpha = .9; ctx.fillStyle = ['#fff0bd', '#f4b8a5', '#e7f4d0'][i % 3]; ctx.beginPath(); ctx.arc((i * 137 + 21) % width, (i * 71 + 15) % height, 1.7, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for(const zone of map.buildZones||[]){ctx.fillStyle='#d4f3a466';ctx.fillRect(zone.x,zone.y,zone.width,zone.height);ctx.strokeStyle='#34683dcc';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.strokeRect(zone.x,zone.y,zone.width,zone.height);ctx.setLineDash([]);ctx.fillStyle='#1d3828';ctx.font=`700 ${Math.max(9,10/displayScale)}px sans-serif`;ctx.fillText('BUILD ZONE',zone.x+4,zone.y+12);}
   drawTerrainZones(ctx,map,displayScale);
   tracePath(ctx, path); ctx.strokeStyle = map.edge; ctx.lineWidth = 44; ctx.stroke();
   tracePath(ctx, path); ctx.strokeStyle = map.trail; ctx.lineWidth = 34; ctx.stroke();
@@ -166,7 +167,7 @@ export function createStaticMapCache(createCanvas) {
   return {
     draw(ctx, state) {
       const { width, height, map, path, pathLength, airPath, displayScale } = state;
-      const key = JSON.stringify([width, height, map.biome, map.background, map.patch, map.edge, map.trail, path, pathLength, airPath, displayScale]);
+      const key = JSON.stringify([width, height, map.biome, map.background, map.patch, map.edge, map.trail, map.buildZones||null, path, pathLength, airPath, displayScale]);
       if (!canvas || cacheKey !== key) {
         canvas = createCanvas(width, height);
         canvas.width = width;

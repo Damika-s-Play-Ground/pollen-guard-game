@@ -219,7 +219,14 @@ export const BALANCED_CAMPAIGN_WAVES=Object.freeze({
   'ridge-summit':ridgeSummitBalanced
 });
 
+const customWaveSchedules=new Map();
+export function registerCustomWaveSchedules(mapId,schedules){
+  if(typeof mapId!=='string'||!/^custom-[a-z][a-z0-9-]{1,31}$/.test(mapId)||!Array.isArray(schedules)||schedules.length!==15)return false;
+  customWaveSchedules.set(mapId,schedules.map(wave=>({cue:wave.cue,groups:wave.groups.map(group=>({...group}))})));return true;
+}
+
 export function waveSchedulesForMap(mapId = 'meadow', version = WAVE_SCHEDULE_VERSION) {
+  if(customWaveSchedules.has(mapId))return customWaveSchedules.get(mapId);
   if (version === LEGACY_WAVE_SCHEDULE_VERSION) return AUTHORED_WAVES;
   const schedules = version >= WAVE_SCHEDULE_VERSION ? BALANCED_CAMPAIGN_WAVES :
     version >= AIR_ROUTE_SCHEDULE_VERSION ? AIR_ROUTE_CAMPAIGN_WAVES :

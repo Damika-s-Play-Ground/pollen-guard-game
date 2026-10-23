@@ -1,0 +1,14 @@
+{
+  "id": "./",
+  "name": "Pollen Guard — Meadow Defense",
+  "short_name": "Pollen Guard",
+  "description": "An original meadow tower-defense strategy game.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101913",
+  "theme_color": "#18251d",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
