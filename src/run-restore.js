@@ -14,7 +14,7 @@ export function projectSavedRunToRuntime(run, { maps, towerDefinitions, enemyCom
     .filter(shot => shot.target);
 
   return {
-    selectedMap:restoredRunMapId(run,maps), gateRoute:run.gateRoute??'default',gateSwitchesRemaining:run.gateSwitchesRemaining??0,terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion:run.waveScheduleVersion, challenge:run.challenge, difficulty:run.difficulty??'standard',challengeRules:[...(run.challengeRules??[])],challengeBoardId:run.challengeBoardId??null,seedObjective:run.seedObjective?{...run.seedObjective,seeds:run.seedObjective.seeds.map(seed=>({...seed}))}:null,cash:run.cash, lives:run.lives,
+    selectedMap:restoredRunMapId(run,maps), gateRoute:run.gateRoute??'default',gateSwitchesRemaining:run.gateSwitchesRemaining??0,terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion:run.waveScheduleVersion, challenge:run.challenge, difficulty:run.difficulty??'standard',challengeRules:[...(run.challengeRules??[])],challengeBoardId:run.challengeBoardId??null,...(Object.hasOwn(run,'endlessModifier')?{endlessModifier:run.endlessModifier??null,endlessChoiceWave:run.endlessChoiceWave??0}:{}),seedObjective:run.seedObjective?{...run.seedObjective,seeds:run.seedObjective.seeds.map(seed=>({...seed}))}:null,cash:run.cash, lives:run.lives,
     popped:run.popped, wave:run.wave, combatPerformance:run.combatPerformance, bloomCharge:run.bloomCharge,
     towers, enemies, spawnQueue, shots, gameTime:run.gameTime,
     nextEntityId:Math.max(run.nextEntityId || 1,nextEntityId), spawnClock:run.spawnClock,

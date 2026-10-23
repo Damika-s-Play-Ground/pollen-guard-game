@@ -1,5 +1,6 @@
 import { enemyCombatProfiles } from './game-data.js';
 import { AUTHORED_WAVES, buildWaveQueue, calculateWaveBudget, summarizeWave, upcomingWaves } from './waves.js';
+import { ENDLESS_CHOICES } from './endless-mode.js';
 
 const pluralNames = {
   mite: 'moss mites', zip: 'zip mites', armored: 'armored beetles', shield: 'shield bugs',
@@ -20,8 +21,8 @@ function bossCue(cue, name) {
   return name ? cue.replace(/Bramble bosses/g, `${name} bosses`).replace(/Bramble boss|Bramble beetle/g, name) : cue;
 }
 
-export function buildWaveTimelineView({ bossName, terminal, won, running, paused, wave, scheduled, enemyCount, sunflowerIncome, intermission, challenge, limit, difficulty, challengeRules, schedules = AUTHORED_WAVES }) {
-  const options={difficulty,challengeRules};
+export function buildWaveTimelineView({ bossName, terminal, won, running, paused, wave, scheduled, enemyCount, sunflowerIncome, intermission, challenge, limit, difficulty, challengeRules, endlessModifier = null, schedules = AUTHORED_WAVES }) {
+  const options={difficulty,challengeRules,endless:challenge==='endless',endlessModifier};
   const summary = running ? summarizeWave(wave, schedules, options) : null;
   return {
     terminal, won, running, paused, wave,
@@ -39,7 +40,7 @@ const previewEnemyNames = {
   splitter: 'splitters', flyer: 'sky gnats', boss: 'BRAMBLE BOSS', healer:'Moss Tenders', carrier:'Shield Carriers', burrower:'Burrowers'
 };
 
-export function buildWavePreviewView({ terminal, won, running, wave, mapLabel, bossName = 'Bramble boss', schedules = AUTHORED_WAVES, airRouteEnabled = false, difficulty, challengeRules }) {
+export function buildWavePreviewView({ terminal, won, running, wave, mapLabel, bossName = 'Bramble boss', schedules = AUTHORED_WAVES, airRouteEnabled = false, difficulty, challengeRules, endless = false, endlessModifier = null }) {
   if (terminal) return {
     terminal: true,
     won,
@@ -47,7 +48,7 @@ export function buildWavePreviewView({ terminal, won, running, wave, mapLabel, b
   };
 
   const previewWave = running ? wave : wave + 1;
-  const queue = buildWaveQueue(previewWave, schedules, {difficulty,challengeRules});
+  const queue = buildWaveQueue(previewWave, schedules, {difficulty,challengeRules,endless,endlessModifier});
   const counts = queue.reduce((all, item) => {
     const type = typeof item === 'string' ? item : item.type;
     all[type] = (all[type] || 0) + 1;
@@ -64,7 +65,7 @@ export function buildWavePreviewView({ terminal, won, running, wave, mapLabel, b
     total: queue.length,
     threat: waveRating(budget),
     names,
-    cue: `${bossCue(schedules[(previewWave - 1) % schedules.length].cue, bossName === 'Bramble boss' ? undefined : bossName)}${markedSeedThieves?' Marked ground pest carries one seed out to the cache, then returns along the amber route. Defeat it to recover the seed.':''}`,
+    cue: `${bossCue(schedules[(previewWave - 1) % schedules.length].cue, bossName === 'Bramble boss' ? undefined : bossName)}${endless&&endlessModifier&&ENDLESS_CHOICES[endlessModifier]?` Endless pressure: ${ENDLESS_CHOICES[endlessModifier].description}`:''}${markedSeedThieves?' Marked ground pest carries one seed out to the cache, then returns along the amber route. Defeat it to recover the seed.':''}`,
     budget
   };
   const waveInfo = running

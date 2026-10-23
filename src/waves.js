@@ -1,5 +1,6 @@
 import { AIR_ROUTE_SCHEDULE_VERSION } from './air-routes.js';
 import { adjustedSpawnGroups, tuneSpawnGroup } from './challenge-rules.js';
+import { ENDLESS_CHOICES, ENDLESS_ENEMY_CAP, ENDLESS_MIN_SPAWN_INTERVAL, ENDLESS_THREAT_BUDGET, isEndlessChoice } from './endless-mode.js';
 
 export const AUTHORED_WAVES = [
   { groups: [{ type: 'mite', count: 10, interval: 0.56 }], cue: 'Fragile mites arrive in a steady line.' },
@@ -240,7 +241,11 @@ export function summarizeWave(waveNumber, schedules = AUTHORED_WAVES, options = 
   if (!schedule?.groups?.length) return null;
   const queue = buildWaveQueue(waveNumber, schedules, options);
   const seedCarrierIndex=queue.findIndex(spawn=>spawn.seedCarrier);
-  const groups = schedule.groups.map(group => tuneSpawnGroup({ ...group, count: group.count + cycle }, options));
+  const groups = schedule.groups.map(group => tuneSpawnGroup({ ...group, count: options.endless?Math.min(group.count+cycle,28):group.count + cycle }, options));
+  if(options.endless&&isEndlessChoice(options.endlessModifier)){
+    const modifier=ENDLESS_CHOICES[options.endlessModifier];groups.push({type:modifier.type,count:modifier.count,interval:modifier.interval,lane:modifier.lane,telegraph:modifier.telegraph});
+  }
+  if(options.endless&&waveNumber%5===0&&!groups.some(group=>group.type==='boss'))groups.push({type:'boss',count:1,interval:.8,lane:'ground',telegraph:'Periodic boss · a bramble beetle leads this wave'});
   if(seedCarrierIndex>=0){
     const carrierGroup=groups.find(group=>group.lane==='ground'&&group.type!=='boss');
     if(carrierGroup)carrierGroup.seedCarrierCount=1;
@@ -250,7 +255,7 @@ export function summarizeWave(waveNumber, schedules = AUTHORED_WAVES, options = 
   return {
     wave: waveNumber, groups, total: queue.length, budget: calculateWaveBudget(queue),
     spawnSpan, bounty, clearBonus: 12 + waveNumber * 2,
-    cue:seedCarrierIndex>=0?`${schedule.cue} A marked seed thief turns back to the entry with one cache seed.`:schedule.cue
+    cue:`${seedCarrierIndex>=0?`${schedule.cue} A marked seed thief turns back to the entry with one cache seed.`:schedule.cue}${options.endless&&options.endlessModifier&&ENDLESS_CHOICES[options.endlessModifier]?` ${ENDLESS_CHOICES[options.endlessModifier].description}`:''}${options.endless&&waveNumber%5===0?' Periodic boss warning: a Bramble boss joins this wave.':''}`
   };
 }
 
@@ -287,8 +292,32 @@ export function buildWaveQueue(waveNumber, schedules = AUTHORED_WAVES, options =
   if (!Number.isInteger(waveNumber) || waveNumber < 1 || !Array.isArray(schedules) || schedules.length === 0) return [];
   const cycle = Math.floor((waveNumber - 1) / schedules.length);
   const schedule = schedules[(waveNumber - 1) % schedules.length];
-  const groups = schedule.groups.map(group => ({ ...group, count: group.count + cycle }));
+  const groups = schedule.groups.map(group => ({ ...group, count:options.endless?Math.min(group.count+cycle,28):group.count + cycle }));
   const queue=adjustedSpawnGroups(groups, options);
+  if(options.endless){
+    if(isEndlessChoice(options.endlessModifier)){
+      const modifier=ENDLESS_CHOICES[options.endlessModifier];
+      for(let index=0;index<modifier.count;index++)queue.push({type:modifier.type,interval:modifier.interval,lane:modifier.lane,telegraph:modifier.telegraph});
+    }
+    // A boss appears at every five-wave checkpoint, even when an authored cycle
+    // would otherwise omit one. Existing bosses are not duplicated.
+    const bossCheckpoint=waveNumber%5===0;
+    let checkpointBoss=bossCheckpoint?queue.find(spawn=>spawn.type==='boss'):null;
+    const ordinary=bossCheckpoint?queue.filter(spawn=>spawn.type!=='boss'):queue;
+    if(bossCheckpoint&&!checkpointBoss)checkpointBoss={type:'boss',interval:.8,lane:'ground',telegraph:'Periodic boss · a bramble beetle leads this wave'};
+    const budgetLimit=bossCheckpoint?ENDLESS_THREAT_BUDGET-threatWeights.boss:ENDLESS_THREAT_BUDGET;
+    let budget=0;
+    const bounded=[];
+    for(const spawn of ordinary){
+      const type=typeof spawn==='string'?spawn:spawn.type;
+      const threat=threatWeights[type]||0;
+      if(bounded.length>=ENDLESS_ENEMY_CAP-(bossCheckpoint?1:0)||budget+threat>budgetLimit)continue;
+      budget+=threat;
+      bounded.push(typeof spawn==='string'?spawn:{...spawn,interval:Math.max(ENDLESS_MIN_SPAWN_INTERVAL,spawn.interval)});
+    }
+    if(checkpointBoss)bounded.push({...checkpointBoss,interval:Math.max(ENDLESS_MIN_SPAWN_INTERVAL,checkpointBoss.interval)});
+    return bounded;
+  }
   if(options.challengeRules?.includes('seedRecovery')&&[3,7,11].includes(waveNumber)){
     const index=queue.findIndex(spawn=>spawn.lane==='ground'&&spawn.type!=='boss');
     if(index>=0)queue[index]={...queue[index],seedCarrier:true,telegraph:'Seed thief · steals a cache seed and returns to the entry'};

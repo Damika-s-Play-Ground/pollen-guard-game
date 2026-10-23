@@ -1,11 +1,12 @@
 import { isSpellTargetValid } from './spells.js';
+import { isEndlessChoice } from './endless-mode.js';
 
 export const ACTION_LOG_VERSION = 2;
 export const MAX_RUN_ACTIONS = 20_000;
 
 const TOWER_TYPES = new Set(['sprout', 'dew', 'puff', 'thorn', 'sunflower', 'gust', 'ember', 'briar', 'pollenBeacon', 'compostTrap', 'pollinatorRelay']);
 const TARGET_MODES = new Set(['First', 'Last', 'Strongest', 'Weakest', 'Closest', 'Support']);
-const ACTION_TYPES = new Set(['placeTower', 'startWave', 'chooseBranch', 'upgradeTower', 'setTarget', 'sellTower', 'towerAbility', 'bloom', 'snare', 'aimedSpell', 'moveGuardian', 'guardianPulse', 'switchGate']);
+const ACTION_TYPES = new Set(['placeTower', 'startWave', 'chooseEndlessModifier', 'chooseBranch', 'upgradeTower', 'setTarget', 'sellTower', 'towerAbility', 'bloom', 'snare', 'aimedSpell', 'moveGuardian', 'guardianPulse', 'switchGate']);
 
 function validId(value) { return Number.isSafeInteger(value) && value > 0; }
 function hasKeys(payload, keys) { return Object.keys(payload).length === keys.length && keys.every(key => Object.hasOwn(payload, key)); }
@@ -14,6 +15,7 @@ function validPayload(type, payload) {
   switch (type) {
     case 'placeTower': return hasKeys(payload, ['towerId', 'towerType', 'x', 'y']) && validId(payload.towerId) && TOWER_TYPES.has(payload.towerType) && Number.isFinite(payload.x) && payload.x >= 0 && payload.x <= 1000 && Number.isFinite(payload.y) && payload.y >= 0 && payload.y <= 600;
     case 'startWave': return hasKeys(payload, ['wave', 'early', 'bonus']) && Number.isSafeInteger(payload.wave) && payload.wave > 0 && payload.wave <= 100_000 && typeof payload.early === 'boolean' && Number.isSafeInteger(payload.bonus) && payload.bonus >= 0 && payload.bonus <= 3600;
+    case 'chooseEndlessModifier': return hasKeys(payload,['modifierId'])&&isEndlessChoice(payload.modifierId);
     case 'chooseBranch': return hasKeys(payload, ['towerId', 'branch']) && validId(payload.towerId) && Number.isInteger(payload.branch) && payload.branch >= 0 && payload.branch <= 1;
     case 'upgradeTower': return hasKeys(payload, ['towerId', 'level', 'branch']) && validId(payload.towerId) && Number.isInteger(payload.level) && payload.level >= 2 && payload.level <= 3 && Number.isInteger(payload.branch) && payload.branch >= 0 && payload.branch <= 1;
     case 'setTarget': return hasKeys(payload, ['towerId', 'mode']) && validId(payload.towerId) && TARGET_MODES.has(payload.mode);

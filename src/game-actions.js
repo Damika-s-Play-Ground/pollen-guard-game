@@ -17,6 +17,7 @@ import { createRoutePathLengthResolver } from './air-routes.js';
 import { createEnemyRouteGeometry } from './air-routes.js';
 import { createSeedObjective, SEED_RECOVERY_RULE } from './seed-objective.js';
 import { researchStartingAdjustment } from './research-tree.js';
+import { endlessChoiceRequired, isEndlessChoice } from './endless-mode.js';
 
 export function validateTowerPlacement(state, type, point, { path, width = 900, height = 500 } = {}) {
   if (!towersDef[type]) return 'Choose a defender from the catalog first.';
@@ -51,15 +52,21 @@ export function applyPlayerAction(state, action, context = {}) {
     }
     case 'startWave': {
       if (state.running || state.gameOver || state.wave >= (context.waveLimit ?? Infinity)) return rejected('A wave cannot start in the current state.');
+      if(endlessChoiceRequired({challenge:state.challenge,wave:state.wave,endlessChoiceWave:state.endlessChoiceWave}))return rejected('Choose an Endless modifier before the next wave.');
       const bonus = payload.early && state.intermission > 0 ? Math.max(1, Math.ceil(state.intermission)) : 0;
       if (payload.wave !== state.wave + 1 || payload.bonus !== bonus) return rejected('Wave command does not match the current wave state.');
       state.cash += bonus;
       state.wave++;
-      state.spawnQueue = buildWaveQueue(state.wave, waveSchedulesForMap(state.selectedMap || 'meadow', state.waveScheduleVersion), { difficulty: state.difficulty, challengeRules: state.challengeRules });
+      state.spawnQueue = buildWaveQueue(state.wave, waveSchedulesForMap(state.selectedMap || 'meadow', state.waveScheduleVersion), { difficulty: state.difficulty, challengeRules: state.challengeRules, endless:state.challenge==='endless',endlessModifier:state.endlessModifier });
       state.running = true;
       state.intermission = 0;
       state.spawnClock = 0;
       return { ok: true, bonus, defeated: [], affected: [] };
+    }
+    case 'chooseEndlessModifier': {
+      if(state.challenge!=='endless'||state.running||state.gameOver||state.enemies.length||state.spawnQueue.length||!endlessChoiceRequired({challenge:state.challenge,wave:state.wave,endlessChoiceWave:state.endlessChoiceWave})||!isEndlessChoice(payload.modifierId))return rejected('An Endless modifier choice is not available now.');
+      state.endlessModifier=payload.modifierId;state.endlessChoiceWave=state.wave;
+      return {ok:true,modifierId:state.endlessModifier,bonus:0,defeated:[],affected:[]};
     }
     case 'switchGate': {
       const map=context.map ?? maps[state.selectedMap];
@@ -199,7 +206,7 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
   const researchStart=researchStartingAdjustment(researchLoadout);
   const trackContributions = run.combatPerformance?.complete === true;
   const state = {
-    selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,challengeBoardId:run.challengeBoardId??null,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
+    selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,challengeBoardId:run.challengeBoardId??null,endlessModifier:null,endlessChoiceWave:0,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
     researchLoadout,relicLoadout, simulationTick: 0, gameTime: 0, cash: configuration.cash+difficulty.cashDelta+researchStart.cash, lives: Math.max(1,loadout.lives+difficulty.livesDelta+researchStart.lives), popped: 0, wave: 0, bloomCharge: 0,
     combatPerformance: trackContributions ? createCombatPerformance(true) : null,
     towers: [], enemies: [], shots: [], spawnQueue: [], spawnClock: 0, running: false, gameOver: false, paused: false,
@@ -252,7 +259,8 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
     ...(run.version>=14?{seedObjective:state.seedObjective}: {}),
     ...(run.version>=15?{researchLoadout:state.researchLoadout}: {}),
     ...(Object.hasOwn(run,'relicLoadout')?{relicLoadout:state.relicLoadout}: {}),
-    ...(run.version>=17?{challengeBoardId:state.challengeBoardId}: {})
+    ...(run.version>=17?{challengeBoardId:state.challengeBoardId}: {}),
+    ...(run.version>=18?{endlessModifier:state.endlessModifier,endlessChoiceWave:state.endlessChoiceWave}: {})
   };
   return { run: replayedRun, state, hash: hashGameplayState(replayedRun) };
 }
