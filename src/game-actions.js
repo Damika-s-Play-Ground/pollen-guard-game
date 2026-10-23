@@ -16,6 +16,7 @@ import { defaultGateRoute, gateSwitchesForMap, pathForGateRoute } from './gate-r
 import { createRoutePathLengthResolver } from './air-routes.js';
 import { createEnemyRouteGeometry } from './air-routes.js';
 import { createSeedObjective, SEED_RECOVERY_RULE } from './seed-objective.js';
+import { researchStartingAdjustment } from './research-tree.js';
 
 export function validateTowerPlacement(state, type, point, { path, width = 900, height = 500 } = {}) {
   if (!towersDef[type]) return 'Choose a defender from the catalog first.';
@@ -193,10 +194,12 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
   const positionForRoute=enemy=>activeGeometry?activeGeometry.positionOf(enemy):positionOf(enemy);
   const lengthForRoute=createRoutePathLengthResolver(activeGeometry,pathLength);
   const loadout = createMissionKitState({ challenge:run.challenge, guardianMode:run.guardianMode ?? 'none', path:activePath, width:guardianWidth, height:guardianHeight, modeDefinitions:modes });
+  const researchLoadout=run.version>=15?[...(run.researchLoadout??[])]:[];
+  const researchStart=researchStartingAdjustment(researchLoadout);
   const trackContributions = run.combatPerformance?.complete === true;
   const state = {
     selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
-    simulationTick: 0, gameTime: 0, cash: configuration.cash+difficulty.cashDelta, lives: Math.max(1,loadout.lives+difficulty.livesDelta), popped: 0, wave: 0, bloomCharge: 0,
+    researchLoadout, simulationTick: 0, gameTime: 0, cash: configuration.cash+difficulty.cashDelta+researchStart.cash, lives: Math.max(1,loadout.lives+difficulty.livesDelta+researchStart.lives), popped: 0, wave: 0, bloomCharge: 0,
     combatPerformance: trackContributions ? createCombatPerformance(true) : null,
     towers: [], enemies: [], shots: [], spawnQueue: [], spawnClock: 0, running: false, gameOver: false, paused: false,
     intermission: 0, speed: normalizeGameSpeed(run.speed), nextEntityId: 1,
@@ -245,7 +248,8 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
     ...(run.guardianMode === undefined && run.guardian === undefined ? {} : { guardianMode: state.guardianMode, guardian: state.guardian }),
     ...(run.version>=12?{difficulty:state.difficulty,challengeRules:state.challengeRules}:{}),
     ...(run.version>=10?{spellLoadout:state.spellLoadout,rejuvenationField:state.rejuvenationField}: {}),
-    ...(run.version>=14?{seedObjective:state.seedObjective}: {})
+    ...(run.version>=14?{seedObjective:state.seedObjective}: {}),
+    ...(run.version>=15?{researchLoadout:state.researchLoadout}: {})
   };
   return { run: replayedRun, state, hash: hashGameplayState(replayedRun) };
 }

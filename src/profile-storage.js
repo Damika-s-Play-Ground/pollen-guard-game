@@ -1,11 +1,12 @@
 import { DEFAULT_KEY_BINDINGS, normalizeKeyBindings } from './keyboard-bindings.js';
 import { DEFAULT_SPELL_LOADOUT, normalizeSpellLoadout } from './spells.js';
 import { DIFFICULTIES } from './challenge-rules.js';
+import { earnedResearchPoints, normalizeResearchState } from './research-tree.js';
 
 export const PROFILE_STORAGE_KEY = 'pollen-guard.profile.v2';
 export const UI_SETTINGS_STORAGE_KEY = 'pollen-guard.ui.v1';
 
-export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlockedMissions:['meadow'], completedMissions:[], missionRecords:{}, missionMastery:{}, achievements: [], bestWave: {} });
+export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlockedMissions:['meadow'], completedMissions:[], missionRecords:{}, missionMastery:{}, research:{unlocked:[],loadout:{}}, achievements: [], bestWave: {} });
 export const DEFAULT_UI_SETTINGS = Object.freeze({
   animation: 'full', shake: true, flashes: true, compact: false, palette: 'garden',
   textSize: 'normal', tutorialSeen: false, tutorialInProgress: false, tutorialReturnToSavedRun: false, sound: false,
@@ -63,7 +64,10 @@ export function normalizeProfile(value, { mapIds = [], achievementIds = [] } = {
       if (key.length <= 120 && Number.isSafeInteger(wave) && wave >= 0) bestWave[key] = wave;
     }
   }
-  return { ...source, unlockedMaps, unlockedMissions, completedMissions, missionRecords, missionMastery:normalizeMissionMastery(source.missionMastery,{missionIds:[...missionIds]}), achievements, bestWave };
+  const missionMastery=normalizeMissionMastery(source.missionMastery,{missionIds:[...missionIds]});
+  const researchProfile={completedMissions:[...completedMissions],missionMastery};
+  return { ...source, unlockedMaps, unlockedMissions, completedMissions, missionRecords, missionMastery,
+    research:normalizeResearchState(source.research,earnedResearchPoints(researchProfile)), achievements, bestWave };
 }
 
 export function normalizeUiSettings(value) {

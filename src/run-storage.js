@@ -46,6 +46,11 @@ export function selectRecoverableRun(primaryRaw, backupRaw, maps, modes) {
   return { run: null, source: 'none', raw: primary };
 }
 
+export function runHasGameplayProgress(run) {
+  if (!run || typeof run !== 'object') return false;
+  return Boolean(run.wave>0||run.towers?.length||run.enemies?.length||run.shots?.length||run.spawnQueue?.length||run.actionLog?.length||run.popped>0);
+}
+
 export function writeRunWithBackup(storage, primaryKey, backupKey, nextRaw, maps, modes) {
   const nextRun = parseStoredRun(nextRaw);
   if (isUnsupportedRunVersion(nextRun)) return { saved: false, reason: 'future-next' };

@@ -21,6 +21,7 @@ export function projectSavedRunToRuntime(run, { maps, towerDefinitions, enemyCom
     intermission:run.intermission, speed:run.speed, runSeed:run.runSeed, simulationTick:run.simulationTick,
     actionLog:run.actionLog, actionLogComplete:run.actionLogComplete,
     guardianMode:run.guardianMode ?? 'none', guardian:run.guardian ? { ...run.guardian } : null,
-    spellLoadout:[...(run.spellLoadout??DEFAULT_SPELL_LOADOUT)], rejuvenationField:run.rejuvenationField ? { ...run.rejuvenationField } : null
+    spellLoadout:[...(run.spellLoadout??DEFAULT_SPELL_LOADOUT)], rejuvenationField:run.rejuvenationField ? { ...run.rejuvenationField } : null,
+    researchLoadout:[...(run.researchLoadout??[])]
   };
 }

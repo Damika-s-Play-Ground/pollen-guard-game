@@ -1,4 +1,5 @@
 import { masteryChallengeText } from './mission-mastery.js';
+import { earnedResearchPoints, RESEARCH_NODES, RESEARCH_PATHS, normalizeResearchState } from './research-tree.js';
 
 export const ACHIEVEMENT_DEFINITIONS = [
   ['first-pop','First bloom','Scatter your first mite.'],
@@ -72,4 +73,37 @@ export function renderCampaignMap({ document, root, missions, profile, selectedM
   }
   const count=document.createElement('p');count.className='campaign-progress';count.textContent=`${completed.size} of ${missions.length} missions cleared`;
   root.prepend(count);
+}
+
+export function renderResearchTree({ document, root, profile, canRespec=true }) {
+  const points=earnedResearchPoints(profile),state=normalizeResearchState(profile.research,points);
+  root.replaceChildren();
+  const status=document.createElement('p');status.className='research-summary';
+  status.textContent=`Research · ${state.unlocked.length} of ${points} points spent · ${Math.max(0,points-state.unlocked.length)} available. Earn 1 for each cleared chapter and 1 for every 3 mastery medals.`;
+  root.append(status);
+  if(!canRespec){const note=document.createElement('p');note.className='research-lock';note.textContent='Research changes are available between missions. Finish or restart this garden before changing its research loadout.';root.append(note);}
+  for(const path of RESEARCH_PATHS){
+    const group=document.createElement('section');group.className='research-path';
+    const heading=document.createElement('h4');heading.textContent=path.name;
+    const description=document.createElement('p');description.textContent=path.summary;group.append(heading,description);
+    for(const node of RESEARCH_NODES.filter(item=>item.path===path.id)){
+      const unlocked=state.unlocked.includes(node.id),active=state.loadout[path.id]===node.id;
+      const prior=RESEARCH_NODES.find(item=>item.path===path.id&&item.tier===node.tier-1);
+      const available=unlocked||(!prior||state.unlocked.includes(prior.id))&&state.unlocked.length<points;
+      const card=document.createElement('article');card.className=`research-node${active?' equipped':''}${unlocked?' researched':''}`;
+      const title=document.createElement('h5');title.textContent=`${node.tier}. ${node.name}`;
+      const copy=document.createElement('p');copy.id=`research-description-${node.id}`;copy.textContent=node.description;
+      const button=document.createElement('button');button.type='button';button.dataset.researchNode=node.id;
+      button.disabled=!canRespec||!available;
+      button.textContent=active?'Equipped':unlocked?'Equip':available?'Research · 1 point':prior?`Locked · research ${prior.name}`:'Locked · earn a point';
+      button.setAttribute('aria-pressed',String(active));
+      button.setAttribute('aria-label',`${active?'Equipped':unlocked?'Equip':'Research'} ${node.name}`);
+      button.setAttribute('aria-describedby',copy.id);
+      card.append(title,copy,button);group.append(card);
+    }
+    root.append(group);
+  }
+  const respec=document.createElement('button');respec.type='button';respec.dataset.researchRespec='true';respec.disabled=!canRespec||state.unlocked.length===0;respec.textContent='Reset research · refund points';
+  root.append(respec);
+  return {points,state};
 }

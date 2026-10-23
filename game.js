@@ -13,12 +13,13 @@ import { chooseTargetForTower, targetPriorityInfo } from './src/targeting.js';
 import { ACTION_LOG_VERSION, MAX_RUN_ACTIONS, appendTickAction, createRunSeed } from './src/action-log.js';
 import { applyPlayerAction, validateTowerPlacement } from './src/game-actions.js';
 import { parseRunExport, serializeRunExport } from './src/run-transfer.js';
-import { clearRunBackupAfterReset, selectRecoverableRun, writeRunWithBackup } from './src/run-storage.js';
+import { clearRunBackupAfterReset, runHasGameplayProgress, selectRecoverableRun, writeRunWithBackup } from './src/run-storage.js';
 import { createRunSaveSnapshot } from './src/run-save.js';
 import { projectSavedRunToRuntime } from './src/run-restore.js';
 import { runSaveFailureMessage } from './src/run-save-ui.js';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, CHALLENGE_RULES, difficultyFor, normalizeChallengeRules } from './src/challenge-rules.js';
 import { createRunState, transitionRunState, runStateSaveFlags, runStateStopsClock } from './src/run-state.js';
+import { clearResearchLoadout, earnedResearchPoints, normalizeResearchState, purchaseResearchNode, researchLoadoutIds, researchStartingAdjustment, selectResearchNode } from './src/research-tree.js';
 import { calculatePathLength, distanceToPath } from './src/path-geometry.js';
 import { createEnemyRouteGeometry } from './src/air-routes.js';
 import { defaultGateRoute, gateSwitchesForMap, pathForGateRoute, summarizeGateRoute } from './src/gate-routes.js';
@@ -49,7 +50,7 @@ import { buildHudView, renderHud } from './src/hud-ui.js';
 import { buildRunDebrief, createCombatPerformance, registerCombatTower } from './src/combat-performance.js';
 import { renderResultsScreen } from './src/results-ui.js';
 import { createConfirmationFlow } from './src/confirmation-flow.js';
-import { ACHIEVEMENT_DEFINITIONS, renderAchievements as renderProfileAchievements, renderMapOptions as renderProfileMapOptions, renderCampaignMap as renderProfileCampaignMap } from './src/profile-ui.js';
+import { ACHIEVEMENT_DEFINITIONS, renderAchievements as renderProfileAchievements, renderMapOptions as renderProfileMapOptions, renderCampaignMap as renderProfileCampaignMap, renderResearchTree as renderProfileResearchTree } from './src/profile-ui.js';
 import { buildTowerInspectorModel, buildTowerUpgradePreview, buildTowerTargetStatus, isTowerLinkedToAnother } from './src/tower-inspector-model.js';
 import { buildTowerAbilityDockModel, buildTowerAbilityPreview } from './src/tower-ability-dock-model.js';
 import { renderUiSettings } from './src/settings-ui.js';
@@ -107,12 +108,15 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     mapIds: Object.keys(maps), achievementIds: ACHIEVEMENT_DEFINITIONS.map(([id]) => id)
   });
   let profile = profileStorage.loadProfile();
+  profile.research=normalizeResearchState(profile.research,earnedResearchPoints(profile));
+  let researchLoadout=researchLoadoutIds(profile.research);
   const uiSettings = profileStorage.loadSettings();
   let explicitAnimationPreference=false;try{const saved=JSON.parse(localStorage.getItem(UI_SETTINGS_STORAGE_KEY)||'null');explicitAnimationPreference=['full','reduced','off'].includes(saved?.animation);}catch{}
   if(!explicitAnimationPreference&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){uiSettings.animation='reduced';uiSettings.shake=false;}
   let selectedMap = 'meadow', gateRoute='default',gateSwitchesRemaining=0,terrainRulesVersion=1, challenge = 'classic', difficulty=DEFAULT_DIFFICULTY, challengeRules=[], path = maps.meadow.path, pathLength = 0, routeGeometry = createEnemyRouteGeometry(maps.meadow,WAVE_SCHEDULE_VERSION);
   const terrainAt=point=>terrainRulesVersion>=1?terrainZoneAt(selectedMap,point):'ground';
-  let cash=220, lives=20, popped=0, wave=0, bloomCharge=0, waveScheduleVersion=WAVE_SCHEDULE_VERSION, towers=[], enemies=[], shots=[], particles=[];
+  const initialResearchStart=researchStartingAdjustment(researchLoadout);
+  let cash=220+initialResearchStart.cash, lives=Math.max(1,20+initialResearchStart.lives), popped=0, wave=0, bloomCharge=0, waveScheduleVersion=WAVE_SCHEDULE_VERSION, towers=[], enemies=[], shots=[], particles=[];
   let guardianMode='none', guardian=null, guardianMoveActive=false, guardianMoveOrigin=null;
   let seedObjective=null;
   let seedObjectiveControls=null;
@@ -251,7 +255,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function updatePlacementHint(point=pointer) {
     const error=selectedType&&point.inside?placementError(point):'';
     const def=selectedType?towersDef[selectedType]:null,terrain=point.inside?terrainAt(point):null;
-    const stats=def?getEffectiveTowerStats({type:selectedType,level:1},{challenge,challengeRules,linked:false,terrain},def):null;
+    const stats=def?getEffectiveTowerStats({type:selectedType,level:1},{challenge,challengeRules,linked:false,terrain,researchLoadout},def):null;
     const view=buildPlacementHintView({selectedType,placementCandidate,error,definition:def,stats,terrain,terrainText:terrain?terrainBonusForTower(terrain,selectedType):''});
     renderPlacementHint({hint:byId('placementHint'),confirm:byId('placementConfirm'),board:canvas.parentElement,confirmButton:byId('confirmPlacementBtn'),view});
   }
@@ -276,7 +280,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     futureSaveProtected=false;
     const gateSetupChanged=gateRoute!==defaultGateRoute(maps[selectedMap])||gateSwitchesRemaining!==gateSwitchesForMap(maps[selectedMap]);
     if (runIsOver() || (!wave && !towers.length && guardianMode==='none'&&!gateSetupChanged)) { try{localStorage.removeItem(RUN_KEY);}catch{} byId('resumeBtn').disabled=hasSavedRun(); return false; }
-    const run=createRunSaveSnapshot({version:RUN_SAVE_VERSION,terrainRulesVersion,waveScheduleVersion,seedVersion:1,runSeed,simulationTick,actionLogVersion:ACTION_LOG_VERSION,actionLog,actionLogComplete,selectedMap,gateRoute,gateSwitchesRemaining,challenge,difficulty,challengeRules,seedObjective,guardianMode,guardian,spellLoadout,rejuvenationField,cash,lives,popped,wave,bloomCharge,towers,enemies,shots,spawnQueue,spawnClock,combatPerformance,...runStateSaveFlags(runState),intermission,speed,gameTime,nextEntityId});
+    const run=createRunSaveSnapshot({version:RUN_SAVE_VERSION,terrainRulesVersion,waveScheduleVersion,seedVersion:1,runSeed,simulationTick,actionLogVersion:ACTION_LOG_VERSION,actionLog,actionLogComplete,selectedMap,gateRoute,gateSwitchesRemaining,challenge,difficulty,challengeRules,seedObjective,guardianMode,guardian,spellLoadout,rejuvenationField,researchLoadout,cash,lives,popped,wave,bloomCharge,towers,enemies,shots,spawnQueue,spawnClock,combatPerformance,...runStateSaveFlags(runState),intermission,speed,gameTime,nextEntityId});
     const result=writeRunWithBackup(localStorage,RUN_KEY,RUN_BACKUP_KEY,JSON.stringify(run),maps,modes);
     if(result.saved){byId('resumeBtn').disabled=false;storageErrorShown=false;return true;}
     if(result.reason==='future-primary'){futureSaveProtected=true;setToast(`This run uses a newer game version; this version ${RUN_SAVE_VERSION} will not overwrite it.`);return false;}
@@ -293,7 +297,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     selectedMap=restored.selectedMap;gateRoute=restored.gateRoute;gateSwitchesRemaining=restored.gateSwitchesRemaining; terrainRulesVersion=restored.terrainRulesVersion; waveScheduleVersion=restored.waveScheduleVersion; challenge=restored.challenge; difficulty=restored.difficulty;challengeRules=restored.challengeRules;seedObjective=restored.seedObjective;cash=restored.cash; lives=restored.lives; popped=restored.popped; wave=restored.wave;
     guardianMode=restored.guardianMode; guardian=restored.guardian;guardianMoveActive=false;guardianMoveOrigin=null;byId('guardianLoadout').value=guardianMode;
     spellLoadout=restored.spellLoadout;rejuvenationField=restored.rejuvenationField;syncSpellLoadoutChecks();
-    combatPerformance=restored.combatPerformance; bloomCharge=restored.bloomCharge; towers=restored.towers;
+    combatPerformance=restored.combatPerformance; bloomCharge=restored.bloomCharge; towers=restored.towers;researchLoadout=[...restored.researchLoadout];
     towers.forEach(tower=>registerCombatTower(combatPerformance,tower));
     enemies=restored.enemies; spawnQueue=restored.spawnQueue;
     selectedTower=null; gameTime=restored.gameTime; nextEntityId=restored.nextEntityId; shots=restored.shots;
@@ -308,6 +312,15 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function storedRunSelection() {
     try{return selectRecoverableRun(localStorage.getItem(RUN_KEY),localStorage.getItem(RUN_BACKUP_KEY),maps,modes);}
     catch{return {run:null,source:'unavailable'};}
+  }
+  function hasPendingSavedGarden(){
+    try {
+      const primary=localStorage.getItem(RUN_KEY),backup=localStorage.getItem(RUN_BACKUP_KEY);
+      if(!primary&&!backup)return false;
+      const selection=selectRecoverableRun(primary,backup,maps,modes),run=selection.run;
+      if(!run)return true; // Preserve malformed and future-version saves.
+      return runHasGameplayProgress(run);
+    } catch { return true; }
   }
   function exportRunFile() {
     const hasActiveRun=!runIsOver()&&(wave>0||towers.length>0);
@@ -414,6 +427,17 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function renderAchievements() {
     renderProfileAchievements({document,root:byId('achievements'),count:byId('achievementCount'),recordInfo:byId('recordInfo'),definitions:ACHIEVEMENT_DEFINITIONS,profile});
   }
+  const researchRulesEligible=()=>!tutorialPractice.active&&challenge==='classic'&&difficulty==='standard'&&challengeRules.length===0;
+  const researchCanRespec=()=>researchRulesEligible()&&!tutorialPractice.active&&!hasPendingSavedGarden()&&(runIsOver()||(!wave&&!towers.length&&!runIsActivelyRunning()));
+  function renderResearch() {
+    const root=byId('researchTree');if(!root)return;
+    renderProfileResearchTree({document,root,profile,canRespec:researchCanRespec()});
+    if(!researchRulesEligible()){
+      const note=document.createElement('p');note.className='research-lock';
+      note.textContent='Research effects are locked in non-Classic, non-Standard, or modified-rule challenges. Resume or explicitly restart any saved garden before changing research.';
+      root.append(note);
+    }
+  }
   function renderMapOptions() {
     renderProfileMapOptions({document,select:byId('mapSelect'),maps,unlockedMaps:profile.unlockedMaps,selectedMap,missions:CAMPAIGN_MISSIONS});
     renderCampaignMap();
@@ -465,24 +489,25 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function renderTowerOptions() {
     byId('prospectiveLabel').textContent=selectedType?`Building · ${towersDef[selectedType].icon} ${towersDef[selectedType].name} · ${towersDef[selectedType].cost} petals`:'No build pick · choose a defender to place';
-    renderTowerCatalog({document,root:byId('towerList'),towersDef,towerRoles,selectedType,filter:towerFilter,challenge,challengeRules,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg});
+    renderTowerCatalog({document,root:byId('towerList'),towersDef,towerRoles,selectedType,filter:towerFilter,challenge,challengeRules,researchLoadout,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg});
     document.querySelectorAll('.tower-option').forEach(button=>button.addEventListener('click',()=>{if(guardianMoveActive)endGuardianMove();if(aimedSpellId)cancelAimedSpell();selectedType=button.dataset.type;renderTowerOptions();renderSelected();updatePlacementHint();draw();canvas.focus({preventScroll:true});}));
     document.querySelectorAll('.tower-filter').forEach(button=>{button.classList.toggle('active',button.dataset.filter===towerFilter);button.setAttribute('aria-pressed',String(button.dataset.filter===towerFilter));});
     byId('cancelPlacementBtn').style.display=selectedType?'block':'none';
     const chosen=selectedType&&towersDef[selectedType];
-    const chosenStats=chosen&&getEffectiveTowerStats({type:selectedType,level:1},{challenge,challengeRules,linked:false},chosen);
-    byId('towerDetail').textContent=chosen?`${chosen.name} · ${chosen.supportStructure?chosen.role:chosen.income?`+${chosenStats.income} petals/wave`:`${chosenStats.damage} damage/hit · ${(1/chosenStats.rate).toFixed(1)} attacks/s`} · ${chosen.range?`range ${Math.round(chosen.range)} map units · `:''}${chosen.role} · ${chosen.cost} petals. Place on open grass; Esc cancels.`:'Choose a defender to see its stats and placement range.';
+    const chosenStats=chosen&&getEffectiveTowerStats({type:selectedType,level:1},{challenge:chosen.supportStructure?'classic':challenge,challengeRules:chosen.supportStructure?[]:challengeRules,linked:false,researchLoadout},chosen);
+    const supportDetail=chosen?.supportStructure==='beacon'?`buffs up to 3 eligible attackers within ${Math.round(chosenStats.range)} map units with ${Math.round((1-chosenStats.buffMultiplier)*100)}% shorter attack interval, once each; 48-unit footprint.`:chosen?.supportStructure==='trap'?`slows the first ${Math.max(0,chosen.triggerLimit-(researchLoadout.includes('compost-lattice')?1:0))} unique ground pests to enter its ${Math.round(chosenStats.range)} map units ring for ${chosen.slowDuration}s, then expires; footprint ${chosen.footprint} units.`:chosen?.role;
+    byId('towerDetail').textContent=chosen?`${chosen.name} · ${chosen.supportStructure?supportDetail:chosen.income?`+${chosenStats.income} petals/wave`:`${chosenStats.damage} damage/hit · ${(1/chosenStats.rate).toFixed(1)} attacks/s`} · ${chosen.range?`range ${Math.round(chosenStats.range)} map units · `:''}${chosen.supportStructure?'':`${chosen.role} · `}${chosen.cost} petals. Place on open grass; Esc cancels.`:'Choose a defender to see its stats and placement range.';
     updatePlacementHint();
   }
   function selectedUpgradeCost(tower) { return towerUpgradeQuote(tower,towersDef[tower.type]).cost; }
   function updateUpgradePreview() {
     const linked=isTowerLinkedToAnother(selectedTower,towers,towersLinked);
-    const text=buildTowerUpgradePreview({tower:selectedTower,towers,challenge,challengeRules,linked,cash,terrain:terrainAt(selectedTower)});
+    const text=buildTowerUpgradePreview({tower:selectedTower,towers,challenge,challengeRules,linked,cash,terrain:terrainAt(selectedTower),researchLoadout});
     if(upgradePreviewRenderGate.shouldRender(text))renderTowerUpgradePreview({document,text});
   }
   function updateTargetIndicator() {
     const linked=isTowerLinkedToAnother(selectedTower,towers,towersLinked);
-    const text=buildTowerTargetStatus({tower:selectedTower,enemies,challenge,challengeRules,linked,enemyPosition,isRunning:runIsRunning(),terrain:terrainAt(selectedTower)});
+    const text=buildTowerTargetStatus({tower:selectedTower,enemies,challenge,challengeRules,linked,enemyPosition,isRunning:runIsRunning(),terrain:terrainAt(selectedTower),researchLoadout});
     if(targetStatusRenderGate.shouldRender(text))renderTowerTargetStatus({document,text});
   }
   function updateSelectedAbilityDock() {
@@ -493,7 +518,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(abilityPreview&&abilityPreview.towerId!==selectedTower?.id)abilityPreview=null;
     if(!selectedTower)abilityPreview=null;
     const linked=isTowerLinkedToAnother(selectedTower,towers,towersLinked);
-    const view=selectedTower?buildTowerInspectorModel({selectedTower,towers,challenge,challengeRules,linked,cash,wave,gameTime,terrain:terrainAt(selectedTower),tutorialActive:tutorialPractice.active,tutorialTask:tutorialPractice.task,tutorialTowerId:tutorialPractice.towerId,
+    const view=selectedTower?buildTowerInspectorModel({selectedTower,towers,challenge,challengeRules,linked,cash,wave,gameTime,terrain:terrainAt(selectedTower),researchLoadout,tutorialActive:tutorialPractice.active,tutorialTask:tutorialPractice.task,tutorialTowerId:tutorialPractice.towerId,
       onChooseBranch:index=>{const result=performPlayerAction('chooseBranch',{towerId:selectedTower.id,branch:index});if(result.ok){renderSelected();saveRun();}}
     }):{empty:true};
     const signature=createInspectorDisplaySignature({towerId:selectedTower?.id??null,view});
@@ -551,7 +576,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function updateWaveTimeline() {
     const timeline=byId('waveTimeline');if(!timeline)return;
-    const sunflowerIncome=towers.filter(tower=>tower.type==='sunflower').reduce((sum,tower)=>sum+getEffectiveTowerStats(tower,{terrain:terrainAt(tower)},towersDef.sunflower).income,0);
+    const sunflowerIncome=towers.filter(tower=>tower.type==='sunflower').reduce((sum,tower)=>sum+getEffectiveTowerStats(tower,{terrain:terrainAt(tower),researchLoadout},towersDef.sunflower).income,0);
     const key=[runState.basePhase,runState.phase,selectedMap,waveScheduleVersion,challenge,difficulty,challengeRules.join(','),wave,spawnQueue.length,enemies.length,Math.ceil(intermission),sunflowerIncome].join(':');if(key===waveTimelineKey)return;waveTimelineKey=key;
     const view=buildWaveTimelineView({
       bossName:waveScheduleVersion>=2?BOSS_VARIANTS[selectedMap].name:undefined,
@@ -622,7 +647,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(popped>0)unlock('first-pop');if(enemy.boss)unlock('boss');
     renderSelected();
   }
-  function towersLinked(a,b) { return towersAreLinked(a,b,towersDef,towers); }
+  function towersLinked(a,b) { return towersAreLinked(a,b,towersDef,towers,researchLoadout); }
   function runTowerAbility() {
     if(!selectedTower)return;const tower=selectedTower;
     const result=performPlayerAction('towerAbility',{towerId:tower.id});if(!result.ok){setToast(result.reason);return;}abilityPreview=null;
@@ -723,8 +748,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       gateRoutePreviews:!runIsActivelyRunning()&&!enemies.length&&!spawnQueue.length&&maps[selectedMap].gateRoutes?Object.entries(maps[selectedMap].gateRoutes).map(([id,route])=>({id,label:route.label,path:route.path})):null,selectedGateRoute:gateRoute,
       airPath:waveScheduleVersion>=WAVE_SCHEDULE_VERSION?maps[selectedMap].airPath:null,
       towers,selectedTower,towersDef,towersLinked,
-      selectedTowerRange(tower){const def=towersDef[tower.type];if(def.supportStructure)return def.range; if(!def.range)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));return getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower)},def).range;},
-      placementPreviewRange(type,point){return getEffectiveTowerStats({type,level:1},{challenge,challengeRules,linked:false,terrain:terrainAt(point)},towersDef[type]).range;},abilityPreview:liveAbilityPreview,
+      selectedTowerRange(tower){const def=towersDef[tower.type];if(def.supportStructure)return getEffectiveTowerStats(tower,{researchLoadout},def).range; if(!def.range)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));return getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout},def).range;},
+      placementPreviewRange(type,point){return getEffectiveTowerStats({type,level:1},{challenge,challengeRules,linked:false,terrain:terrainAt(point),researchLoadout},towersDef[type]).range;},abilityPreview:liveAbilityPreview,
       enemies,enemyPosition:enemy=>renderSnapshots.enemyPosition(enemy,routeGeometry.pathFor,renderAlpha),shots,shotPosition:shot=>renderSnapshots.shotPosition(shot,renderAlpha),
       shotAngle(shot,alpha){const from=renderSnapshots.shotPosition(shot,alpha),target=shot.target;if(!target)return 0;const point=renderSnapshots.enemyPosition(target,routeGeometry.pathFor,alpha);return Math.atan2(point.y-(target.flying?target.radius*.85:0)-from.y,point.x-from.x);},particles,selectedType,pointer,
       placementError,palette:uiSettings.palette,highContrastEnemyColors,selectedTargetId:targetId,
@@ -738,14 +763,14 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(!selectedTower)return null;
     const def=towersDef[selectedTower.type];if(def.income||def.supportStructure)return null;
     const linked=towers.some(other=>other!==selectedTower&&towersLinked(selectedTower,other));
-    const range=getEffectiveTowerStats(selectedTower,{challenge,challengeRules,linked},def).range;
+    const range=getEffectiveTowerStats(selectedTower,{challenge,challengeRules,linked,researchLoadout},def).range;
     const eligible=enemies.filter(enemy=>Math.hypot(selectedTower.x-enemyPosition(enemy).x,selectedTower.y-enemyPosition(enemy).y)<=range&&canHitTarget({canHitAir:def.antiAir},enemy));
     return chooseTargetForTower(selectedTower,eligible,enemyPosition)?.id??null;
   }
   function applyChallenge() {
     const hadRun=Boolean(wave||towers.length||guardian||hasSavedRun());
     gateRoute=defaultGateRoute(maps[selectedMap]);gateSwitchesRemaining=gateSwitchesForMap(maps[selectedMap]);path=pathForGateRoute(maps[selectedMap],gateRoute);
-    const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);lives=Math.max(1,kit.lives+preset.livesDelta);guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;cash=Math.max(0,config().cash+preset.cashDelta);towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;wave=0;popped=0;bloomCharge=0;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();combatPerformance=createCombatPerformance();transitionRun({type:'RESET'});intermission=0;updateGatePanel();gameTime=0;simulationTick=0;actionLog=[];actionLogComplete=true;actionLogLimitShown=false;runSeed=createRunSeed();selectedTower=null;selectedType='sprout';simulationClock.reset();resetRenderSnapshots();syncSpellLoadoutChecks();updatePlayOptionsLabel();renderTowerOptions();renderSelected();updateHud();updatePreview();saveRun();draw();
+    const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];const researchStart=researchStartingAdjustment(researchLoadout);lives=Math.max(1,kit.lives+preset.livesDelta+researchStart.lives);guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;cash=Math.max(0,config().cash+preset.cashDelta+researchStart.cash);towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;wave=0;popped=0;bloomCharge=0;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();combatPerformance=createCombatPerformance();transitionRun({type:'RESET'});intermission=0;updateGatePanel();gameTime=0;simulationTick=0;actionLog=[];actionLogComplete=true;actionLogLimitShown=false;runSeed=createRunSeed();selectedTower=null;selectedType='sprout';simulationClock.reset();resetRenderSnapshots();syncSpellLoadoutChecks();updatePlayOptionsLabel();renderTowerOptions();renderSelected();updateHud();updatePreview();saveRun();draw();
     if(hadRun)clearCompatibleBackup();
   }
   function finishRun(won) {
@@ -754,11 +779,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const mission=CAMPAIGN_MISSION_BY_ID[selectedMap];let masteryResult=null;
     if(mission&&won){
       const progress=buildMissionCompletion(profile,mission.id,{won,lives,leaks:combatPerformance.leaks.total});
-      if(progress){profile={...profile,...progress};persistProfile();renderMapOptions();}
+      if(progress){profile={...profile,...progress};profile.research=normalizeResearchState(profile.research,earnedResearchPoints(profile));persistProfile();renderMapOptions();renderResearch();}
     }
     if(mission){
       masteryResult=buildMissionMasteryProgress(profile,{missionId:mission.id,difficulty,challenge,challengeRules,guardianMode,won,lives,leaks:combatPerformance.leaks.total,towerCount:towers.length});
-      if(masteryResult.changed){profile={...profile,missionMastery:masteryResult.mastery};persistProfile();renderCampaignMap();}
+      if(masteryResult.changed){profile={...profile,missionMastery:masteryResult.mastery};profile.research=normalizeResearchState(profile.research,earnedResearchPoints(profile));persistProfile();renderCampaignMap();renderResearch();}
     }
     byId('waveInfo').textContent=won?'All waves cleared! This garden is thriving.':'The seed pod was overrun. Try another layout or challenge rule.';
     if(won)unlock('guardian');else shakeBoard();
@@ -777,7 +802,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     gameTime+=dt;simulationTick++;
     if(!runIsRunning()&&!runIsOver()&&intermission>0){intermission=Math.max(0,intermission-dt);updateHud();}
     if(runIsRunning()&&!runIsOver()){
-      const state={running:runIsRunning(),gameOver:runIsOver(),spawnQueue,spawnClock,wave,cash,lives,popped,bloomCharge,towers,enemies,shots,nextEntityId,challenge,difficulty,challengeRules,selectedMap,terrainRulesVersion,waveScheduleVersion,intermission,performance:combatPerformance,rejuvenationField,seedObjective};
+      const state={running:runIsRunning(),gameOver:runIsOver(),spawnQueue,spawnClock,wave,cash,lives,popped,bloomCharge,towers,enemies,shots,nextEntityId,challenge,difficulty,challengeRules,selectedMap,terrainRulesVersion,waveScheduleVersion,intermission,performance:combatPerformance,rejuvenationField,seedObjective,researchLoadout};
       const visuals={defeated:[],leaked:[],statusTicks:[],impacts:[]};
       const result=stepCombat(state,dt,{pathLength:routeGeometry.pathLengthFor,positionOf:enemyPosition,
         onDefeat:enemy=>visuals.defeated.push(enemy),onLeak:enemy=>visuals.leaked.push(enemy),
@@ -803,10 +828,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function resetRun() {
     const hadRun=Boolean(wave||towers.length||guardianMode!=='none'||hasSavedRun());
     gateRoute=defaultGateRoute(maps[selectedMap]);gateSwitchesRemaining=gateSwitchesForMap(maps[selectedMap]);path=pathForGateRoute(maps[selectedMap],gateRoute);
-    const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);terrainRulesVersion=1;cash=tutorialPractice.active?1200:Math.max(0,config().cash+preset.cashDelta);lives=tutorialPractice.active?99:Math.max(1,kit.lives+preset.livesDelta);popped=0;wave=0;bloomCharge=0;guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;combatPerformance=createCombatPerformance();
+    const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];const researchStart=researchStartingAdjustment(researchLoadout);terrainRulesVersion=1;cash=tutorialPractice.active?1200:Math.max(0,config().cash+preset.cashDelta+researchStart.cash);lives=tutorialPractice.active?99:Math.max(1,kit.lives+preset.livesDelta+researchStart.lives);popped=0;wave=0;bloomCharge=0;guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;combatPerformance=createCombatPerformance();
     transitionRun({type:'RESET'});intermission=0;updateGatePanel();selectedTower=null;selectedType='sprout';speed=DEFAULT_GAME_SPEED;gameTime=0;simulationTick=0;actionLog=[];actionLogComplete=true;actionLogLimitShown=false;runSeed=createRunSeed();simulationClock.reset();resetRenderSnapshots();
     if(tutorialPractice.active)tutorialPractice=resetTutorialPracticeState(tutorialPractice);
     syncSpellLoadoutChecks();updatePlayOptionsLabel();renderTowerOptions();renderSelected();updateHud();updatePreview();draw();
+    if(byId('guideDialog').open){transitionRun({type:'DIALOG_OPEN'});updateHud();}
     if(!tutorialPractice.active){saveRun();if(hadRun)clearCompatibleBackup();}else updateTutorialCoach();
   }
 
@@ -816,7 +842,25 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('pauseBtn').onclick=()=>{transitionRun({type:'TOGGLE_USER_PAUSE'});updateHud();updateGatePanel();saveRun();};
   byId('speedBtn').onclick=()=>{speed=toggleGameSpeed(speed);updateHud();};
   defenderSheetToggle.onclick=()=>setDefenderSheetOpen(!defenderSheet.classList.contains('open'));
-  byId('guideOpenBtn').onclick=()=>{byId('guideDialog').showModal();transitionRun({type:'DIALOG_OPEN'});updateHud();};
+  byId('guideOpenBtn').onclick=()=>{renderResearch();byId('guideDialog').showModal();transitionRun({type:'DIALOG_OPEN'});updateHud();};
+  byId('researchTree').addEventListener('click',event=>{
+    if(!researchCanRespec()){setToast('Research can only be refit between missions in a standard Classic garden.');return;}
+    let next;
+    const respecButton=event.target.closest('[data-research-respec]');
+    let focusSelector='[data-research-respec]';
+    if(respecButton)next=clearResearchLoadout(profile.research,earnedResearchPoints(profile));
+    else {
+      const button=event.target.closest('[data-research-node]');if(!button)return;
+      const nodeId=button.dataset.researchNode,unlocked=profile.research.unlocked.includes(nodeId);
+      const result=unlocked?selectResearchNode(profile.research,nodeId,earnedResearchPoints(profile)):purchaseResearchNode(profile.research,nodeId,earnedResearchPoints(profile));
+      if(!result.ok){setToast(result.reason);return;}next=result.state;focusSelector=`[data-research-node="${nodeId}"]`;
+    }
+    profile={...profile,research:normalizeResearchState(next,earnedResearchPoints(profile))};researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];persistProfile();
+    if(runIsOver()||(!wave&&!towers.length&&!hasPendingSavedGarden()))resetRun();renderResearch();
+    const requestedFocus=byId('researchTree').querySelector(focusSelector);
+    (requestedFocus&&!requestedFocus.disabled?requestedFocus:byId('researchTree').querySelector('[data-research-node]:not(:disabled)')||byId('guideCloseBtn')).focus({preventScroll:true});
+    setToast('Research loadout saved. These sidegrades apply to the next fresh garden.');
+  });
   byId('guideCloseBtn').onclick=()=>byId('guideDialog').close();
   byId('upgradeBtn').onclick=()=>{
     if(tutorialPractice.active&&tutorialPractice.task!==3){setToast('Follow the practice steps before upgrading.');return;}
