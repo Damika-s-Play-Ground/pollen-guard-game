@@ -195,11 +195,12 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
   const lengthForRoute=createRoutePathLengthResolver(activeGeometry,pathLength);
   const loadout = createMissionKitState({ challenge:run.challenge, guardianMode:run.guardianMode ?? 'none', path:activePath, width:guardianWidth, height:guardianHeight, modeDefinitions:modes });
   const researchLoadout=run.version>=15?[...(run.researchLoadout??[])]:[];
+  const relicLoadout=run.version>=16?[...(run.relicLoadout??[])]:[];
   const researchStart=researchStartingAdjustment(researchLoadout);
   const trackContributions = run.combatPerformance?.complete === true;
   const state = {
     selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
-    researchLoadout, simulationTick: 0, gameTime: 0, cash: configuration.cash+difficulty.cashDelta+researchStart.cash, lives: Math.max(1,loadout.lives+difficulty.livesDelta+researchStart.lives), popped: 0, wave: 0, bloomCharge: 0,
+    researchLoadout,relicLoadout, simulationTick: 0, gameTime: 0, cash: configuration.cash+difficulty.cashDelta+researchStart.cash, lives: Math.max(1,loadout.lives+difficulty.livesDelta+researchStart.lives), popped: 0, wave: 0, bloomCharge: 0,
     combatPerformance: trackContributions ? createCombatPerformance(true) : null,
     towers: [], enemies: [], shots: [], spawnQueue: [], spawnClock: 0, running: false, gameOver: false, paused: false,
     intermission: 0, speed: normalizeGameSpeed(run.speed), nextEntityId: 1,
@@ -249,7 +250,8 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
     ...(run.version>=12?{difficulty:state.difficulty,challengeRules:state.challengeRules}:{}),
     ...(run.version>=10?{spellLoadout:state.spellLoadout,rejuvenationField:state.rejuvenationField}: {}),
     ...(run.version>=14?{seedObjective:state.seedObjective}: {}),
-    ...(run.version>=15?{researchLoadout:state.researchLoadout}: {})
+    ...(run.version>=15?{researchLoadout:state.researchLoadout}: {}),
+    ...(Object.hasOwn(run,'relicLoadout')?{relicLoadout:state.relicLoadout}: {})
   };
   return { run: replayedRun, state, hash: hashGameplayState(replayedRun) };
 }

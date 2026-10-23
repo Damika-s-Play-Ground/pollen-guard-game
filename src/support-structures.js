@@ -2,12 +2,12 @@ import { applyCombatHit } from './combat-rules.js';
 import { towersDef } from './game-data.js';
 import { getEffectiveTowerStats } from './game-core.js';
 
-export function assignPollenBeaconBuffs(towers, researchLoadout=[]) {
+export function assignPollenBeaconBuffs(towers, researchLoadout=[],relicLoadout=[]) {
   const beacons = towers.filter(tower => tower.type === 'pollenBeacon').sort((a, b) => a.id - b.id);
   const attackers = towers.filter(tower => ['sprout', 'puff', 'thorn', 'gust', 'ember', 'briar'].includes(tower.type)).sort((a, b) => a.id - b.id);
   const assignments = new Map();
   for (const tower of attackers) {
-    const nearby = beacons.filter(beacon => Math.hypot(beacon.x - tower.x, beacon.y - tower.y) < getEffectiveTowerStats(beacon,{researchLoadout},towersDef.pollenBeacon).range)
+    const nearby = beacons.filter(beacon => Math.hypot(beacon.x - tower.x, beacon.y - tower.y) < getEffectiveTowerStats(beacon,{researchLoadout,relicLoadout},towersDef.pollenBeacon).range)
       .sort((a, b) => Math.hypot(a.x - tower.x, a.y - tower.y) - Math.hypot(b.x - tower.x, b.y - tower.y) || a.id - b.id);
     const beacon = nearby.find(candidate => (assignments.get(candidate.id)?.length || 0) < towersDef.pollenBeacon.buffCap);
     if (!beacon) continue;

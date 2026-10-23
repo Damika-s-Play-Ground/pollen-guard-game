@@ -87,12 +87,12 @@ function tickTower(tower, state, dt, positionOf, hooks = {}, pollenBeaconBuffedI
   tower.cooldown = Math.max(0, tower.cooldown - dt);
   if (tower.cooldown > 0) return;
   const linkedCombinations = state.towers
-    .filter(other => other !== tower && towersAreLinked(tower, other, towersDef, state.towers,state.researchLoadout??[]))
+    .filter(other => other !== tower && towersAreLinked(tower, other, towersDef, state.towers,state.researchLoadout??[],state.relicLoadout??[]))
     .map(other => combinationForPair(tower, other));
   const hasGoldenSeeds = linkedCombinations.some(combination => combination?.id === 'golden-seeds');
   const terrain=state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground';
-  const stats = getEffectiveTowerStats(tower, { challenge: state.challenge, challengeRules:state.challengeRules, linked: hasGoldenSeeds, terrain, researchLoadout:state.researchLoadout??[] }, def);
-  if (pollenBeaconBuffedIds.has(tower.id)) stats.rate *= state.researchLoadout?.includes('beacon-network') ? .91 : towersDef.pollenBeacon.buffMultiplier;
+  const stats = getEffectiveTowerStats(tower, { challenge: state.challenge, challengeRules:state.challengeRules, linked: hasGoldenSeeds, terrain, researchLoadout:state.researchLoadout??[],relicLoadout:state.relicLoadout??[] }, def);
+  if (pollenBeaconBuffedIds.has(tower.id)) stats.rate *= state.relicLoadout?.includes('beacon-bell') ? .90 : state.researchLoadout?.includes('beacon-network') ? .91 : towersDef.pollenBeacon.buffMultiplier;
   const rejuvenationField=state.rejuvenationField;
   if (rejuvenationField?.duration>0 && Math.hypot(tower.x-rejuvenationField.x,tower.y-rejuvenationField.y)<=78) stats.rate*=.85;
   const candidates = state.enemies.filter(enemy => canHitTarget({ canHitAir: def.antiAir }, enemy) &&
@@ -245,9 +245,9 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
       const covered = state.towers.some(tower => {
         const def = towersDef[tower.type];
         if (!def || def.supportStructure || !canHitTarget({ canHitAir: def.antiAir }, enemy)) return false;
-        const hasLink = state.towers.some(other => other !== tower && towersAreLinked(tower, other, towersDef, state.towers,state.researchLoadout??[]));
+        const hasLink = state.towers.some(other => other !== tower && towersAreLinked(tower, other, towersDef, state.towers,state.researchLoadout??[],state.relicLoadout??[]));
         const terrain=state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground';
-        const range = getEffectiveTowerStats(tower, { challenge: state.challenge, challengeRules:state.challengeRules, linked: hasLink, terrain,researchLoadout:state.researchLoadout??[] }, def).range;
+        const range = getEffectiveTowerStats(tower, { challenge: state.challenge, challengeRules:state.challengeRules, linked: hasLink, terrain,researchLoadout:state.researchLoadout??[],relicLoadout:state.relicLoadout??[] }, def).range;
         return Math.hypot(tower.x - point.x, tower.y - point.y) <= range;
       });
       recordEnemyLeak(state.performance, enemy, covered);
@@ -267,7 +267,7 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
     add.progress = summon.progress;
     state.enemies.push(add);
   });
-  const pollenBeaconBuffedIds = assignPollenBeaconBuffs(state.towers,state.researchLoadout??[]);
+  const pollenBeaconBuffedIds = assignPollenBeaconBuffs(state.towers,state.researchLoadout??[],state.relicLoadout??[]);
   const trapTriggers = triggerCompostTraps(state.towers, state.enemies, positionOf,state.researchLoadout??[]);
   trapTriggers.forEach(({ trap, enemy }) => recordCombatControl(state.performance, trap.id, trap.type, 'slow', Math.min(dt, enemy.slow || 0)));
   state.towers.forEach(tower => tickTower(tower, state, dt, positionOf, hooks, pollenBeaconBuffedIds));
@@ -304,9 +304,9 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
     state.running = false;
     // Wave income is resolved from the same effective stat the inspector previews.
     const income = state.towers.filter(tower => tower.type === 'sunflower').reduce((sum, tower) =>
-      sum + getEffectiveTowerStats(tower, {terrain:state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground',researchLoadout:state.researchLoadout??[]}, towersDef.sunflower).income, 0);
+      sum + getEffectiveTowerStats(tower, {terrain:state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground',researchLoadout:state.researchLoadout??[],relicLoadout:state.relicLoadout??[]}, towersDef.sunflower).income, 0);
     for (const tower of state.towers.filter(tower => tower.type === 'sunflower')) {
-      recordTowerIncome(state.performance, tower.id, tower.type, getEffectiveTowerStats(tower, {terrain:state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground',researchLoadout:state.researchLoadout??[]}, towersDef.sunflower).income);
+      recordTowerIncome(state.performance, tower.id, tower.type, getEffectiveTowerStats(tower, {terrain:state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground',researchLoadout:state.researchLoadout??[],relicLoadout:state.relicLoadout??[]}, towersDef.sunflower).income);
     }
     const bonus = 12 + state.wave * 2 + income;
     state.cash += bonus;

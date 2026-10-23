@@ -1,11 +1,11 @@
 import { formatMapUnits } from './game-core.js';
 
-export function renderTowerCatalog({ document, root, towersDef, towerRoles, selectedType, filter, challenge, challengeRules = [], researchLoadout=[], keyBindings, keyCodeLabel, getEffectiveTowerStats, towerArtSvg }) {
+export function renderTowerCatalog({ document, root, towersDef, towerRoles, selectedType, filter, challenge, challengeRules = [], researchLoadout=[],relicLoadout=[], keyBindings, keyCodeLabel, getEffectiveTowerStats, towerArtSvg }) {
   const entries = Object.entries(towersDef).filter(([id]) => filter === 'all' || towerRoles[id] === filter);
   const buttons = entries.map(([id, tower]) => {
     const button = document.createElement('button');
     const selected = selectedType === id;
-    const effective = getEffectiveTowerStats({ type: id, level: 1 }, { challenge:tower.supportStructure?'classic':challenge, challengeRules:tower.supportStructure?[]:challengeRules, linked: false,researchLoadout }, tower);
+    const effective = getEffectiveTowerStats({ type: id, level: 1 }, { challenge:tower.supportStructure?'classic':challenge, challengeRules:tower.supportStructure?[]:challengeRules, linked: false,researchLoadout,relicLoadout }, tower);
     const keyCode = keyBindings[`tower${Object.keys(towersDef).indexOf(id) + 1}`];
     const shortcut = keyCode ? keyCodeLabel(keyCode) : '';
     const unavailable = (challenge === 'thrifty' || challengeRules.includes('noSunflowers')) && id === 'sunflower';

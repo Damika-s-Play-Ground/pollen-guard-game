@@ -1,6 +1,7 @@
 import { masteryChallengeText } from './mission-mastery.js';
 import { earnedResearchPoints, RESEARCH_NODES, RESEARCH_PATHS, normalizeResearchState } from './research-tree.js';
-
+import { RELICS, RELIC_REWARDS, normalizeRelicState, RELIC_LOADOUT_SIZE } from './relics.js';
+import { CAMPAIGN_MISSIONS } from './campaign.js';
 export const ACHIEVEMENT_DEFINITIONS = [
   ['first-pop','First bloom','Scatter your first mite.'],
   ['builder','Master gardener','Place eight defenders in one run.'],
@@ -106,4 +107,38 @@ export function renderResearchTree({ document, root, profile, canRespec=true }) 
   const respec=document.createElement('button');respec.type='button';respec.dataset.researchRespec='true';respec.disabled=!canRespec||state.unlocked.length===0;respec.textContent='Reset research · refund points';
   root.append(respec);
   return {points,state};
+}
+
+export function renderRelicLoadout({document,root,profile,canRefit=true}){
+  const state=normalizeRelicState(profile.relics,profile.completedMissions||[]);
+  root.replaceChildren();
+  const summary=document.createElement('p');summary.className='relic-summary';
+  summary.textContent=`Relics · ${state.loadout.length}/${RELIC_LOADOUT_SIZE} equipped. Clear campaign missions for fixed, deterministic rewards; no random drops.`;
+  root.append(summary);
+  const slot=document.createElement('p');slot.className='relic-slots';
+  slot.textContent=`Loadout slots: ${state.loadout.map(id=>RELICS.find(item=>item.id===id)?.name||id).join(' + ')||'empty'}${state.loadout.length<2?' · one slot open'.repeat(2-state.loadout.length):''}`;
+  root.append(slot);
+  if(!canRefit){const note=document.createElement('p');note.className='relic-lock';note.textContent='Relics can be refit between missions. Resume or explicitly restart a saved garden before changing the loadout.';root.append(note);}
+  const unlocked=new Set(state.unlocked);
+  for(const relic of RELICS){
+    const owned=unlocked.has(relic.id),equipped=state.loadout.includes(relic.id);
+    const blockedBy=state.loadout.filter(id=>relic.incompatible.includes(id)||RELICS.find(item=>item.id===id)?.incompatible.includes(relic.id));
+    const conflict=blockedBy[0];
+    const full=state.loadout.length>=RELIC_LOADOUT_SIZE&&!equipped;
+    const card=document.createElement('article');card.className=`relic-card${equipped?' equipped':''}${owned?' unlocked':''}`;
+    const title=document.createElement('h4');title.textContent=relic.name;
+    const detail=document.createElement('p');detail.textContent=`${relic.description}${relic.incompatible.length?` Field-kit incompatibility: ${relic.incompatible.map(id=>RELICS.find(item=>item.id===id)?.name||id).join(', ')} cannot be equipped alongside it.`:''}`;
+    const reward=document.createElement('small');
+    const rewardMission=RELIC_REWARDS.find(item=>item.relicId===relic.id);
+    const missionName=CAMPAIGN_MISSIONS.find(item=>item.id===rewardMission?.missionId)?.name||'campaign clear';
+    reward.textContent=owned?'Unlocked':`Unlock: clear ${missionName}`;
+    const button=document.createElement('button');button.type='button';button.dataset.relic=relic.id;
+    button.disabled=!canRefit||!owned||Boolean(conflict)||full&&!equipped;
+    button.textContent=equipped?'Unequip':conflict?`Incompatible with ${RELICS.find(item=>item.id===conflict)?.name||'equipped relic'}`:full?'Unequip a relic first':owned?'Equip relic':'Locked';
+    button.setAttribute('aria-pressed',String(equipped));
+    button.setAttribute('aria-label',`${equipped?'Unequip':'Equip'} ${relic.name}`);
+    button.setAttribute('aria-describedby',`relic-description-${relic.id}`);detail.id=`relic-description-${relic.id}`;
+    card.append(title,detail,reward,button);root.append(card);
+  }
+  return {state};
 }

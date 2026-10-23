@@ -7,8 +7,8 @@ import { towerArtSvg } from './tower-art.js';
 import { assignPollenBeaconBuffs } from './support-structures.js';
 import { terrainBonusForTower } from './terrain.js';
 
-function applyBeaconInterval(stats, tower, towers, researchLoadout=[]) {
-  if (assignPollenBeaconBuffs(towers,researchLoadout).has(tower.id)) stats.rate *= researchLoadout.includes('beacon-network') ? 0.91 : towersDef.pollenBeacon.buffMultiplier;
+function applyBeaconInterval(stats, tower, towers, researchLoadout=[],relicLoadout=[]) {
+  if (assignPollenBeaconBuffs(towers,researchLoadout,relicLoadout).has(tower.id)) stats.rate *= relicLoadout.includes('beacon-bell') ? .90 : researchLoadout.includes('beacon-network') ? 0.91 : towersDef.pollenBeacon.buffMultiplier;
   return stats;
 }
 
@@ -17,12 +17,12 @@ export function isTowerLinkedToAnother(selectedTower, towers, towersLinked) {
   return towers.some(other => other !== selectedTower && towersLinked(selectedTower, other));
 }
 
-function combinationStatus(tower, towers, combo, researchLoadout=[]) {
+function combinationStatus(tower, towers, combo, researchLoadout=[],relicLoadout=[]) {
   const partnerType = combo.towerTypes.find(type => type !== tower.type);
   const partnerName = towersDef[partnerType]?.name || partnerType;
   const partners = towers.filter(other => other !== tower && other.id !== tower.id && other.type === partnerType);
   if (!partners.length) return `${combo.name} inactive · no ${partnerName} placed`;
-  if (partners.some(other => towersAreLinked(tower, other, towersDef, towers,researchLoadout))) {
+  if (partners.some(other => towersAreLinked(tower, other, towersDef, towers,researchLoadout,relicLoadout))) {
     return `${combo.name} active (${combo.activeSummary})`;
   }
   const nearest = partners.reduce((best, other) => {
@@ -30,41 +30,41 @@ function combinationStatus(tower, towers, combo, researchLoadout=[]) {
     return distance < best.distance ? { partner: other, distance } : best;
   }, { partner: partners[0], distance: Infinity });
   const radius = combo.id === 'golden-seeds'
-    ? getEffectiveTowerStats(tower.type === 'sunflower' ? tower : nearest.partner, {researchLoadout}, towersDef.sunflower).allyLinkRadius
+    ? getEffectiveTowerStats(tower.type === 'sunflower' ? tower : nearest.partner, {researchLoadout,relicLoadout}, towersDef.sunflower).allyLinkRadius
     : combo.id === 'windcarved-thorns' && towers.some(relay => relay.type === 'pollinatorRelay' &&
       Math.hypot(relay.x - tower.x, relay.y - tower.y) <= combo.relayRange && Math.hypot(relay.x - nearest.partner.x, relay.y - nearest.partner.y) <= combo.relayRange)
       ? combo.relayRadius : combo.radius;
   return `${combo.name} inactive · nearest ${partnerName} ${formatMapUnits(nearest.distance)} away; needs < ${radius} map units`;
 }
 
-function combinationStatuses(tower, towers, researchLoadout=[]) {
+function combinationStatuses(tower, towers, researchLoadout=[],relicLoadout=[]) {
   return TOWER_COMBINATIONS
     .filter(combo => combo.towerTypes.includes(tower.type))
-    .map(combo => combinationStatus(tower, towers, combo,researchLoadout))
+    .map(combo => combinationStatus(tower, towers, combo,researchLoadout,relicLoadout))
     .join(' · ');
 }
 
-export function buildTowerUpgradePreview({ tower, towers = [tower], challenge, challengeRules = [], linked, cash, terrain = 'ground', researchLoadout=[] }) {
+export function buildTowerUpgradePreview({ tower, towers = [tower], challenge, challengeRules = [], linked, cash, terrain = 'ground', researchLoadout=[],relicLoadout=[] }) {
   if (!tower) return '';
   if (towersDef[tower.type]?.supportStructure) return `${towersDef[tower.type].name} is a fixed support structure; it has no upgrades.`;
   if (tower.level === 3) return 'Fully grown · no further upgrade.';
   if (tower.level === 1 && tower.branchChoice == null) return 'Choose a branch to see its exact next stats.';
 
   const def = towersDef[tower.type], quote = towerUpgradeQuote(tower, def);
-  const current = applyBeaconInterval(getEffectiveTowerStats(tower, { challenge, challengeRules, linked, terrain,researchLoadout }, def), tower, towers,researchLoadout);
-  const next = applyBeaconInterval(getEffectiveTowerStats({ ...tower, level: tower.level + 1, branch: quote.branch }, { challenge, challengeRules, linked, terrain,researchLoadout }, def), tower, towers,researchLoadout);
+  const current = applyBeaconInterval(getEffectiveTowerStats(tower, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), tower, towers,researchLoadout,relicLoadout);
+  const next = applyBeaconInterval(getEffectiveTowerStats({ ...tower, level: tower.level + 1, branch: quote.branch }, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), tower, towers,researchLoadout,relicLoadout);
   const changes = describeTowerStatChanges(current, next);
   const shortfall = Math.max(0, quote.cost - cash);
   return `Next · ${changes.length ? changes.join(' · ') : 'No numeric stat change'} · Ability unchanged: ${def.ability} · Cost ${quote.cost} petals · Investment ${quote.investedAfter} · sell return ${quote.refundAfter}${shortfall ? ` · Need ${shortfall} more` : ''}`;
 }
 
-export function buildTowerTargetStatus({ tower, enemies = [], challenge, challengeRules = [], linked, enemyPosition, isRunning = false, terrain = 'ground', researchLoadout=[] }) {
+export function buildTowerTargetStatus({ tower, enemies = [], challenge, challengeRules = [], linked, enemyPosition, isRunning = false, terrain = 'ground', researchLoadout=[],relicLoadout=[] }) {
   if (!tower) return 'Select a defender to see its target.';
   const def = towersDef[tower.type];
   if (def.supportStructure) return `${def.name} is a support structure and does not select or attack targets.`;
   if (def.income) return `Unavailable · ${def.name} harvests petals and cannot attack enemies.`;
 
-  const range = getEffectiveTowerStats(tower, { challenge, challengeRules, linked, terrain,researchLoadout }, def).range;
+  const range = getEffectiveTowerStats(tower, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def).range;
   const inRange = enemies.filter(enemy => Math.hypot(tower.x - enemyPosition(enemy).x, tower.y - enemyPosition(enemy).y) <= range);
   const eligible = inRange.filter(enemy => canHitTarget({ canHitAir: def.antiAir }, enemy));
   const target = chooseTargetForTower(tower, eligible, enemyPosition);
@@ -82,7 +82,7 @@ export function buildTowerTargetStatus({ tower, enemies = [], challenge, challen
   return isRunning ? 'No target in range · waiting for an enemy.' : 'No current target · start a wave to preview targets.';
 }
 
-export function buildTowerInspectorModel({ selectedTower, towers = [], challenge, challengeRules = [], linked, cash, wave, gameTime, terrain = 'ground', researchLoadout=[], tutorialActive = false, tutorialTask = 0, tutorialTowerId = null, onChooseBranch }) {
+export function buildTowerInspectorModel({ selectedTower, towers = [], challenge, challengeRules = [], linked, cash, wave, gameTime, terrain = 'ground', researchLoadout=[],relicLoadout=[], tutorialActive = false, tutorialTask = 0, tutorialTowerId = null, onChooseBranch }) {
   if (!selectedTower) return { empty: true };
 
   const def = towersDef[selectedTower.type], level = selectedTower.level, branch = selectedTower.branch;
@@ -91,11 +91,11 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
     const connectedPair = selectedTower.type === 'pollinatorRelay' && towers.some(a => a.type === 'gust' && towers.some(b => b.type === 'thorn' &&
       Math.hypot(a.x - b.x, a.y - b.y) >= 132 && Math.hypot(a.x - b.x, a.y - b.y) < 160 &&
       Math.hypot(a.x - selectedTower.x, a.y - selectedTower.y) <= 88 && Math.hypot(b.x - selectedTower.x, b.y - selectedTower.y) <= 88));
-    const supportStats=getEffectiveTowerStats(selectedTower,{researchLoadout},def),supportRange=supportStats.range;
+    const supportStats=getEffectiveTowerStats(selectedTower,{researchLoadout,relicLoadout},def),supportRange=supportStats.range;
     const trapLimit=Math.max(0,def.triggerLimit-(researchLoadout.includes('compost-lattice')?1:0));
     const trapRemaining=Math.max(0,trapLimit-trapCount);
     const details = selectedTower.type === 'pollenBeacon'
-      ? `Up to 3 Sprout, Puff, Thorn, Kite, Ember, or Briar attackers within ${supportRange} units get a ${researchLoadout.includes('beacon-network')?'9%':'12%'} shorter attack interval (×${researchLoadout.includes('beacon-network')?'.91':'.88'}). Dew Bells and support structures are ineligible. A tower receives one Beacon buff at most; 48-unit footprint.`
+      ? `Up to 3 Sprout, Puff, Thorn, Kite, Ember, or Briar attackers within ${supportRange} units get a ${Math.round((1-supportStats.buffMultiplier)*100)}% shorter attack interval (×${supportStats.buffMultiplier.toFixed(2)}). Dew Bells and support structures are ineligible. A tower receives one Beacon buff at most; 48-unit footprint.`
       : selectedTower.type === 'compostTrap'
         ? `${trapRemaining} of ${trapLimit} triggers remain. Each trap slows a unique ground pest within ${supportRange} units for ${def.slowDuration}s; each pest can trigger only one Compost Trap. Footprint ${def.footprint}.`
         : `Windcarved Thorns extends from 132 to <160 units when this Relay is within 88 units of both partners. Only one Relay counts per pair; footprint 38.${connectedPair ? ' Pair currently connected.' : ' No pair currently connected.'}`;
@@ -112,7 +112,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
       abilityInfo:details, contextTitle:def.name
     };
   }
-  const stats = applyBeaconInterval(getEffectiveTowerStats(selectedTower, { challenge, challengeRules, linked, terrain,researchLoadout }, def), selectedTower, towers,researchLoadout);
+  const stats = applyBeaconInterval(getEffectiveTowerStats(selectedTower, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), selectedTower, towers,researchLoadout,relicLoadout);
   const chosenBranch = level === 1 ? selectedTower.branchChoice : branch;
   const hasBranchChoice = chosenBranch != null;
   const quote = towerUpgradeQuote(selectedTower, def);
@@ -137,9 +137,9 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
 
   let branchOptions = null;
   if (level === 1) {
-    const base = applyBeaconInterval(getEffectiveTowerStats({ ...selectedTower, level: 1, branch: undefined }, { challenge, challengeRules, linked, terrain,researchLoadout }, def), selectedTower, towers,researchLoadout);
+    const base = applyBeaconInterval(getEffectiveTowerStats({ ...selectedTower, level: 1, branch: undefined }, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), selectedTower, towers,researchLoadout,relicLoadout);
     branchOptions = def.branches.map(([name, description, branchCost], index) => {
-      const next = applyBeaconInterval(getEffectiveTowerStats({ ...selectedTower, level: 2, branch: index }, { challenge, challengeRules, linked, terrain,researchLoadout }, def), selectedTower, towers,researchLoadout);
+      const next = applyBeaconInterval(getEffectiveTowerStats({ ...selectedTower, level: 2, branch: index }, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), selectedTower, towers,researchLoadout,relicLoadout);
       const changes = describeTowerStatChanges(base, next);
       return {
         name, description, cost: branchCost,
@@ -151,7 +151,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
   }
 
   const payback = def.income && stats.income > 0 ? Math.ceil(investment / stats.income) : 0;
-  const pairing = combinationStatuses(selectedTower, towers,researchLoadout);
+  const pairing = combinationStatuses(selectedTower, towers,researchLoadout,relicLoadout);
   return {
     empty: false,
     portrait: towerArtSvg(selectedTower.type, level, branch ?? selectedTower.branchChoice),
