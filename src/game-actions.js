@@ -185,7 +185,7 @@ export function applyPlayerAction(state, action, context = {}) {
   }
 }
 
-export function replayRecordedRun(run, { pathLength, positionOf, path, map, width = 900, height = 500, guardianWidth = 900, guardianHeight = 540 } = {}) {
+function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width = 900, height = 500, guardianWidth = 900, guardianHeight = 540 } = {}) {
   if (!run || run.actionLogComplete !== true || run.actionLogVersion !== ACTION_LOG_VERSION || !isValidActionLog(run.actionLog) || !Number.isSafeInteger(run.simulationTick) ||
       (run.actionLog.length > 0 && run.actionLog.at(-1).tick > run.simulationTick) ||
       typeof positionOf !== 'function' || !(Number.isFinite(pathLength) || typeof pathLength === 'function')) throw new TypeError('Run is not replayable or its map geometry is missing.');
@@ -240,6 +240,7 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
     const terminalWin = configuration.limit !== Infinity && state.wave >= configuration.limit && !state.running;
     if (!state.gameOver && !terminalWin) advanceMeadowGuardian(state.guardian, SIMULATION_STEP, { path:activePath, width:guardianWidth, height:guardianHeight, enemies: state.enemies, enemyPosition: positionForRoute });
     state.simulationTick++;
+    yield { tick: state.simulationTick, totalTicks: run.simulationTick, state };
   }
   state.paused = Boolean(run.paused);
   state.speed = normalizeGameSpeed(run.speed);
@@ -264,4 +265,40 @@ export function replayRecordedRun(run, { pathLength, positionOf, path, map, widt
     ...(run.version>=18?{endlessModifier:state.endlessModifier,endlessChoiceWave:state.endlessChoiceWave}: {})
   };
   return { run: replayedRun, state, hash: hashGameplayState(replayedRun) };
+}
+
+export function createReplayPlayback(run, options = {}) {
+  const iterator = replayRecordedRunSteps(run, options);
+  let result = null;
+  let currentState = null;
+  let currentTick = 0;
+  return {
+    get done() { return result !== null; },
+    get result() { return result; },
+    get state() { return result?.state ?? currentState; },
+    get tick() { return result?.run.simulationTick ?? currentTick; },
+    get totalTicks() { return run?.simulationTick ?? 0; },
+    advance(ticks = 1) {
+      if (!Number.isSafeInteger(ticks) || ticks < 1 || ticks > 10000) throw new RangeError('Replay advance must be between 1 and 10,000 ticks.');
+      let advanced = 0;
+      while (advanced < ticks && !result) {
+        const next = iterator.next();
+        if (next.done) { result = next.value; break; }
+        currentState = next.value.state;
+        currentTick = next.value.tick;
+        advanced++;
+      }
+      return { advanced, done: result !== null, tick: this.tick, totalTicks: this.totalTicks, state: this.state, result };
+    },
+    restart() {
+      return createReplayPlayback(run, options);
+    }
+  };
+}
+
+export function replayRecordedRun(run, options = {}) {
+  const iterator = replayRecordedRunSteps(run, options);
+  let next = iterator.next();
+  while (!next.done) next = iterator.next();
+  return next.value;
 }

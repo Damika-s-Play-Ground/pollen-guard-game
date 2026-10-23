@@ -11,7 +11,7 @@ import { BOSS_VARIANTS, bossLeakCost } from './src/boss-encounters.js';
 import { towerAbilityTargets } from './src/combat-actions.js';
 import { chooseTargetForTower, targetPriorityInfo } from './src/targeting.js';
 import { ACTION_LOG_VERSION, MAX_RUN_ACTIONS, appendTickAction, createRunSeed } from './src/action-log.js';
-import { applyPlayerAction, validateTowerPlacement } from './src/game-actions.js';
+import { applyPlayerAction, createReplayPlayback, validateTowerPlacement } from './src/game-actions.js';
 import { parseRunExport, serializeRunExport } from './src/run-transfer.js';
 import { clearRunBackupAfterReset, runHasGameplayProgress, selectRecoverableRun, writeRunWithBackup } from './src/run-storage.js';
 import { createRunSaveSnapshot } from './src/run-save.js';
@@ -118,6 +118,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   });
   const RUN_KEY = 'pollen-guard.run.v2';
   const RUN_BACKUP_KEY = 'pollen-guard.run.backup.v1';
+  let pauseRunHistoryPlayback=()=>{};
   const highContrastEnemyColors = { mite:'#d55e00',zip:'#f0e442',armored:'#0072b2',shield:'#56b4e9',splitter:'#009e73',flyer:'#cc79a7',crumb:'#e69f00',boss:'#332288',healer:'#a98b68',carrier:'#008b83',burrower:'#8a5b28' };
   const profileStorage = createProfileStorage(() => localStorage, {
     mapIds: Object.keys(maps), achievementIds: ACHIEVEMENT_DEFINITIONS.map(([id]) => id)
@@ -321,14 +322,33 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     } catch { return false; }
   }
   function renderLocalRunHistory() {
-    renderRunHistory(byId('runHistory'),loadRunHistory().entries,document,{
+    pauseRunHistoryPlayback();
+    const historyUi=renderRunHistory(byId('runHistory'),loadRunHistory().entries,document,{
       onCompare:compareRunSummaries,
       onVerifyReplay(entry){
         const map=maps[entry.mapId];if(!map)return {verified:false,reason:'This map is not available in the current build.'};
         const activePath=pathForGateRoute(map,entry.gateRoute),geometry=createEnemyRouteGeometry({...map,path:activePath},entry.waveScheduleVersion);
         return verifyRecordedReplay(entry,{path:activePath,map,pathLength:geometry.pathLengthFor,positionOf:geometry.positionOf});
+      },
+      onCreatePlayback(entry){
+        const map=maps[entry.mapId];if(!map)throw new Error('This map is not available in the current build.');
+        const activePath=pathForGateRoute(map,entry.gateRoute),geometry=createEnemyRouteGeometry({...map,path:activePath},entry.waveScheduleVersion);
+        return createReplayPlayback(entry.run,{path:activePath,map,pathLength:geometry.pathLengthFor,positionOf:geometry.positionOf});
+      },
+      onRenderPlaybackFrame(entry,state,canvas){
+        const map=maps[entry.mapId];if(!map||!canvas?.getContext)return;
+        const ctx=canvas.getContext('2d');if(!ctx)return;
+        const route=pathForGateRoute(map,state?.gateRoute||entry.gateRoute),geometry=createEnemyRouteGeometry({...map,path:route},entry.waveScheduleVersion);
+        ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle=map.background||'#9bc780';ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.beginPath();route.forEach((point,index)=>index?ctx.lineTo(point[0],point[1]):ctx.moveTo(point[0],point[1]));ctx.strokeStyle=map.edge||'#d5b876';ctx.lineWidth=54;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+        ctx.beginPath();route.forEach((point,index)=>index?ctx.lineTo(point[0],point[1]):ctx.moveTo(point[0],point[1]));ctx.strokeStyle=map.trail||'#efd99e';ctx.lineWidth=42;ctx.stroke();
+        for(const zone of map.buildZones||[]){ctx.fillStyle='rgba(42,83,49,.12)';ctx.fillRect(zone.x,zone.y,zone.width,zone.height);}
+        for(const tower of state?.towers||[]){ctx.beginPath();ctx.arc(tower.x,tower.y,14,0,Math.PI*2);ctx.fillStyle=towersDef[tower.type]?.color||'#e9d58a';ctx.fill();ctx.strokeStyle='#203126';ctx.lineWidth=3;ctx.stroke();}
+        for(const enemy of state?.enemies||[]){const point=geometry.positionOf(enemy);ctx.beginPath();ctx.arc(point.x,point.y,enemy.boss?15:enemy.radius||8,0,Math.PI*2);ctx.fillStyle=enemy.boss?'#774c9f':enemy.lane==='air'?'#36b8c8':enemy.type==='armored'?'#746e62':'#b66e48';ctx.fill();ctx.strokeStyle='#17241b';ctx.lineWidth=2;ctx.stroke();}
+        for(const shot of state?.shots||[]){ctx.fillStyle='#fff2a0';ctx.fillRect(shot.x-3,shot.y-3,6,6);}
       }
     });
+    pauseRunHistoryPlayback=historyUi?.pauseAll||(()=>{});
   }
   function renderPracticeRange() {
     const choices=towerTestRangeChoices();
@@ -1010,6 +1030,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     setToast('Relic loadout saved for the next fresh garden.');
   });
   byId('guideCloseBtn').onclick=()=>byId('guideDialog').close();
+  byId('guideDialog').addEventListener('close',()=>pauseRunHistoryPlayback());
   byId('upgradeBtn').onclick=()=>{
     if(tutorialPractice.active&&tutorialPractice.task!==3){setToast('Follow the practice steps before upgrading.');return;}
     if(!selectedTower||selectedTower.level>=3)return;const t=selectedTower,def=towersDef[t.type];
