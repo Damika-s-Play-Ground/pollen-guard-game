@@ -48,7 +48,7 @@ export function renderRunHistory(container, entries, document, { onVerifyReplay 
       playbackStatus.textContent=`Tick ${frame.tick} / ${frame.totalTicks} · wave ${state?.wave||0} · ${state?.towers?.length||0} defenders · ${(state?.enemies?.length||0)+(state?.spawnQueue?.length||0)} pests remaining.`;
       if(frame.done){stop();play.disabled=true;playbackAnnouncement.textContent=`Playback finished. Use Verify replay to check the final state hash (${frame.result.hash}).`;} else playbackAnnouncement.textContent='';
     };
-    const advance=()=>{try{const frame=player.advance(Math.max(1,Math.round(15*Number(speed.value))));showFrame(frame);}catch(error){stop();play.disabled=true;playbackAnnouncement.textContent=`Replay stopped: ${error.message}`;}};
+    const advance=()=>{try{const frame=player.advance(Math.max(1,Math.round(15*Number(speed.value))));showFrame(frame);}catch(error){stop();play.disabled=true;playbackAnnouncement.textContent=`Replay stopped because it is incompatible with this build: ${error.message}`;}};
     playbackButton.addEventListener('click',()=>{
       try{player=onCreatePlayback(entry);if(!player){playbackAnnouncement.textContent='Replay playback is unavailable for this run.';return;}
         playback.hidden=false;progress.max=Math.max(1,player.totalTicks);play.disabled=false;restart.disabled=false;playbackButton.focus?.();
