@@ -15,11 +15,11 @@ export function buildHudView({
 
   return {
     counters: { cash: cashValue, lives, popped, wave },
-    life: { percent: lifePercent, value: lives },
+    life: { percent: lifePercent, value: lives, maximum: lifeCapacity },
     bloom: { percent: bloomCharge },
     waveLimit: limit === Infinity ? '· ∞' : `/ ${limit}`,
-    battlefieldSummary: `${mapName}, ${challengeLabel} rules. Wave ${wave} of ${limit === Infinity ? 'unlimited' : limit}; ${runStatus}. ${cashValue} petals and ${lives} seeds. ${roster.length} defenders: ${rosterText} ${selectedDescription} Use arrow keys to aim a selected build, Enter to preview and place, Escape to cancel. Cycle placed defenders with ${previousTowerKey} and ${nextTowerKey}.`,
-    battlefieldLabel: `${mapName} battlefield. Wave ${wave}, ${lives} seeds, ${cashValue} petals. ${selectedDescription} Arrow keys aim; Enter previews then places; Escape to cancel.`,
+    battlefieldSummary: `${mapName}, ${challengeLabel} rules. Wave ${wave} of ${limit === Infinity ? 'unlimited' : limit}; ${runStatus}. ${cashValue} petals and ${lives} garden health. ${roster.length} defenders: ${rosterText} ${selectedDescription} Use arrow keys to aim a selected build, Enter to preview and place, Escape to cancel. Cycle placed defenders with ${previousTowerKey} and ${nextTowerKey}.`,
+    battlefieldLabel: `${mapName} battlefield. Wave ${wave}, ${lives} garden health, ${cashValue} petals. ${selectedDescription} Arrow keys aim; Enter previews then places; Escape to cancel.`,
     buttons: {
       startBtn: { disabled: running || paused || finished || (tutorialActive && tutorialTask !== 4), text: finished ? (lives > 0 ? 'Garden saved' : 'Meadow over') : paused ? 'Game paused' : running ? 'Wave in progress…' : `Start wave ${wave + 1}  ↗` },
       pauseBtn: { text: paused ? '▶' : 'Ⅱ', label: paused ? 'Resume game (Space)' : 'Pause game (Space)', pressed: paused },
@@ -41,6 +41,7 @@ export function renderHud(document, view) {
 
   byId('lifeBar').style.width = `${view.life.percent}%`;
   byId('lifeBar').parentElement.setAttribute('aria-valuenow', view.life.value);
+  byId('lifeBar').parentElement.setAttribute('aria-valuemax', view.life.maximum);
   byId('bloomBar').style.width = `${view.bloom.percent}%`;
   byId('bloomBar').parentElement.setAttribute('aria-valuenow', view.bloom.percent);
   byId('waveLimit').textContent = view.waveLimit;
