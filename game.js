@@ -106,6 +106,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const defenderSheet=byId('defenderSheet');
   const defenderSheetToggle=byId('defenderSheetToggle');
   const mobileLayout=window.matchMedia('(max-width: 700px)');
+  const placementFlowLayout=window.matchMedia('(max-width: 860px)');
   const mapFooter=byId('mapFooter');
   const syncCombatDockHeight=()=>document.documentElement.style.setProperty('--combat-dock-height',`${Math.ceil(mapFooter.getBoundingClientRect().height)}px`);
   if('ResizeObserver' in window)new ResizeObserver(syncCombatDockHeight).observe(mapFooter);else window.addEventListener('resize',syncCombatDockHeight);
@@ -114,6 +115,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   setDefenderSheetOpen(!mobileLayout.matches);
   syncPlacementConfirmHost();
   mobileLayout.addEventListener('change',event=>{setDefenderSheetOpen(!event.matches);syncPlacementConfirmHost();if(selectedTower)updateSelectedActionPlacement();});
+  placementFlowLayout.addEventListener('change',syncPlacementConfirmHost);
   renderCombatReference({
     note:byId('combatRuleNote'), matrixBody:byId('combatMatrixBody'), profileBody:byId('enemyProfileBody'),
     rules:COMBAT_RULES, matrix:COMBAT_INTERACTION_MATRIX, profiles:enemyCombatProfiles, document
@@ -282,7 +284,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     return validateTowerPlacement({challenge,challengeRules,cash,towers},selectedType,point,{path,width:canvas.width,height:canvas.height});
   }
   function syncPlacementConfirmHost() {
-    const confirm=byId('placementConfirm'),destination=mobileLayout.matches?canvas.parentElement:byId('placementConfirmHost');
+    const confirm=byId('placementConfirm'),destination=placementFlowLayout.matches?canvas.parentElement:byId('placementConfirmHost');
     movePlacementConfirmation({confirm,destination,activeElement:document.activeElement});
   }
   function updatePlacementHint(point=pointer) {
