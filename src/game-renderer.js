@@ -140,7 +140,7 @@ function drawTerrainLabels(ctx,map,displayScale=1) {
   }
 }
 
-function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath, displayScale = 1 }) {
+function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, displayScale = 1 }) {
   ctx.fillStyle = map.background;
   ctx.fillRect(0, 0, width, height);
   for (let i = 0; i < 34; i++) {
@@ -155,7 +155,6 @@ function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath
   tracePath(ctx, path); ctx.strokeStyle = map.edge; ctx.lineWidth = 44; ctx.stroke();
   tracePath(ctx, path); ctx.strokeStyle = map.trail; ctx.lineWidth = 34; ctx.stroke();
   tracePath(ctx, path); ctx.setLineDash([4, 9]); ctx.strokeStyle = '#af9f6c'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
-  drawAirRoute(ctx,airPath);
   drawBiomeAccents(ctx, map, path);
   drawRouteLandmarks(ctx, path, pathLength);
   drawTerrainLabels(ctx,map,displayScale);
@@ -166,8 +165,8 @@ export function createStaticMapCache(createCanvas) {
   let canvas = null, cacheKey = null;
   return {
     draw(ctx, state) {
-      const { width, height, map, path, pathLength, airPath, displayScale } = state;
-      const key = JSON.stringify([width, height, map.biome, map.background, map.patch, map.edge, map.trail, map.buildZones||null, path, pathLength, airPath, displayScale]);
+      const { width, height, map, path, pathLength, displayScale } = state;
+      const key = JSON.stringify([width, height, map.biome, map.background, map.patch, map.edge, map.trail, map.buildZones||null, path, pathLength, displayScale]);
       if (!canvas || cacheKey !== key) {
         canvas = createCanvas(width, height);
         canvas.width = width;
@@ -447,7 +446,7 @@ function countCueOverlaps(centers, ranks) {
 
 export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = null) {
   const {
-    width, height, displayScale = 1, map, path, pathLength, airPath, towers, selectedTower, towersDef, towersLinked, selectedTowerRange,
+    width, height, displayScale = 1, map, path, pathLength, airPath, showAirRoute = true, towers, selectedTower, towersDef, towersLinked, selectedTowerRange,
     enemies, enemyPosition, shots, shotPosition, shotAngle = () => 0, particles, selectedType, pointer, placementError,
     placementPreviewRange, abilityPreview, palette, highContrastEnemyColors, selectedTargetId, visualTime = 0, enemyHitFlash = () => 0, recoilForTower = () => 0, recoilAngleForTower = () => null,
     guardian = null, guardianMoveActive = false, guardianCursor = null, gateRoutePreviews = null, selectedGateRoute = null
@@ -455,6 +454,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   ctx.clearRect(0, 0, width, height);
   if (staticMapCache) staticMapCache.draw(ctx, state);
   else drawStaticMapLayer(ctx, state);
+  if (showAirRoute) drawAirRoute(ctx, airPath);
   drawGateRoutePreviews(ctx,gateRoutePreviews,selectedGateRoute,displayScale);
   drawSeedRecoveryPaths(ctx,path,pathLength,state.seedObjective,displayScale);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';

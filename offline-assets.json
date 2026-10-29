@@ -5,6 +5,7 @@
   "./index.html",
   "./manifest.webmanifest",
   "./src/action-log.js",
+  "./src/air-route-visibility.js",
   "./src/air-routes.js",
   "./src/audio-mix.js",
   "./src/auto-start.js",

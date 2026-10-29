@@ -12,7 +12,7 @@ export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlocke
 export const DEFAULT_UI_SETTINGS = Object.freeze({
   animation: 'full', shake: true, flashes: true, compact: false, palette: 'garden',
   textSize: 'normal', tutorialSeen: false, tutorialInProgress: false, tutorialReturnToSavedRun: false, sound: false,
-  masterVolume: 80, musicVolume: 20, effectsVolume: 70,
+  masterVolume: 80, musicVolume: 20, effectsVolume: 70, alwaysShowAirRoute: false,
   keyBindings: DEFAULT_KEY_BINDINGS, spellLoadout: DEFAULT_SPELL_LOADOUT, autoStartWaves: false
 });
 
@@ -93,7 +93,8 @@ export function normalizeUiSettings(value) {
     masterVolume: Number.isFinite(source.masterVolume) ? Math.round(Math.max(0, Math.min(100, source.masterVolume))) : DEFAULT_UI_SETTINGS.masterVolume,
     musicVolume: Number.isFinite(source.musicVolume) ? Math.round(Math.max(0, Math.min(100, source.musicVolume))) : DEFAULT_UI_SETTINGS.musicVolume,
     effectsVolume: Number.isFinite(source.effectsVolume) ? Math.round(Math.max(0, Math.min(100, source.effectsVolume))) : DEFAULT_UI_SETTINGS.effectsVolume,
-    autoStartWaves: typeof source.autoStartWaves === 'boolean' ? source.autoStartWaves : DEFAULT_UI_SETTINGS.autoStartWaves
+    autoStartWaves: typeof source.autoStartWaves === 'boolean' ? source.autoStartWaves : DEFAULT_UI_SETTINGS.autoStartWaves,
+    alwaysShowAirRoute: typeof source.alwaysShowAirRoute === 'boolean' ? source.alwaysShowAirRoute : DEFAULT_UI_SETTINGS.alwaysShowAirRoute
   };
 }
 

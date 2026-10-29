@@ -52,6 +52,7 @@ import { shouldEmitParticles } from './src/visual-preferences.js';
 import { createGameAudio } from './src/game-audio.js';
 import { appendCosmeticParticles } from './src/effect-budget.js';
 import { buildWavePreviewView, buildWaveTimelineView, renderWavePreview, renderWaveTimeline } from './src/wave-ui.js';
+import { shouldShowAirRoute } from './src/air-route-visibility.js';
 import { renderTowerCatalog } from './src/tower-catalog-ui.js';
 import { renderTowerInspector, renderTowerUpgradePreview, renderTowerTargetStatus } from './src/tower-inspector-ui.js';
 import { renderTowerAbilityDock } from './src/tower-ability-dock-ui.js';
@@ -149,6 +150,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const towerRecoilAt=new Map();
   const renderSnapshots=createRenderSnapshots();
   let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', tutorialStep=0, tutorialPractice=createTutorialPracticeState(), tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='';
+  let previewHasFlyer=false;
   const aimedSpellControls=new Map();
   let runState=createRunState();
   let combatPerformance=createCombatPerformance();
@@ -187,7 +189,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
         masterVolume:byId('masterVolume'), masterVolumeValue:byId('masterVolumeValue'),
         musicVolume:byId('musicVolume'), musicVolumeValue:byId('musicVolumeValue'),
         effectsVolume:byId('effectsVolume'), effectsVolumeValue:byId('effectsVolumeValue'),
-        compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'), autoStartWaves:byId('autoStartWaves')
+        compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'), autoStartWaves:byId('autoStartWaves'),
+        alwaysShowAirRoute:byId('alwaysShowAirRoute')
       }
     });
   }
@@ -296,7 +299,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     renderPlacementHint({hint:byId('placementHint'),confirm:byId('placementConfirm'),board:canvas.parentElement,confirmButton:byId('confirmPlacementBtn'),view});
   }
   function selectPlacedTower(tower) {
-    selectedTower=tower;selectedType=null;placementCandidate=null;hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updateHud();revealSelectedTower();updatePlacementHint();draw();announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});
+    selectedTower=tower;selectedType=null;placementCandidate=null;hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updateHud();updatePreview();revealSelectedTower();updatePlacementHint();draw();announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});
   }
   function showSelectionChooser(candidates) {
     showTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement,candidates,towerDefinitions:towersDef,onSelect:selectPlacedTower,document});
@@ -635,7 +638,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function renderTowerOptions() {
     byId('prospectiveLabel').textContent=selectedType?`Building · ${towersDef[selectedType].icon} ${towersDef[selectedType].name} · ${towersDef[selectedType].cost} petals`:'No build pick · choose a defender to place';
     renderTowerCatalog({document,root:byId('towerList'),towersDef,towerRoles,selectedType,filter:towerFilter,challenge,challengeRules,researchLoadout,relicLoadout,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg,showAll:byId('towerList').dataset.showAll==='true'});
-    document.querySelectorAll('.tower-option').forEach(button=>button.addEventListener('click',()=>{if(guardianMoveActive)endGuardianMove();if(aimedSpellId)cancelAimedSpell();selectedType=button.dataset.type;renderTowerOptions();renderSelected();updatePlacementHint();draw();canvas.focus({preventScroll:true});}));
+    document.querySelectorAll('.tower-option').forEach(button=>button.addEventListener('click',()=>{if(guardianMoveActive)endGuardianMove();if(aimedSpellId)cancelAimedSpell();selectedType=button.dataset.type;renderTowerOptions();renderSelected();updatePreview();updatePlacementHint();draw();canvas.focus({preventScroll:true});}));
     document.querySelectorAll('.catalog-more').forEach(button=>button.addEventListener('click',()=>{const root=byId('towerList');const expanded=button.getAttribute('aria-expanded')==='true';root.dataset.showAll=String(!expanded);if(expanded&&selectedType&&!['sprout','dew','puff'].includes(selectedType))selectedType=null;renderTowerOptions();byId('towerList').querySelector('.catalog-more')?.focus({preventScroll:true});}));
     document.querySelectorAll('.tower-filter').forEach(button=>{button.classList.toggle('active',button.dataset.filter===towerFilter);button.setAttribute('aria-pressed',String(button.dataset.filter===towerFilter));});
     byId('cancelPlacementBtn').style.display=selectedType?'block':'none';
@@ -812,10 +815,12 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const view=buildWavePreviewView({
       terminal:runIsOver(),won:runState.basePhase==='won',running:runIsRunning(),wave,
       bossName:waveScheduleVersion>=2?BOSS_VARIANTS[selectedMap]?.name:undefined,mapLabel:CAMPAIGN_MISSION_BY_ID[selectedMap]?`CHAPTER ${CAMPAIGN_MISSION_BY_ID[selectedMap].chapter} · ${CAMPAIGN_MISSION_BY_ID[selectedMap].name.toUpperCase()}`:maps[selectedMap].name.toUpperCase(),
-      schedules:waveSchedulesForMap(selectedMap,waveScheduleVersion),airRouteEnabled:waveScheduleVersion>=WAVE_SCHEDULE_VERSION,difficulty,challengeRules,endless:challenge==='endless',endlessModifier
+      schedules:waveSchedulesForMap(selectedMap,waveScheduleVersion),difficulty,challengeRules,endless:challenge==='endless',endlessModifier
     });
+    previewHasFlyer=Boolean(view.preview?.counts?.flyer);
+    view.airRouteEnabled=shouldShowAirRoute({alwaysShow:uiSettings.alwaysShowAirRoute,previewHasFlyer,selectedAntiAir:Boolean(towersDef[selectedTower?.type||selectedType]?.antiAir),activeFlyer:enemies.some(enemy=>enemy.flying),supported:waveScheduleVersion>=WAVE_SCHEDULE_VERSION});
     renderWavePreview({document,enemyPreview:byId('enemyPreview'),waveThreat:byId('waveThreat'),mapNote:byId('mapNote'),waveInfo:byId('waveInfo'),view});
-    if(maps[selectedMap]?.customMap){const objective=maps[selectedMap].customObjective;byId('mapNote').textContent=`${maps[selectedMap].name} · ${objective.brief} Minimum ${objective.minLives} seeds must remain. Ground and sky routes share this custom trail.`;}
+    if(maps[selectedMap]?.customMap){const objective=maps[selectedMap].customObjective;byId('mapNote').textContent=`${maps[selectedMap].name} · ${objective.brief} Minimum ${objective.minLives} seeds must remain.${view.airRouteEnabled?' Ground and sky routes share this custom trail.':''}`;}
     if(!wave&&!runIsRunning())byId('waveInfo').textContent+=guardianMode==='guardian'?' Optional kit: move your Meadow Guardian across safe grass; Pollen Pulse slows nearby ground pests, but a pest can knock it down briefly.':guardianMode==='ward'?' Optional kit: Pollen Ward grants two extra starting seeds instead of an active unit.':' Optional kit: choose a Meadow Guardian or Pollen Ward in mission settings; neither is required.';
     updateWaveTimeline();
   }
@@ -863,10 +868,10 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(spellId!=='rejuvenation'&&!enemies.length){setToast('Wait for pests to reach the trail before aiming this spell.');return;}
     if(guardianMoveActive)endGuardianMove();
     aimedSpellId=spellId;spellTargetStart=null;selectedType=null;placementCandidate=null;selectedTower=null;
-    byId('spellLoadoutStatus').textContent=buildSpellPreview(spellId).targeting;refreshSpellControls();renderTowerOptions();renderSelected();canvas.focus({preventScroll:true});draw();
+    byId('spellLoadoutStatus').textContent=buildSpellPreview(spellId).targeting;refreshSpellControls();renderTowerOptions();renderSelected();updatePreview();canvas.focus({preventScroll:true});draw();
   }
   function cancelAimedSpell(){
-    if(!aimedSpellId)return;aimedSpellId=null;spellTargetStart=null;byId('spellLoadoutStatus').textContent='Aim canceled. No petals spent.';refreshSpellControls();updatePlacementHint();draw();
+    if(!aimedSpellId)return;aimedSpellId=null;spellTargetStart=null;byId('spellLoadoutStatus').textContent='Aim canceled. No petals spent.';refreshSpellControls();updatePlacementHint();updatePreview();draw();
   }
   function commitAimedSpell(point){
     if(!aimedSpellId)return;
@@ -896,7 +901,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(tutorialPractice.active&&(tutorialPractice.task!==0||selectedType!=='sprout')){setToast('Practice placement uses one Sprout Slinger first.');return;}
     const def=towersDef[selectedType];if(!def)return;const error=placementError(point);if(error){setToast(error);updatePlacementHint({...point,inside:true});return;}
     const result=performPlayerAction('placeTower',{towerId:nextEntityId,towerType:selectedType,x:point.x,y:point.y});if(!result.ok){setToast(result.reason);return;}
-    selectedTower=result.tower;placementCandidate=null;byId('placementConfirm').hidden=true;if(!repeatBuild)selectedType=null;if(mobileLayout.matches)setDefenderSheetOpen(false);canvas.focus({preventScroll:true});playCue('place');if(towers.length>=8)unlock('builder');setToast(`${def.name} planted.`);advanceTutorialPractice('place',{towerId:result.tower.id,type:result.tower.type});updateHud();renderTowerOptions();renderSelected();updatePlacementHint();if(!mobileLayout.matches)revealSelectedTower();saveRun();draw();
+    selectedTower=result.tower;placementCandidate=null;byId('placementConfirm').hidden=true;if(!repeatBuild)selectedType=null;if(mobileLayout.matches)setDefenderSheetOpen(false);canvas.focus({preventScroll:true});playCue('place');if(towers.length>=8)unlock('builder');setToast(`${def.name} planted.`);advanceTutorialPractice('place',{towerId:result.tower.id,type:result.tower.type});updateHud();renderTowerOptions();renderSelected();updatePreview();updatePlacementHint();if(!mobileLayout.matches)revealSelectedTower();saveRun();draw();
   }
   function drawMapMagnifier() {
     if(!magnifierEnabled||pointer.x<0||pointer.y<0){magnifierCanvas.hidden=true;return;}
@@ -924,7 +929,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       if(hits.length===1){selectPlacedTower(hits[0]);return;}
       hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});
       if(selectedType){if(event?.pointerType==='touch'){placementCandidate=point;pointer={...point,inside:true};updatePlacementHint(pointer);draw();}else placeTower(point);}
-      else{selectedTower=null;renderSelected();updateHud();draw();}
+      else{selectedTower=null;renderSelected();updateHud();updatePreview();draw();}
     }
   });
   function drawSpellOverlay(){
@@ -947,6 +952,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       width:canvas.width,height:canvas.height,displayScale:canvasDisplayScale,map:maps[selectedMap],path,pathLength,
       gateRoutePreviews:!runIsActivelyRunning()&&!enemies.length&&!spawnQueue.length&&maps[selectedMap].gateRoutes?Object.entries(maps[selectedMap].gateRoutes).map(([id,route])=>({id,label:route.label,path:route.path})):null,selectedGateRoute:gateRoute,
       airPath:waveScheduleVersion>=WAVE_SCHEDULE_VERSION?maps[selectedMap].airPath:null,
+      showAirRoute:shouldShowAirRoute({alwaysShow:uiSettings.alwaysShowAirRoute,previewHasFlyer,selectedAntiAir:Boolean(towersDef[selectedTower?.type||selectedType]?.antiAir),activeFlyer:enemies.some(enemy=>enemy.flying),supported:waveScheduleVersion>=WAVE_SCHEDULE_VERSION}),
       towers,selectedTower,towersDef,towersLinked,
       selectedTowerRange(tower){const def=towersDef[tower.type];if(def.supportStructure)return getEffectiveTowerStats(tower,{researchLoadout,relicLoadout},def).range; if(!def.range)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));return getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def).range;},
       placementPreviewRange(type,point){return getEffectiveTowerStats({type,level:1},{challenge,challengeRules,linked:false,terrain:terrainAt(point),researchLoadout,relicLoadout},towersDef[type]).range;},abilityPreview:liveAbilityPreview,
@@ -1121,7 +1127,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('towerAbilityBtn').onclick=previewTowerAbility;byId('towerAbilityConfirm').onclick=runTowerAbility;byId('towerAbilityCancel').onclick=cancelTowerAbilityPreview;byId('bloomBtn').onclick=useBloom;byId('snareBtn').onclick=useSnare;
   byId('guardianMoveBtn').onclick=()=>guardianMoveActive?endGuardianMove():beginGuardianMove();byId('guardianPulseBtn').onclick=useGuardianPulse;
   byId('guardianMoveBtn').onclick=()=>guardianMoveActive?endGuardianMove():beginGuardianMove();byId('guardianPulseBtn').onclick=useGuardianPulse;
-  byId('sellBtn').onclick=()=>{if(!selectedTower)return;const tower=selectedTower,refund=saleRefund(tower.invested,towersDef[tower.type].cost);requestConfirmation('Sell this defender?',`Sell ${towersDef[tower.type].name}? Investment: ${tower.invested} petals · refund: ${refund} petals.`,()=>{const result=performPlayerAction('sellTower',{towerId:tower.id,refund});if(!result.ok){setToast(result.reason);return;}selectedTower=null;renderSelected();updateHud();if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}saveRun();draw();},`Sell · +${refund} ✿`);};
+  byId('sellBtn').onclick=()=>{if(!selectedTower)return;const tower=selectedTower,refund=saleRefund(tower.invested,towersDef[tower.type].cost);requestConfirmation('Sell this defender?',`Sell ${towersDef[tower.type].name}? Investment: ${tower.invested} petals · refund: ${refund} petals.`,()=>{const result=performPlayerAction('sellTower',{towerId:tower.id,refund});if(!result.ok){setToast(result.reason);return;}selectedTower=null;renderSelected();updateHud();if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}updatePreview();saveRun();draw();},`Sell · +${refund} ✿`);};
   byId('resetBtn').onclick=()=>requestConfirmation('Restart this garden?',`Restart the ${config().label} run on ${maps[selectedMap].name}? Current towers and wave progress will be lost.`,()=>{resetRun();explainFreshGarden('Fresh garden. Choose your trail and defenders.');},'Restart run');
   byId('mapSelect').onchange=event=>{const previous=selectedMap,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the trail',()=>{selectedMap=next;challengeBoardId=null;path=maps[selectedMap].path;calcPath();renderMapOptions();updatePlayOptionsLabel();applyChallenge();renderChallenges();explainFreshGarden(`${maps[selectedMap].name} selected.`);});};
   byId('routeGatePanel').addEventListener('toggle',()=>{draw();});
@@ -1148,7 +1154,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   bindRunTransferControls({exportButton:byId('exportRunBtn'),importButton:byId('importRunBtn'),fileInput:byId('runImportInput'),onExport:exportRunFile,onImport:importRunFile});
   document.querySelectorAll('.tower-filter').forEach(button=>button.onclick=()=>{towerFilter=button.dataset.filter;renderTowerOptions();});
   byId('changeBuildPickBtn').onclick=()=>{const side=document.querySelector('.side'),expanded=!side.classList.contains('show-build');side.classList.toggle('show-build',expanded);updateSelectedActionPlacement();if(expanded)byId('towerList').querySelector('.tower-option')?.focus({preventScroll:true});};
-  byId('cancelPlacementBtn').onclick=()=>{if(aimedSpellId){cancelAimedSpell();return;}selectedType=null;placementCandidate=null;hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updatePlacementHint();draw();};
+  byId('cancelPlacementBtn').onclick=()=>{if(aimedSpellId){cancelAimedSpell();return;}selectedType=null;placementCandidate=null;hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updatePreview();updatePlacementHint();draw();};
   byId('confirmPlacementBtn').onclick=()=>{if(placementCandidate)placeTower(placementCandidate);};
   byId('cancelPreviewBtn').onclick=()=>{placementCandidate=null;updatePlacementHint(pointer);draw();};
   byId('repeatBuildBtn').onclick=event=>{repeatBuild=!repeatBuild;event.currentTarget.setAttribute('aria-pressed',String(repeatBuild));event.currentTarget.textContent=`Repeat build · ${repeatBuild?'On':'Off'}`;};
@@ -1165,7 +1171,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       masterVolume:byId('masterVolume'), masterVolumeValue:byId('masterVolumeValue'),
       musicVolume:byId('musicVolume'), musicVolumeValue:byId('musicVolumeValue'),
       effectsVolume:byId('effectsVolume'), effectsVolumeValue:byId('effectsVolumeValue'),
-      compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'),autoStartWaves:byId('autoStartWaves')
+      compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'),autoStartWaves:byId('autoStartWaves'),alwaysShowAirRoute:byId('alwaysShowAirRoute')
     }, settings:uiSettings, saveSettings:saveUiSettings, applySettings:applyUiSettings,
     redraw:draw, syncAudio:()=>gameAudio.sync(),
     setSoundEnabled:enabled=>{soundOn=enabled;gameAudio.sync();if(enabled)playCue('soundOn');},
@@ -1173,7 +1179,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       autoStartController.setEnabled(enabled);
       if(enabled&&wave>0&&!runIsRunning()&&!runIsOver()&&challenge!=='endless')autoStartController.afterWaveClear(wave);
       updateAutoStartControls();
-    }
+    },
+    onAirRouteChange:()=>{updatePreview();draw();}
   });
   byId('keyboardBindings').onclick=event=>{const button=event.target.closest('[data-key-binding]');if(!button)return;pendingKeyBinding=button.dataset.keyBinding;byId('keyboardBindingStatus').textContent=`Press a key for ${buildKeyboardActionLabels(towersDef)[pendingKeyBinding]}. Escape cancels.`;button.focus({preventScroll:true});};
   byId('resetKeyboardBindings').onclick=()=>{keyBindings={...DEFAULT_KEY_BINDINGS};uiSettings.keyBindings=keyBindings;saveUiSettings();pendingKeyBinding=null;byId('keyboardBindingStatus').textContent='Default shortcuts restored.';renderKeyboardBindings();renderTowerOptions();};
