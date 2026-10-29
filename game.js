@@ -112,7 +112,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   syncCombatDockHeight();
   function setDefenderSheetOpen(open) { defenderSheet.classList.toggle('open',Boolean(open));defenderSheetToggle.setAttribute('aria-expanded',String(Boolean(open))); }
   setDefenderSheetOpen(!mobileLayout.matches);
-  mobileLayout.addEventListener('change',event=>setDefenderSheetOpen(!event.matches));
+  mobileLayout.addEventListener('change',event=>{setDefenderSheetOpen(!event.matches);if(selectedTower)updateSelectedActionPlacement();});
   renderCombatReference({
     note:byId('combatRuleNote'), matrixBody:byId('combatMatrixBody'), profileBody:byId('enemyProfileBody'),
     rules:COMBAT_RULES, matrix:COMBAT_INTERACTION_MATRIX, profiles:enemyCombatProfiles, document
@@ -655,6 +655,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function renderSelected() {
     if(abilityPreview&&abilityPreview.towerId!==selectedTower?.id)abilityPreview=null;
     if(!selectedTower)abilityPreview=null;
+    updateSelectedActionPlacement();
     const linked=isTowerLinkedToAnother(selectedTower,towers,towersLinked);
     const view=selectedTower?buildTowerInspectorModel({selectedTower,towers,challenge,challengeRules,linked,cash,wave,gameTime,terrain:terrainAt(selectedTower),researchLoadout,relicLoadout,tutorialActive:tutorialPractice.active,tutorialTask:tutorialPractice.task,tutorialTowerId:tutorialPractice.towerId,
       onChooseBranch:index=>{const result=performPlayerAction('chooseBranch',{towerId:selectedTower.id,branch:index});if(result.ok){renderSelected();saveRun();}}
@@ -662,6 +663,21 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const signature=createInspectorDisplaySignature({towerId:selectedTower?.id??null,view});
     if(selectedInspectorRenderGate.shouldRender(signature))renderTowerInspector({document,canvasHost:canvas.parentElement,view});
     updateUpgradePreview();updateTargetIndicator();updateSelectedAbilityDock();
+  }
+  function updateSelectedActionPlacement() {
+    const context=byId('selectedContext'),side=document.querySelector('.side'),mobile=mobileLayout.matches;
+    const destination=mobile?canvas.parentElement:byId('selectedActionHost');
+    if(context.parentElement!==destination){
+      const focusedControl=context.contains(document.activeElement)?document.activeElement:null;
+      if(mobile)destination.insertBefore(context,byId('battlefieldSummary'));
+      else destination.append(context);
+      focusedControl?.focus({preventScroll:true});
+    }
+    const selected=Boolean(selectedTower),toggle=byId('changeBuildPickBtn'),expanded=side.classList.contains('show-build');
+    side.classList.toggle('has-selected-actions',selected);
+    if(!selected){side.classList.remove('show-build');toggle.hidden=true;toggle.setAttribute('aria-expanded','false');byId('defenderCardTitle').textContent='Choose a defender';byId('defenderCardMode').textContent='BUILD PICK';return;}
+    toggle.hidden=false;toggle.setAttribute('aria-expanded',String(expanded));toggle.textContent=expanded?'Hide build choices':'Choose another defender';
+    byId('defenderCardTitle').textContent='Selected defender';byId('defenderCardMode').textContent='INSPECT';
   }
   function revealSelectedTower() {
     if(!selectedTower)return;
@@ -1123,6 +1139,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('resumeBtn').onclick=restoreRun;
   bindRunTransferControls({exportButton:byId('exportRunBtn'),importButton:byId('importRunBtn'),fileInput:byId('runImportInput'),onExport:exportRunFile,onImport:importRunFile});
   document.querySelectorAll('.tower-filter').forEach(button=>button.onclick=()=>{towerFilter=button.dataset.filter;renderTowerOptions();});
+  byId('changeBuildPickBtn').onclick=()=>{const side=document.querySelector('.side'),expanded=!side.classList.contains('show-build');side.classList.toggle('show-build',expanded);updateSelectedActionPlacement();if(expanded)byId('towerList').querySelector('.tower-option')?.focus({preventScroll:true});};
   byId('cancelPlacementBtn').onclick=()=>{if(aimedSpellId){cancelAimedSpell();return;}selectedType=null;placementCandidate=null;hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updatePlacementHint();draw();};
   byId('confirmPlacementBtn').onclick=()=>{if(placementCandidate)placeTower(placementCandidate);};
   byId('cancelPreviewBtn').onclick=()=>{placementCandidate=null;updatePlacementHint(pointer);draw();};
