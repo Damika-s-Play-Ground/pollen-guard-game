@@ -1,23 +1,39 @@
 
+const ENCOUNTER_COUNTERS = Object.freeze({
+  armored: Object.freeze({ towerType: 'briar', label: 'Briar Patch', reason: 'neutral toxin damage against armor' }),
+  splitter: Object.freeze({ towerType: 'puff', label: 'Puff Pod', reason: 'area bursts catch clustered pests' }),
+  flyer: Object.freeze({ towerType: 'gust', label: 'Kite Keeper', reason: 'fast anti-air gusts' }),
+  burrower: Object.freeze({ towerType: 'compostTrap', label: 'Compost Trap', reason: 'slows ground pests entering its ring' })
+});
+
 export function buildEnemyBriefingView({ targetWave, intro, running = false, terminal = false }) {
   if (running || terminal || !intro) return { hidden: true, enemyType: null };
+  const counter = ENCOUNTER_COUNTERS[intro.type] || null;
   return {
     hidden: false,
     enemyType: intro.type,
     heading: `New threat · Wave ${targetWave} · ${intro.icon} ${intro.name}. `,
     rule: intro.rule,
-    guideLabel: `Inspect ${intro.name} in the enemy field guide`
+    guideLabel: `Inspect ${intro.name} in the enemy field guide`,
+    counter
   };
 }
 
-export function renderEnemyBriefing({ panel, text, guideButton, view, document }) {
+export function renderEnemyBriefing({ panel, text, guideButton, counterButton, view, document }) {
   panel.hidden = view.hidden;
+  if (counterButton) counterButton.hidden = view.hidden || !view.counter;
   if (view.hidden) return;
   panel.dataset.enemyIntel = view.enemyType;
   const heading = document.createElement('strong');
   heading.textContent = view.heading;
   text.replaceChildren(heading, document.createTextNode(view.rule));
   guideButton.setAttribute('aria-label', view.guideLabel);
+  if (counterButton && view.counter) {
+    counterButton.dataset.towerType = view.counter.towerType;
+    counterButton.textContent = `Try ${view.counter.label}`;
+    counterButton.setAttribute('aria-label', `Reveal and select ${view.counter.label}: ${view.counter.reason}`);
+    counterButton.title = view.counter.reason;
+  }
 }
 
 export function filterEnemyGuide({ list, empty, query }) {

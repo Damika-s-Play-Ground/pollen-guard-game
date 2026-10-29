@@ -796,7 +796,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const targetWave=wave+1,intro=!runIsRunning()&&!runIsOver()?firstEncounterIntel(targetWave,waveSchedulesForMap(selectedMap,waveScheduleVersion),waveScheduleVersion):null,key=intro?`${targetWave}:${intro.type}:${waveScheduleVersion}`:'';
     if(key===enemyBriefingKey)return;enemyBriefingKey=key;
     const view=buildEnemyBriefingView({targetWave,intro,running:runIsRunning(),terminal:runIsOver()});
-    renderEnemyBriefing({panel:byId('enemyBriefing'),text:byId('enemyBriefingText'),guideButton:byId('enemyBriefingGuide'),view,document});
+    renderEnemyBriefing({panel:byId('enemyBriefing'),text:byId('enemyBriefingText'),guideButton:byId('enemyBriefingGuide'),counterButton:byId('enemyBriefingCounter'),view,document});
   }
   function openEnemyGuide(type) {
     const guide=byId('enemyGuide'),search=byId('enemyGuideSearch');guide.open=true;
@@ -811,6 +811,10 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('enemyGuideSearch').addEventListener('input',filterEnemyGuide);
   byId('enemyGuideList').addEventListener('click',event=>{const type=event.target.closest('[data-enemy-resistance]')?.dataset.enemyResistance;if(type)openEnemyResistance(type);});
   byId('enemyBriefingGuide').addEventListener('click',()=>openEnemyGuide(byId('enemyBriefing').dataset.enemyIntel));
+  byId('enemyBriefingCounter').addEventListener('click',event=>{
+    const type=event.currentTarget.dataset.towerType;
+    if(type)selectTowerShortcut(type);
+  });
   byId('waveTimeline').addEventListener('click',event=>{const type=event.target.closest('[data-enemy-intel]')?.dataset.enemyIntel;if(type)openEnemyGuide(type);});
   byId('enemyPreview').addEventListener('click',event=>{const type=event.target.closest('[data-enemy-intel]')?.dataset.enemyIntel;if(type)openEnemyGuide(type);});
   function updatePreview() {
