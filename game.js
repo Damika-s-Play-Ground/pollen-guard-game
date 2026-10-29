@@ -42,7 +42,7 @@ import { CAMPAIGN_MISSIONS, CAMPAIGN_MISSION_BY_ID, buildMissionCompletion } fro
 import { buildMissionMasteryProgress, missionMasteryResultText } from './src/mission-mastery.js';
 import { ENEMY_INTEL, enemyIntelFor, firstEncounterIntel } from './src/enemy-intel.js';
 import { buildEnemyBriefingView, filterEnemyGuide as filterEnemyGuideCards, renderEnemyBriefing, renderEnemyGuide } from './src/enemy-guide-ui.js';
-import { buildPlacementHintView, renderPlacementHint } from './src/placement-ui.js';
+import { buildPlacementHintView, movePlacementConfirmation, renderPlacementHint } from './src/placement-ui.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
 import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutorialPracticeState, finishTutorialPracticeState, resetTutorialPracticeState } from './src/tutorial-progress.js';
 import { buildTutorialCoachView, clearTutorialCoach, renderTutorialCoach, renderTutorialStep } from './src/tutorial-ui.js';
@@ -112,7 +112,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   syncCombatDockHeight();
   function setDefenderSheetOpen(open) { defenderSheet.classList.toggle('open',Boolean(open));defenderSheetToggle.setAttribute('aria-expanded',String(Boolean(open))); }
   setDefenderSheetOpen(!mobileLayout.matches);
-  mobileLayout.addEventListener('change',event=>{setDefenderSheetOpen(!event.matches);if(selectedTower)updateSelectedActionPlacement();});
+  syncPlacementConfirmHost();
+  mobileLayout.addEventListener('change',event=>{setDefenderSheetOpen(!event.matches);syncPlacementConfirmHost();if(selectedTower)updateSelectedActionPlacement();});
   renderCombatReference({
     note:byId('combatRuleNote'), matrixBody:byId('combatMatrixBody'), profileBody:byId('enemyProfileBody'),
     rules:COMBAT_RULES, matrix:COMBAT_INTERACTION_MATRIX, profiles:enemyCombatProfiles, document
@@ -280,7 +281,12 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(!selectedType)return 'Choose a defender from the catalog first.';
     return validateTowerPlacement({challenge,challengeRules,cash,towers},selectedType,point,{path,width:canvas.width,height:canvas.height});
   }
+  function syncPlacementConfirmHost() {
+    const confirm=byId('placementConfirm'),destination=mobileLayout.matches?canvas.parentElement:byId('placementConfirmHost');
+    movePlacementConfirmation({confirm,destination,activeElement:document.activeElement});
+  }
   function updatePlacementHint(point=pointer) {
+    syncPlacementConfirmHost();
     const error=selectedType&&point.inside?placementError(point):'';
     const def=selectedType?towersDef[selectedType]:null,terrain=point.inside?terrainAt(point):null;
     const stats=def?getEffectiveTowerStats({type:selectedType,level:1},{challenge,challengeRules,linked:false,terrain,researchLoadout,relicLoadout},def):null;

@@ -24,6 +24,14 @@ export function buildPlacementHintView({ selectedType, placementCandidate, error
   };
 }
 
+export function movePlacementConfirmation({ confirm, destination, activeElement }) {
+  if (confirm.parentElement === destination) return false;
+  const focused = confirm.contains(activeElement) ? activeElement : null;
+  destination.append(confirm);
+  focused?.focus({ preventScroll: true });
+  return true;
+}
+
 export function renderPlacementHint({ hint, confirm, board, confirmButton, view }) {
   hint.textContent = view.text;
   hint.className = view.className;
