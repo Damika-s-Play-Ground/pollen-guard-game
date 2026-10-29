@@ -1,7 +1,7 @@
 export const TUTORIAL_STEPS = Object.freeze([
   Object.freeze(['Welcome to the meadow', 'Place defenders on open grass beside the trail. Their range preview helps you cover long stretches.']),
   Object.freeze(['Choose a defender', 'Sprout Slinger is a simple first pick. You can filter defenders by attack, support, or economy role.']),
-  Object.freeze(['Plan each wave', 'Preview enemy counts, then start a wave. Use the early launch button when you are ready. Mission kit is optional: the Meadow Guardian can move over safe grass and slow nearby ground pests, while Pollen Ward adds two starting seeds. Sudden Death with Ward is labeled as a three-seed variant. Core missions work without either kit.']),
+  Object.freeze(['Plan each wave', 'Preview enemy counts, place defenders, then launch when your garden is ready. Mission kit is optional: the Meadow Guardian can move over safe grass and slow nearby ground pests, while Pollen Ward adds two starting seeds. Sudden Death with Ward is labeled as a three-seed variant. Core missions work without either kit.']),
   Object.freeze(['Inspect and specialize', 'Select a placed tower to change its target priority, choose an upgrade branch, and use its ability.'])
 ]);
 

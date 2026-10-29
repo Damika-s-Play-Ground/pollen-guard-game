@@ -261,7 +261,7 @@ export function summarizeWave(waveNumber, schedules = AUTHORED_WAVES, options = 
   const bounty = queue.reduce((total, spawn) => total + (enemyBounties[spawn.type] || 0) + (spawn.type === 'splitter' ? 2 : 0), 0);
   return {
     wave: waveNumber, groups, total: queue.length, budget: calculateWaveBudget(queue),
-    spawnSpan, bounty, clearBonus: 12 + waveNumber * 2,
+    spawnSpan, bounty, clearBonus: (options.economyRulesVersion ?? 0) >= 1 ? 12 : 12 + waveNumber * 2,
     cue:`${seedCarrierIndex>=0?`${schedule.cue} A marked seed thief turns back to the entry with one cache seed.`:schedule.cue}${options.endless&&options.endlessModifier&&ENDLESS_CHOICES[options.endlessModifier]?` ${ENDLESS_CHOICES[options.endlessModifier].description}`:''}${options.endless&&waveNumber%5===0?' Periodic boss warning: a Bramble boss joins this wave.':''}`
   };
 }

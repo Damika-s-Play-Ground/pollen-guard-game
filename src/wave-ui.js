@@ -21,8 +21,8 @@ function bossCue(cue, name) {
   return name ? cue.replace(/Bramble bosses/g, `${name} bosses`).replace(/Bramble boss|Bramble beetle/g, name) : cue;
 }
 
-export function buildWaveTimelineView({ bossName, terminal, won, running, paused, wave, scheduled, enemyCount, sunflowerIncome, intermission, challenge, limit, difficulty, challengeRules, endlessModifier = null, schedules = AUTHORED_WAVES }) {
-  const options={difficulty,challengeRules,endless:challenge==='endless',endlessModifier};
+export function buildWaveTimelineView({ bossName, terminal, won, running, paused, wave, scheduled, enemyCount, sunflowerIncome, intermission, challenge, limit, difficulty, challengeRules, endlessModifier = null, economyRulesVersion=0, schedules = AUTHORED_WAVES }) {
+  const options={difficulty,challengeRules,endless:challenge==='endless',endlessModifier,economyRulesVersion};
   const summary = running ? summarizeWave(wave, schedules, options) : null;
   return {
     terminal, won, running, paused, wave,
@@ -72,7 +72,7 @@ export function buildWavePreviewView({ terminal, won, running, wave, mapLabel, b
     ? `Wave ${preview.wave} is in progress. ${preview.total} enemies are in this encounter. ${preview.cue}`
     : wave === 0
       ? `Wave 1 brings ${incoming}. ${preview.cue} Encounter rating is ${preview.threat}; place a defender and launch when ready.`
-      : `Wave ${preview.wave}: ${preview.total} enemies expected. ${preview.cue} Early launch starts the threat now and adds the displayed bonus; waiting or normal launch pays no early bonus.`;
+      : `Wave ${preview.wave}: ${preview.total} enemies expected. ${preview.cue} Review the encounter, then launch when ready.`;
   return { terminal: false, preview, boss: Boolean(counts.boss), bossName, mapLabel, airRouteEnabled,seedRecovery, waveInfo };
 }
 
@@ -140,9 +140,9 @@ export function renderWaveTimeline(element, state) {
       content += '<div class="wave-current cleared"><b>Wave ' + escapeHtml(wave) + ' cleared</b><span>Plan for the next encounter</span></div>';
     }
     if (forecasts.length) {
-      const summary = forecasts[0], earlyBonus = intermission > 0 ? Math.max(1, Math.ceil(intermission)) : 0;
+      const summary = forecasts[0];
       const abilityNote = 'Ivy Snare costs 45 petals; Golden Harvest adds 35 once per wave when used during combat.';
-      content += `<section class="economy-forecast" aria-label="Next wave economy"><b>Wave ${escapeHtml(summary.wave)} economy</b><span>On a cleared wave: +${escapeHtml(summary.clearBonus)} clear bonus${sunflowerIncome ? ` + ${escapeHtml(sunflowerIncome)} Sunflower income` : ''} petals.</span><span>Enemy bounty: up to ${escapeHtml(summary.bounty)} petals, only for enemies defeated before they leak.</span><span>${earlyBonus ? `Early call now: +${escapeHtml(earlyBonus)} petals, trading the remaining prep countdown for an immediate launch. Normal launch or waiting pays no early bonus.` : 'Early-call bonus: 0 petals; the countdown ended, so waiting pays no bonus.'}</span><small>${abilityNote} Forecast excludes ability use; leaks cost seeds.</small></section>`;
+      content += `<section class="economy-forecast" aria-label="Next wave economy"><b>Wave ${escapeHtml(summary.wave)} economy</b><span>On a cleared wave: +${escapeHtml(summary.clearBonus)} clear reward${sunflowerIncome ? ` + ${escapeHtml(sunflowerIncome)} Sunflower income` : ''} petals.</span><span>Enemy bounty: up to ${escapeHtml(summary.bounty)} petals, only for enemies defeated before they leak.</span><small>${abilityNote} Forecast excludes ability use; leaks cost seeds.</small></section>`;
       content += forecasts.map((forecast, index) => renderWaveCard(forecast, index === 0 ? 'Next' : 'Then')).join('');
     } else {
       content += `<p class="timeline-terminal">${running ? 'Final wave in progress · no later waves.' : 'No upcoming waves.'}</p>`;

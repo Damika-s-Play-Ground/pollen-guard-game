@@ -308,7 +308,8 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
     for (const tower of state.towers.filter(tower => tower.type === 'sunflower')) {
       recordTowerIncome(state.performance, tower.id, tower.type, getEffectiveTowerStats(tower, {terrain:state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground',researchLoadout:state.researchLoadout??[],relicLoadout:state.relicLoadout??[]}, towersDef.sunflower).income);
     }
-    const bonus = 12 + state.wave * 2 + income;
+    const clearReward = (state.economyRulesVersion ?? 0) >= 1 ? 12 : 12 + state.wave * 2;
+    const bonus = clearReward + income;
     state.cash += bonus;
     state.intermission = 12;
     return { defeated, leaked, waveClear: { bonus, income }, lost: false };

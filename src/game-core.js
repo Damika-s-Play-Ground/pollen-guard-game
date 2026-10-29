@@ -15,7 +15,7 @@ import { boardChallengeForRun, validChallengeId } from './challenge-board.js';
 import { endlessChoiceDue, isEndlessChoice } from './endless-mode.js';
 
 export const SIMULATION_STEP = 1 / 60;
-export const RUN_SAVE_VERSION = 18;
+export const RUN_SAVE_VERSION = 19;
 const SUPPORT_STRUCTURE_SAVE_VERSION = 8;
 const GUARDIAN_SAVE_VERSION = 9;
 const TARGETED_SPELL_SAVE_VERSION = 10;
@@ -339,7 +339,7 @@ export function assignRunEntityIds(run) {
 
 export function normalizeRunSave(value, maps, modes) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  if (value.version !== undefined && ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, RUN_SAVE_VERSION].includes(value.version)) return null;
+  if (value.version !== undefined && ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, RUN_SAVE_VERSION].includes(value.version)) return null;
   const sourceVersion = value.version ?? 0;
   const finite = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
   const selectedMap = value.selectedMap === undefined ? 'meadow' : value.selectedMap;
@@ -361,6 +361,7 @@ export function normalizeRunSave(value, maps, modes) {
   const challengeBoardId=sourceVersion>=17?value.challengeBoardId:null;
   const endlessModifier=sourceVersion>=18?value.endlessModifier:null;
   const endlessChoiceWave=sourceVersion>=18?value.endlessChoiceWave:0;
+  const economyRulesVersion=sourceVersion>=19?value.economyRulesVersion:0;
   const seedObjective=value.seedObjective;
   const seedObjectiveFieldsValid=sourceVersion>=14
     ? Object.hasOwn(value,'seedObjective')&&(seedRecoveryEnabled?validSeedObjective(seedObjective):seedObjective===null)
@@ -389,6 +390,7 @@ export function normalizeRunSave(value, maps, modes) {
       (sourceVersion>=16?(!Object.hasOwn(value,'relicLoadout')||!validRelicLoadout(relicLoadout)||relicLoadout.length>0&&(challenge!=='classic'||difficulty!=='standard'||normalizedRules.length>0)):Object.hasOwn(value,'relicLoadout')) ||
       (sourceVersion>=17?(!Object.hasOwn(value,'challengeBoardId')||challengeBoardId!==null&&(!validChallengeId(challengeBoardId)||!boardChallengeForRun({id:challengeBoardId,mode:challenge,difficulty,rules:normalizedRules,mapId:selectedMap,spellLoadout,guardianMode,researchLoadout,relicLoadout}))):Object.hasOwn(value,'challengeBoardId')) ||
       (sourceVersion>=18?(!Object.hasOwn(value,'endlessModifier')||!Object.hasOwn(value,'endlessChoiceWave')||!Number.isSafeInteger(endlessChoiceWave)||endlessChoiceWave<0||endlessChoiceWave>(Number.isSafeInteger(value.wave)?value.wave:-1)||endlessChoiceWave>0&&!endlessChoiceDue(endlessChoiceWave)||endlessModifier!==null&&!isEndlessChoice(endlessModifier)||endlessModifier!==null&&endlessChoiceWave===0||endlessModifier===null&&endlessChoiceWave>0||challenge!=='endless'&&(endlessModifier!==null||endlessChoiceWave!==0)):Object.hasOwn(value,'endlessModifier')||Object.hasOwn(value,'endlessChoiceWave')) ||
+      (sourceVersion>=19?(!Object.hasOwn(value,'economyRulesVersion')||![0,1].includes(economyRulesVersion)):Object.hasOwn(value,'economyRulesVersion')) ||
       !optionalFinite('bloomCharge', 0, 100) || !optionalFinite('spawnClock', 0, 60) ||
       !optionalFinite('intermission', 0, 3600) || !optionalFinite('gameTime', 0, 1e9) ||
       (value.speed !== undefined && !GAME_SPEEDS.includes(value.speed)) ||
@@ -471,6 +473,7 @@ export function normalizeRunSave(value, maps, modes) {
     challengeBoardId:sourceVersion>=17?challengeBoardId:null,
     endlessModifier:sourceVersion>=18?endlessModifier:null,
     endlessChoiceWave:sourceVersion>=18?endlessChoiceWave:0,
+    economyRulesVersion,
     cash: Math.floor(value.cash),
     lives: Math.floor(value.lives),
     wave: Math.floor(value.wave),

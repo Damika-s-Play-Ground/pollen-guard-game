@@ -22,13 +22,12 @@ export function buildHudView({
     battlefieldLabel: `${mapName} battlefield. Wave ${wave}, ${lives} seeds, ${cashValue} petals. ${selectedDescription} Arrow keys aim; Enter previews then places; Escape to cancel.`,
     buttons: {
       startBtn: { disabled: running || paused || finished || (tutorialActive && tutorialTask !== 4), text: finished ? (lives > 0 ? 'Garden saved' : 'Meadow over') : paused ? 'Game paused' : running ? 'Wave in progress…' : `Start wave ${wave + 1}  ↗` },
-      fastBtn: { disabled: running || paused || finished || intermission <= 0 || tutorialActive, text: intermission > 0 ? `Early +${Math.max(1, Math.ceil(intermission))} ✿` : 'Early start' },
       pauseBtn: { text: paused ? '▶' : 'Ⅱ', label: paused ? 'Resume game (Space)' : 'Pause game (Space)', pressed: paused },
       bloomBtn: { text: `✦ Bloom pulse · ${bloomCharge} / 100`, disabled: bloomCharge < 100 || !hasEnemies || gameOver || tutorialActive },
       snareBtn: { disabled: cash < 45 || !hasEnemies || gameOver || (tutorialActive && tutorialTask !== 5) },
       speedBtn: { text: `${speed}× speed`, shortLabel: `${speed}×`, label: `Game speed ${speed}×`, active: speed > 1 }
     },
-    waveTag: running ? 'DEFEND THE POD' : finished ? 'RUN COMPLETE' : intermission > 0 ? `EARLY BONUS ${Math.ceil(intermission)}s` : `WAVE ${wave + 1} INCOMING`,
+    waveTag: running ? 'DEFEND THE POD' : finished ? 'RUN COMPLETE' : `WAVE ${wave + 1} INCOMING`,
     bloomStatus: gameOver ? 'Run ended.' : !hasEnemies ? 'Wait for enemies on the trail.' : bloomCharge < 100 ? `Charge by popping enemies · ${100 - bloomCharge} more needed.` : 'Ready · affects every enemy on the trail.',
     snareStatus: gameOver ? 'Run ended.' : cash < 45 ? `Need ${45 - cash} more petals.` : !hasEnemies ? 'Wait for enemies on the trail.' : 'Ready · stuns every enemy on the trail.',
     resumeDisabled,

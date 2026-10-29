@@ -108,8 +108,8 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
       investment:`${selectedTower.invested || def.cost} invested · sell returns ${saleRefund(selectedTower.invested || def.cost, def.cost)}`,
       showBranches:false, branchOptions:null, selectedBranch:null, onChooseBranch,
       upgradeText:'NO UPGRADES', upgradeTitle:`${def.name} has a fixed support effect.`, upgradeDisabled:true,
-      contextUpgradeText:'No upgrades', targetMode:selectedTower.targetMode || 'First', targetModeDisabled:true,
-      abilityInfo:details, contextTitle:def.name
+      targetMode:selectedTower.targetMode || 'First', targetModeDisabled:true,
+      abilityInfo:details, contextTitle:`INSPECT · ${def.name}`
     };
   }
   const stats = applyBeaconInterval(getEffectiveTowerStats(selectedTower, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), selectedTower, towers,researchLoadout,relicLoadout);
@@ -171,10 +171,9 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
     upgradeText: level === 3 ? 'MAX LEVEL' : level === 1 && !hasBranchChoice ? 'Choose branch' : `Upgrade · ${cost} ✿`,
     upgradeTitle: level === 3 ? 'This defender is fully upgraded.' : !hasBranchChoice ? 'Choose a branch to preview its upgrade.' : `${def.branches[chosenBranch][0]}: ${def.branches[chosenBranch][1]}. Upgrade cost: ${cost} petals${shortage ? ` · Need ${shortage} more` : ''}.`,
     upgradeDisabled: level >= 3 || (level === 1 && !hasBranchChoice) || cash < cost || (tutorialActive && (tutorialTask !== 3 || selectedTower.id !== tutorialTowerId)),
-    contextUpgradeText: level === 3 ? 'Max level' : !hasBranchChoice ? 'Choose branch' : `Upgrade · ${cost} ✿`,
     targetMode: selectedTower.targetMode || 'First',
     targetModeDisabled: Boolean(def.income) || (tutorialActive && (tutorialTask !== 2 || selectedTower.id !== tutorialTowerId)),
     abilityInfo: `${def.ability} · ${usedThisWave ? 'used this wave' : remaining > 0 ? `ready in ${Math.ceil(remaining)}s` : 'ready when combat allows'}`,
-    contextTitle: `${def.name} · Lv ${level}`
+    contextTitle: `INSPECT · ${def.name} · Lv ${level}`
   };
 }

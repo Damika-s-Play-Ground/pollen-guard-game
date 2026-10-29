@@ -54,7 +54,9 @@ export function applyPlayerAction(state, action, context = {}) {
     case 'startWave': {
       if (state.running || state.gameOver || state.wave >= (context.waveLimit ?? Infinity)) return rejected('A wave cannot start in the current state.');
       if(endlessChoiceRequired({challenge:state.challenge,wave:state.wave,endlessChoiceWave:state.endlessChoiceWave}))return rejected('Choose an Endless modifier before the next wave.');
-      const bonus = payload.early && state.intermission > 0 ? Math.max(1, Math.ceil(state.intermission)) : 0;
+      const legacyEconomy = (state.economyRulesVersion ?? 0) < 1;
+      const bonus = legacyEconomy && payload.early && state.intermission > 0 ? Math.max(1, Math.ceil(state.intermission)) : 0;
+      if (!legacyEconomy && (payload.early || payload.bonus !== 0)) return rejected('New runs use a single wave launch and fixed launch reward.');
       if (payload.wave !== state.wave + 1 || payload.bonus !== bonus) return rejected('Wave command does not match the current wave state.');
       state.cash += bonus;
       state.wave++;
@@ -207,7 +209,7 @@ function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width
   const researchStart=researchStartingAdjustment(researchLoadout);
   const trackContributions = run.combatPerformance?.complete === true;
   const state = {
-    selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,challengeBoardId:run.challengeBoardId??null,endlessModifier:null,endlessChoiceWave:0,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
+    selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,challengeBoardId:run.challengeBoardId??null,endlessModifier:null,endlessChoiceWave:0,economyRulesVersion:run.economyRulesVersion??0,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
     researchLoadout,relicLoadout, simulationTick: 0, gameTime: 0, cash: configuration.cash+difficulty.cashDelta+researchStart.cash, lives: Math.max(1,loadout.lives+difficulty.livesDelta+researchStart.lives), popped: 0, wave: 0, bloomCharge: 0,
     combatPerformance: trackContributions ? createCombatPerformance(true) : null,
     towers: [], enemies: [], shots: [], spawnQueue: [], spawnClock: 0, running: false, gameOver: false, paused: false,
@@ -245,7 +247,7 @@ function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width
   state.paused = Boolean(run.paused);
   state.speed = normalizeGameSpeed(run.speed);
   const replayedRun = {
-    version: run.version, ...(run.terrainRulesVersion===undefined?{}:{terrainRulesVersion:state.terrainRulesVersion}), ...(run.waveScheduleVersion === undefined ? {} : { waveScheduleVersion:state.waveScheduleVersion }),
+    version: run.version, ...(run.terrainRulesVersion===undefined?{}:{terrainRulesVersion:state.terrainRulesVersion}), ...(run.waveScheduleVersion === undefined ? {} : { waveScheduleVersion:state.waveScheduleVersion}), ...(run.version>=19?{economyRulesVersion:state.economyRulesVersion}:{}),
     seedVersion: state.seedVersion, runSeed: state.runSeed, simulationTick: state.simulationTick,
     actionLogVersion: run.actionLogVersion, actionLog: run.actionLog, actionLogComplete: run.actionLogComplete,
     combatPerformance:trackContributions ? state.combatPerformance : (run.combatPerformance || createCombatPerformance(false)),

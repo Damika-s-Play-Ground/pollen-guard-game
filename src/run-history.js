@@ -34,7 +34,7 @@ export function recordCompletedRun(historyValue, run, { mapName, outcome, leaks 
   const rules = Array.isArray(run.challengeRules) ? [...run.challengeRules].sort() : [];
   const entry = { id, recordedAt, mapId: run.selectedMap, mapName, challenge: run.challenge, difficulty: run.difficulty || 'standard',
     rules, gateRoute: run.gateRoute || 'default', outcome, wave: run.wave, popped: run.popped, lives: run.lives, leaks, milestones:[...new Set(milestones)],
-    version: run.version, terrainRulesVersion: run.terrainRulesVersion || 0, waveScheduleVersion: run.waveScheduleVersion || 0,
+    version: run.version, terrainRulesVersion: run.terrainRulesVersion || 0, economyRulesVersion: run.economyRulesVersion || 0, waveScheduleVersion: run.waveScheduleVersion || 0,
     stateHash: typeof run.stateHash === 'string' ? run.stateHash : '', actionLogComplete: run.actionLogComplete === true,
     actionCount: Array.isArray(run.actionLog) ? run.actionLog.length : 0,
     towers: Array.isArray(run.towers) ? run.towers.map(tower => ({ type: tower.type, level: tower.level, branch: tower.branch ?? null })) : [],
@@ -50,7 +50,7 @@ export function compareRunCompatibility(a, b) {
   if (!validEntry(a) || !validEntry(b)) return { compatible: false, reason: 'Run summary is incomplete.' };
   const same = a.mapId === b.mapId && a.challenge === b.challenge && a.difficulty === b.difficulty &&
     JSON.stringify(a.rules) === JSON.stringify(b.rules) && a.version === b.version &&
-    a.terrainRulesVersion === b.terrainRulesVersion && a.waveScheduleVersion === b.waveScheduleVersion;
+    a.terrainRulesVersion === b.terrainRulesVersion && (a.economyRulesVersion??0) === (b.economyRulesVersion??0) && a.waveScheduleVersion === b.waveScheduleVersion;
   return same ? { compatible: true } : { compatible: false, reason: 'Runs use different maps, rules, or simulation versions.' };
 }
 

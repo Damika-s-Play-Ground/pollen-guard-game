@@ -40,8 +40,6 @@ export function renderTowerInspector({ document, canvasHost, view }) {
       const details = document.createElement('span');
       details.append(document.createTextNode(option.name));
       const description = document.createElement('small'); description.textContent = option.description; details.append(description);
-      const comparison = document.createElement('small'); comparison.textContent = `Next · ${option.changes}`; details.append(comparison);
-      const ability = document.createElement('small'); ability.textContent = option.abilityText; details.append(ability);
       const price = document.createElement('span'); price.textContent = `${option.cost} ✿`;
       button.append(details, price); button.onclick = () => view.onChooseBranch(index);
       return button;
@@ -57,8 +55,7 @@ export function renderTowerInspector({ document, canvasHost, view }) {
   byId('upgradeBtn').textContent = view.upgradeText;
   byId('upgradeBtn').title = view.upgradeTitle;
   byId('upgradeBtn').disabled = view.upgradeDisabled;
-  byId('contextUpgradeBtn').disabled = view.upgradeDisabled;
-  byId('contextUpgradeBtn').textContent = view.contextUpgradeText;
+  byId('sellBtn').textContent = 'Sell';
   byId('targetModeSelect').value = view.targetMode;
   byId('targetModeSelect').disabled = view.targetModeDisabled;
   byId('towerAbilityInfo').textContent = view.abilityInfo;
