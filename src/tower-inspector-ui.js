@@ -9,7 +9,6 @@ export function renderTowerTargetStatus({ document, text }) {
 export function renderTowerInspector({ document, canvasHost, view }) {
   const byId = id => document.getElementById(id);
   const empty = Boolean(view.empty);
-  byId('emptySelected').style.display = empty ? 'block' : 'none';
   byId('selectedPanel').style.display = empty ? 'none' : 'block';
   byId('selectedContext').hidden = empty;
   canvasHost.classList.toggle('has-selected-tower', !empty);
