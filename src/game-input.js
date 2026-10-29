@@ -21,6 +21,10 @@ export function worldRadiusForCssPixels(cssPixels, canvas) {
   return cssPixels * canvas.width / Math.max(1, rect.width);
 }
 
+export function shouldPrioritizeBuildPick({ hasBuildPick, point, placementError }) {
+  return Boolean(hasBuildPick && point && !placementError(point));
+}
+
 export function movePlacementCursor(point, direction, width, height, step = 18, candidate = null) {
   const origin = point?.inside ? point : { x: width / 2, y: height / 2 };
   const delta = { Up: [0, -step], Down: [0, step], Left: [-step, 0], Right: [step, 0] }[direction] || [0, 0];

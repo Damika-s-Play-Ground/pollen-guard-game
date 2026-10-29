@@ -31,7 +31,7 @@ import { equipRelic, unequipRelic, normalizeRelicState, relicLoadoutIds } from '
 import { calculatePathLength, distanceToPath } from './src/path-geometry.js';
 import { createEnemyRouteGeometry } from './src/air-routes.js';
 import { defaultGateRoute, gateSwitchesForMap, pathForGateRoute, summarizeGateRoute } from './src/gate-routes.js';
-import { bindCanvasPointerInput, bindKeyboardInput, findTowersAtPoint, movePlacementCursor, worldRadiusForCssPixels } from './src/game-input.js';
+import { bindCanvasPointerInput, bindKeyboardInput, findTowersAtPoint, movePlacementCursor, shouldPrioritizeBuildPick, worldRadiusForCssPixels } from './src/game-input.js';
 import { createStaticMapCache, drawBattlefield, shotRecoil } from './src/game-renderer.js';
 import { createRenderSnapshots } from './src/render-snapshot.js';
 import { towerArtSvg } from './src/tower-art.js';
@@ -889,6 +889,12 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       if(runIsOver())return;
       if(guardianMoveActive){pointer={...point,inside:true};commitGuardianMove(point);return;}
       if(aimedSpellId){pointer={...point,inside:true};commitAimedSpell(point);return;}
+      if(shouldPrioritizeBuildPick({hasBuildPick:Boolean(selectedType),point,placementError})){
+        hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});
+        if(event?.pointerType==='touch'){placementCandidate=point;pointer={...point,inside:true};updatePlacementHint(pointer);draw();}
+        else placeTower(point);
+        return;
+      }
       const hits=findTowersAtPoint(towers,point,worldRadiusForCssPixels(22,canvas));
       if(hits.length>1){showSelectionChooser(hits);return;}
       if(hits.length===1){selectPlacedTower(hits[0]);return;}
