@@ -19,7 +19,7 @@ import { createSeedObjective, SEED_RECOVERY_RULE } from './seed-objective.js';
 import { researchStartingAdjustment } from './research-tree.js';
 import { endlessChoiceRequired, isEndlessChoice } from './endless-mode.js';
 
-export function validateTowerPlacement(state, type, point, { path, width = 900, height = 500, map } = {}) {
+export function validateTowerPlacement(state, type, point, { path, width = 900, height = 540, map } = {}) {
   if (!towersDef[type]) return 'Choose a defender from the catalog first.';
   const def = towersDef[type];
   if ((state.challenge === 'thrifty' || state.challengeRules?.includes('noSunflowers')) && type === 'sunflower') return 'Sunflowers are disabled by the selected rules.';
@@ -187,7 +187,7 @@ export function applyPlayerAction(state, action, context = {}) {
   }
 }
 
-function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width = 900, height = 500, guardianWidth = 900, guardianHeight = 540 } = {}) {
+function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width = 900, height = 540, guardianWidth = 900, guardianHeight = 540 } = {}) {
   if (!run || run.actionLogComplete !== true || run.actionLogVersion !== ACTION_LOG_VERSION || !isValidActionLog(run.actionLog) || !Number.isSafeInteger(run.simulationTick) ||
       (run.actionLog.length > 0 && run.actionLog.at(-1).tick > run.simulationTick) ||
       typeof positionOf !== 'function' || !(Number.isFinite(pathLength) || typeof pathLength === 'function')) throw new TypeError('Run is not replayable or its map geometry is missing.');
