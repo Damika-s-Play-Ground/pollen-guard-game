@@ -37,6 +37,7 @@ import { createRenderSnapshots } from './src/render-snapshot.js';
 import { towerArtSvg } from './src/tower-art.js';
 import { createProfileStorage, UI_SETTINGS_STORAGE_KEY } from './src/profile-storage.js';
 import { createAutoStartController } from './src/auto-start.js';
+import { buildAutoStartControlView } from './src/auto-start-ui.js';
 import { buildBestWaveRecord, buildRunProgressEvents } from './src/profile-progression.js';
 import { CAMPAIGN_MISSIONS, CAMPAIGN_MISSION_BY_ID, buildMissionCompletion } from './src/campaign.js';
 import { buildMissionMasteryProgress, missionMasteryResultText } from './src/mission-mastery.js';
@@ -731,11 +732,12 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function updateAutoStartControls(){
     const state=autoStartController.snapshot(),status=byId('autoStartStatus'),hold=byId('holdNextWaveBtn'),toggle=byId('autoStartToggleBtn');
-    toggle.textContent=state.enabled?'Auto on':'Auto off';
-    toggle.setAttribute('aria-pressed',String(state.enabled));
-    toggle.setAttribute('aria-label',`Auto-start later finite waves · ${state.enabled?'on':'off'}`);
-    toggle.title='First wave always starts manually; later finite waves wait five seconds. Endless stays manual.';
-    toggle.classList.toggle('active',state.enabled);
+    const view=buildAutoStartControlView({enabled:state.enabled,challenge});
+    toggle.textContent=view.label;
+    toggle.setAttribute('aria-pressed',String(view.pressed));
+    toggle.setAttribute('aria-label',view.ariaLabel);
+    toggle.title=view.title;
+    toggle.classList.toggle('active',view.active);
     hold.hidden=!state.pending;
     status.hidden=!state.enabled||challenge==='endless'||(!state.pending&&!state.held);
     if(state.pending){

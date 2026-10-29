@@ -8,6 +8,7 @@
   "./src/air-route-visibility.js",
   "./src/air-routes.js",
   "./src/audio-mix.js",
+  "./src/auto-start-ui.js",
   "./src/auto-start.js",
   "./src/boss-encounters.js",
   "./src/boss-warning-ui.js",
