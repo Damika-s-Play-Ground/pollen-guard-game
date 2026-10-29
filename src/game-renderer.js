@@ -249,8 +249,12 @@ function drawStatusMarks(ctx, enemy, x, y) {
   });
 }
 
-function drawEnemyDetails(ctx, enemy, x, y, time = 0) {
-  const phase = time * (enemy.type === 'zip' ? 14 : 7) + enemy.id * .73, gait = Math.sin(phase) * 2;
+export function drawEnemyDetails(ctx, enemy, x, y, time = 0) {
+  const gaitProfile = enemy.type === 'zip' ? { rate:14, amplitude:2.7 }
+    : enemy.type === 'armored' ? { rate:3.8, amplitude:.8 }
+      : enemy.type === 'healer' ? { rate:5.2, amplitude:1.15 }
+        : { rate:7, amplitude:2 };
+  const phase = time * gaitProfile.rate + enemy.id * .73;
   ctx.lineWidth = enemy.boss ? 2 : 1.4; ctx.strokeStyle = '#24372b'; ctx.fillStyle = '#fff0c9';
   if (enemy.flying) {
     const flap = time ? Math.sin(time * 12 + enemy.id) * 3 : 0;
@@ -259,7 +263,13 @@ function drawEnemyDetails(ctx, enemy, x, y, time = 0) {
   } else {
     const legY = y + enemy.radius * .55;
     ctx.beginPath();
-    for (const side of [-1, 1]) { ctx.moveTo(x + side * 4, legY); ctx.lineTo(x + side * 7, legY + 3 + gait * .35); ctx.moveTo(x + side * 1, legY + 1); ctx.lineTo(x + side * 2, legY + 4 - gait * .35); }
+    for (const side of [-1, 1]) {
+      const stride = enemy.type === 'armored'
+        ? Math.sin(phase + (side > 0 ? Math.PI : 0)) * gaitProfile.amplitude
+        : Math.sin(phase + side * .42) * gaitProfile.amplitude;
+      ctx.moveTo(x + side * 4, legY); ctx.lineTo(x + side * 7, legY + 3 + stride * .35);
+      ctx.moveTo(x + side * 1, legY + 1); ctx.lineTo(x + side * 2, legY + 4 - stride * .35);
+    }
     ctx.stroke();
   }
   if (enemy.type === 'mite') {
