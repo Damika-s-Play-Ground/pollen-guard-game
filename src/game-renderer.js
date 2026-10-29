@@ -182,7 +182,7 @@ export function createStaticMapCache(createCanvas) {
   };
 }
 
-function traceEnemyShape(ctx, enemy, x, y, radius) {
+export function traceEnemyShape(ctx, enemy, x, y, radius) {
   ctx.beginPath();
   if (enemy.boss) {
     for (let i = 0; i < 10; i++) {
@@ -199,9 +199,24 @@ function traceEnemyShape(ctx, enemy, x, y, radius) {
   } else if (enemy.type === 'burrower') {
     ctx.ellipse(x, y, radius, radius * .72, 0, 0, Math.PI * 2);
   } else if (enemy.flying) {
-    ctx.moveTo(x, y - radius); ctx.lineTo(x + radius * .8, y + radius * .7); ctx.lineTo(x, y + radius * .35); ctx.lineTo(x - radius * .8, y + radius * .7); ctx.closePath();
+    // Broad swept wings and a narrow body keep the air silhouette legible without its glyph.
+    ctx.moveTo(x, y - radius * .72);
+    ctx.quadraticCurveTo(x + radius * .22, y - radius * .42, x + radius * 1.35, y - radius * .85);
+    ctx.lineTo(x + radius * .78, y + radius * .08);
+    ctx.lineTo(x + radius * .24, y + radius * .34);
+    ctx.lineTo(x, y + radius * .8);
+    ctx.lineTo(x - radius * .24, y + radius * .34);
+    ctx.lineTo(x - radius * .78, y + radius * .08);
+    ctx.lineTo(x - radius * 1.35, y - radius * .85);
+    ctx.quadraticCurveTo(x - radius * .22, y - radius * .42, x, y - radius * .72);
+    ctx.closePath();
   } else if (enemy.type === 'armored') {
-    for (let i = 0; i < 6; i++) { const angle = -Math.PI / 2 + i * Math.PI / 3, px = x + Math.cos(angle) * radius, py = y + Math.sin(angle) * radius; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+    // Low, wide beetle carapace with a tapered head rather than a generic hexagon.
+    ctx.moveTo(x - radius * .96, y - radius * .05);
+    ctx.quadraticCurveTo(x - radius * .72, y - radius * .98, x, y - radius * .83);
+    ctx.quadraticCurveTo(x + radius * .82, y - radius * .72, x + radius, y + radius * .05);
+    ctx.lineTo(x + radius * .56, y + radius * .74);
+    ctx.lineTo(x - radius * .6, y + radius * .74);
     ctx.closePath();
   } else if (enemy.type === 'splitter') {
     ctx.arc(x, y, radius * .52, 0, Math.PI * 2);
@@ -255,6 +270,11 @@ function drawEnemyDetails(ctx, enemy, x, y, time = 0) {
     ctx.fillStyle = '#263b2c'; ctx.beginPath(); ctx.arc(x + 2, y - 1, 1, 0, Math.PI * 2); ctx.fill();
   } else if (enemy.type === 'armored' || enemy.boss) {
     ctx.beginPath(); ctx.moveTo(x - enemy.radius * .55, y - 2); ctx.lineTo(x - enemy.radius * .25, y - enemy.radius * .55); ctx.lineTo(x + enemy.radius * .1, y - 2); ctx.moveTo(x + enemy.radius * .1, y - 2); ctx.lineTo(x + enemy.radius * .4, y - enemy.radius * .55); ctx.lineTo(x + enemy.radius * .65, y - 2); ctx.stroke();
+    if (enemy.type === 'armored' && !enemy.boss) {
+      // A split elytra seam reads as a shell in grayscale and remains inside the body.
+      ctx.beginPath(); ctx.moveTo(x, y - enemy.radius * .55); ctx.quadraticCurveTo(x + 2, y, x, y + enemy.radius * .62); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - enemy.radius * .62, y + enemy.radius * .12); ctx.quadraticCurveTo(x, y + enemy.radius * .42, x + enemy.radius * .62, y + enemy.radius * .12); ctx.stroke();
+    }
     if (enemy.boss) { ctx.beginPath(); ctx.moveTo(x - 10, y - enemy.radius + 3); ctx.lineTo(x - 15, y - enemy.radius - 8); ctx.lineTo(x - 5, y - enemy.radius + 1); ctx.moveTo(x + 10, y - enemy.radius + 3); ctx.lineTo(x + 15, y - enemy.radius - 8); ctx.lineTo(x + 5, y - enemy.radius + 1); ctx.stroke(); }
   } else if (enemy.type === 'shield') {
     ctx.beginPath(); ctx.moveTo(x - enemy.radius * .55, y - enemy.radius * .25); ctx.lineTo(x, y - enemy.radius * .65); ctx.lineTo(x + enemy.radius * .55, y - enemy.radius * .25); ctx.stroke();
