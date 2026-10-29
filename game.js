@@ -953,7 +953,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}
     const customMap=maps[selectedMap]?.customMap===true;
     if(won&&customMap)won=lives>=maps[selectedMap].customObjective.minLives;
-    transitionRun({type:won?'WIN':'LOSE'});updateGatePanel();
+    transitionRun({type:won?'WIN':'LOSE'});if(aimedSpellId)cancelAimedSpell();updateGatePanel();
     let profileSaved=true;
     const persistCompletion=()=>{try{persistProfile();return true;}catch{return false;}};
     if(customMap){profileSaved=true;}
@@ -1000,7 +1000,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       visuals.statusTicks.forEach(([enemy,ticks])=>{if(ticks.some(tick=>tick.channel==='heat')){const p=enemyPosition(enemy);burst(p.x,p.y,'#ff9b4d',1);}});
       visuals.impacts.forEach(([shot,position])=>burst(position.x,position.y,shot.color,shot.splash?8:3,shot.splitProjectile?'split':shot.sourceTowerType,shot.splash||0));
       if(result.lost)finishRun(false);
-      if(result.waveClear){transitionRun({type:'WAVE_CLEAR'});updateGatePanel();const {bonus,income}=result.waveClear;checkProgress();byId('waveInfo').textContent=`Wave ${wave} cleared. ${bonus} petals harvested${income?` (${income} from Sunflowers)`:''}.`;setToast('Wave reward harvested!');playCue('waveClear');if(challenge!=='endless'&&wave>=config().limit)finishRun(true);if(!runIsOver()){saveRun();if(challenge!=='endless')autoStartController.afterWaveClear(wave);}else autoStartController.manualLaunch();updatePreview();}
+      if(result.waveClear){transitionRun({type:'WAVE_CLEAR'});if(aimedSpellId)cancelAimedSpell();updateGatePanel();const {bonus,income}=result.waveClear;checkProgress();byId('waveInfo').textContent=`Wave ${wave} cleared. ${bonus} petals harvested${income?` (${income} from Sunflowers)`:''}.`;setToast('Wave reward harvested!');playCue('waveClear');if(challenge!=='endless'&&wave>=config().limit)finishRun(true);if(!runIsOver()){saveRun();if(challenge!=='endless')autoStartController.afterWaveClear(wave);}else autoStartController.manualLaunch();updatePreview();}
       if(leakAlert)setToast(leakAlert);
       updateHud();
     }
@@ -1011,6 +1011,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function resetRun() {
     autoStartController.manualLaunch();
+    aimedSpellId=null;spellTargetStart=null;byId('spellLoadoutStatus').textContent='';
     const hadRun=Boolean(wave||towers.length||guardianMode!=='none'||hasSavedRun());
     gateRoute=defaultGateRoute(maps[selectedMap]);gateSwitchesRemaining=gateSwitchesForMap(maps[selectedMap]);path=pathForGateRoute(maps[selectedMap],gateRoute);
     const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];relicLoadout=relicRulesEligible()?relicLoadoutIds(profile.relics):[];const researchStart=researchStartingAdjustment(researchLoadout);terrainRulesVersion=1;economyRulesVersion=1;cash=tutorialPractice.active?1200:Math.max(0,config().cash+preset.cashDelta+researchStart.cash);lives=tutorialPractice.active?99:Math.max(1,kit.lives+preset.livesDelta+researchStart.lives);popped=0;wave=0;bloomCharge=0;endlessModifier=null;endlessChoiceWave=0;guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=challengeBoardId?[...CHALLENGE_SPELL_LOADOUT]:normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;nextEntityId=1;combatPerformance=createCombatPerformance();
