@@ -21,7 +21,7 @@ export function buildHudView({
     battlefieldSummary: `${mapName}, ${challengeLabel} rules. Wave ${wave} of ${limit === Infinity ? 'unlimited' : limit}; ${runStatus}. ${cashValue} petals and ${lives} garden health. ${roster.length} defenders: ${rosterText} ${selectedDescription} Use arrow keys to aim a selected build, Enter to preview and place, Escape to cancel. Cycle placed defenders with ${previousTowerKey} and ${nextTowerKey}.`,
     battlefieldLabel: `${mapName} battlefield. Wave ${wave}, ${lives} garden health, ${cashValue} petals. ${selectedDescription} Arrow keys aim; Enter previews then places; Escape to cancel.`,
     buttons: {
-      startBtn: { disabled: running || paused || finished || (tutorialActive && tutorialTask !== 4), text: finished ? (lives > 0 ? 'Garden saved' : 'Meadow over') : paused ? 'Game paused' : running ? 'Wave in progress…' : `Start wave ${wave + 1}  ↗` },
+      startBtn: { disabled: running || paused || finished || (tutorialActive && tutorialTask !== 4), text: finished ? (lives > 0 ? 'Garden saved' : 'Meadow over') : paused ? 'Game paused' : running ? 'Wave in progress…' : `Launch wave ${wave + 1}  ↗` },
       pauseBtn: { text: paused ? '▶' : 'Ⅱ', label: paused ? 'Resume game (Space)' : 'Pause game (Space)', pressed: paused },
       bloomBtn: { text: `✦ Bloom pulse · ${bloomCharge} / 100`, disabled: bloomCharge < 100 || !hasEnemies || gameOver || tutorialActive },
       snareBtn: { disabled: cash < 45 || !hasEnemies || gameOver || (tutorialActive && tutorialTask !== 5) },

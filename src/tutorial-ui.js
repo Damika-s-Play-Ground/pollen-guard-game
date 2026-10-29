@@ -41,7 +41,7 @@ const TUTORIAL_COACH_TASKS = Object.freeze([
   Object.freeze({text:'Practice 2/6 · Select the Sprout Slinger you planted.',focusMap:true}),
   Object.freeze({text:'Practice 3/6 · Change its target priority.',focusSelector:'#targetModeSelect'}),
   Object.freeze({text:'Practice 4/6 · Choose a branch, then confirm the upgrade.',focusSelector:'#branchChoices'}),
-  Object.freeze({text:'Practice 5/6 · Start wave 1.',focusSelector:'#startBtn'}),
+  Object.freeze({text:'Practice 5/6 · Launch wave 1.',focusSelector:'#startBtn'}),
   Object.freeze({text:'Practice 6/6 · Use Ivy Snare while enemies are on the trail.',focusSelector:'#snareBtn'})
 ]);
 
