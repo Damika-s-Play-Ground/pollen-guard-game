@@ -12,8 +12,10 @@ export function buildEnemyBriefingView({ targetWave, intro, running = false, ter
   return {
     hidden: false,
     enemyType: intro.type,
-    heading: `New threat · Wave ${targetWave} · ${intro.icon} ${intro.name}. `,
-    rule: intro.rule,
+    heading: `Wave ${targetWave} · New threat`,
+    icon: intro.icon,
+    name: intro.name,
+    route: intro.type === 'flyer' ? 'Air · sky route' : 'Ground · garden trail',
     guideLabel: `Inspect ${intro.name} in the enemy field guide`,
     counter
   };
@@ -24,9 +26,24 @@ export function renderEnemyBriefing({ panel, text, guideButton, counterButton, v
   if (counterButton) counterButton.hidden = view.hidden || !view.counter;
   if (view.hidden) return;
   panel.dataset.enemyIntel = view.enemyType;
+  panel.dataset.hasCounter = String(Boolean(view.counter));
   const heading = document.createElement('strong');
   heading.textContent = view.heading;
-  text.replaceChildren(heading, document.createTextNode(view.rule));
+  const identity = document.createElement('span');
+  identity.className = 'enemy-briefing-identity';
+  const icon = document.createElement('span');
+  icon.className = 'enemy-briefing-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = view.icon;
+  const name = document.createElement('span');
+  name.className = 'enemy-briefing-name';
+  name.textContent = view.name;
+  identity.append(icon, name);
+  const route = document.createElement('small');
+  route.className = 'enemy-briefing-route';
+  route.textContent = view.route;
+  text.replaceChildren(heading, identity, route);
+  text.setAttribute('aria-label', `${view.heading}: ${view.icon} ${view.name}. ${view.route}.`);
   guideButton.setAttribute('aria-label', view.guideLabel);
   if (counterButton && view.counter) {
     counterButton.dataset.towerType = view.counter.towerType;
