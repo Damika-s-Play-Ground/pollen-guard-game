@@ -297,7 +297,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const error=selectedType&&point.inside?placementError(point):'';
     const def=selectedType?towersDef[selectedType]:null,terrain=point.inside?terrainAt(point):null;
     const stats=def?getEffectiveTowerStats({type:selectedType,level:1},{challenge,challengeRules,linked:false,terrain,researchLoadout,relicLoadout},def):null;
-    const view=buildPlacementHintView({selectedType,placementCandidate,error,definition:def,stats,terrain,terrainText:terrain?terrainBonusForTower(terrain,selectedType):''});
+    const view=buildPlacementHintView({selectedType,selectedTower,placementCandidate,error,definition:def,stats,terrain,terrainText:terrain?terrainBonusForTower(terrain,selectedType):''});
     renderPlacementHint({hint:byId('placementHint'),confirm:byId('placementConfirm'),board:canvas.parentElement,confirmButton:byId('confirmPlacementBtn'),view});
   }
   function selectPlacedTower(tower) {
@@ -941,7 +941,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       if(hits.length===1){selectPlacedTower(hits[0]);return;}
       hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});
       if(selectedType){if(event?.pointerType==='touch'){placementCandidate=point;pointer={...point,inside:true};updatePlacementHint(pointer);draw();}else placeTower(point);}
-      else{selectedTower=null;renderSelected();updateHud();updatePreview();draw();}
+      else{selectedTower=null;renderSelected();updateHud();updatePreview();updatePlacementHint();draw();}
     }
   });
   function drawSpellOverlay(){
