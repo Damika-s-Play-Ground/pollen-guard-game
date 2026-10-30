@@ -677,18 +677,28 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(selectedInspectorRenderGate.shouldRender(signature))renderTowerInspector({document,canvasHost:canvas.parentElement,view});
     updateUpgradePreview();updateTargetIndicator();updateSelectedAbilityDock();
   }
+  let rememberedSelectedActionFocus=null;
+  document.addEventListener('focusin',event=>{
+    const context=byId('selectedContext');
+    rememberedSelectedActionFocus=context?.contains(event.target)?event.target:null;
+  },true);
+  document.addEventListener('pointerdown',event=>{
+    const context=byId('selectedContext'),target=event.target instanceof Element?event.target.closest('button,a[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'):null;
+    rememberedSelectedActionFocus=context?.contains(target)?target:null;
+  },true);
   function updateSelectedActionPlacement() {
     const context=byId('selectedContext'),side=document.querySelector('.side'),mobile=mobileLayout.matches;
     const destination=mobile?canvas.parentElement:byId('selectedActionHost');
     if(context.parentElement!==destination){
-      const focusedControl=context.contains(document.activeElement)?document.activeElement:null;
+      const focusedControl=context.contains(document.activeElement)?document.activeElement:
+        document.activeElement===document.body&&context.contains(rememberedSelectedActionFocus)?rememberedSelectedActionFocus:null;
       if(mobile)destination.insertBefore(context,byId('battlefieldSummary'));
       else destination.append(context);
       focusedControl?.focus({preventScroll:true});
     }
     const selected=Boolean(selectedTower),toggle=byId('changeBuildPickBtn'),expanded=side.classList.contains('show-build');
     side.classList.toggle('has-selected-actions',selected);
-    if(!selected){side.classList.remove('show-build');toggle.hidden=true;toggle.setAttribute('aria-expanded','false');byId('defenderCardTitle').textContent='Choose a defender';byId('defenderCardMode').textContent='BUILD PICK';return;}
+    if(!selected){rememberedSelectedActionFocus=null;side.classList.remove('show-build');toggle.hidden=true;toggle.setAttribute('aria-expanded','false');byId('defenderCardTitle').textContent='Choose a defender';byId('defenderCardMode').textContent='BUILD PICK';return;}
     toggle.hidden=false;toggle.setAttribute('aria-expanded',String(expanded));toggle.textContent=expanded?'Hide build choices':'Choose another defender';
     byId('defenderCardTitle').textContent='Selected defender';byId('defenderCardMode').textContent='INSPECT';
   }
