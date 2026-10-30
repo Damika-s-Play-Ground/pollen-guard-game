@@ -55,7 +55,7 @@ import { createGameAudio } from './src/game-audio.js';
 import { appendCosmeticParticles } from './src/effect-budget.js';
 import { buildWavePreviewView, buildWaveTimelineView, renderWavePreview, renderWaveTimeline } from './src/wave-ui.js';
 import { shouldShowAirRoute } from './src/air-route-visibility.js';
-import { renderTowerCatalog } from './src/tower-catalog-ui.js';
+import { renderTowerCatalog, updateTowerCatalogAffordability } from './src/tower-catalog-ui.js';
 import { renderTowerInspector, renderTowerUpgradePreview, renderTowerTargetStatus } from './src/tower-inspector-ui.js';
 import { renderTowerAbilityDock } from './src/tower-ability-dock-ui.js';
 import { buildHudView, renderHud } from './src/hud-ui.js';
@@ -639,8 +639,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function renderTowerOptions() {
     byId('prospectiveLabel').textContent=selectedType?`Building · ${towersDef[selectedType].icon} ${towersDef[selectedType].name} · ${towersDef[selectedType].cost} petals`:'No build pick · choose a defender to place';
-    renderTowerCatalog({document,root:byId('towerList'),towersDef,towerRoles,selectedType,filter:towerFilter,challenge,challengeRules,researchLoadout,relicLoadout,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg,showAll:byId('towerList').dataset.showAll==='true'});
-    document.querySelectorAll('.tower-option').forEach(button=>button.addEventListener('click',()=>{if(guardianMoveActive)endGuardianMove();if(aimedSpellId)cancelAimedSpell();selectedType=button.dataset.type;renderTowerOptions();renderSelected();updatePreview();updatePlacementHint();draw();canvas.focus({preventScroll:true});}));
+    renderTowerCatalog({document,root:byId('towerList'),towersDef,towerRoles,selectedType,filter:towerFilter,challenge,challengeRules,researchLoadout,relicLoadout,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg,cash,showAll:byId('towerList').dataset.showAll==='true'});
+    document.querySelectorAll('.tower-option').forEach(button=>button.addEventListener('click',()=>{const shortfall=Math.max(0,towersDef[button.dataset.type].cost-cash);if(shortfall){setToast(`Need ${shortfall} more petals.`);return;}if(guardianMoveActive)endGuardianMove();if(aimedSpellId)cancelAimedSpell();selectedType=button.dataset.type;renderTowerOptions();renderSelected();updatePreview();updatePlacementHint();draw();canvas.focus({preventScroll:true});}));
     document.querySelectorAll('.catalog-more').forEach(button=>button.addEventListener('click',()=>{const root=byId('towerList');const expanded=button.getAttribute('aria-expanded')==='true';root.dataset.showAll=String(!expanded);if(expanded&&selectedType&&!['sprout','dew','puff'].includes(selectedType))selectedType=null;renderTowerOptions();byId('towerList').querySelector('.catalog-more')?.focus({preventScroll:true});}));
     document.querySelectorAll('.tower-filter').forEach(button=>{button.classList.toggle('active',button.dataset.filter===towerFilter);button.setAttribute('aria-pressed',String(button.dataset.filter===towerFilter));});
     byId('cancelPlacementBtn').style.display=selectedType?'block':'none';
@@ -697,6 +697,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(mobileLayout.matches)setDefenderSheetOpen(true);
   }
   function updateHud() {
+    updateTowerCatalogAffordability(byId('towerList'),cash);
     const running=runIsRunning(),gameOver=runIsOver(),paused=runIsPaused();
     const upgradeDisabled=selectedTower?selectedTower.level>=3||(selectedTower.level===1&&selectedTower.branchChoice==null)||cash<selectedUpgradeCost(selectedTower)||(tutorialPractice.active&&(tutorialPractice.task!==3||selectedTower.id!==tutorialPractice.towerId)):undefined;
     const view=buildHudView({
