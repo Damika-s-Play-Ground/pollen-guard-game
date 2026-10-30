@@ -63,6 +63,4 @@ export function renderHud(document, view) {
   byId('snareStatus').textContent = view.snareStatus;
   const resume = byId('resumeBtn');
   if (resume.disabled !== view.resumeDisabled) resume.disabled = view.resumeDisabled;
-  const upgrade = byId('upgradeBtn');
-  if (view.upgradeDisabled !== undefined && upgrade.disabled !== view.upgradeDisabled) upgrade.disabled = view.upgradeDisabled;
 }

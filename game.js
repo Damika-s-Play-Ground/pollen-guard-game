@@ -56,14 +56,14 @@ import { appendCosmeticParticles } from './src/effect-budget.js';
 import { buildWavePreviewView, buildWaveTimelineView, renderWavePreview, renderWaveTimeline } from './src/wave-ui.js';
 import { shouldShowAirRoute } from './src/air-route-visibility.js';
 import { renderTowerCatalog, updateTowerCatalogAffordability } from './src/tower-catalog-ui.js';
-import { renderTowerInspector, renderTowerUpgradePreview, renderTowerTargetStatus } from './src/tower-inspector-ui.js';
+import { renderTowerInspector, renderTowerUpgradeAction, renderTowerUpgradePreview, renderTowerTargetStatus } from './src/tower-inspector-ui.js';
 import { renderTowerAbilityDock } from './src/tower-ability-dock-ui.js';
 import { buildHudView, renderHud } from './src/hud-ui.js';
 import { buildRunDebrief, createCombatPerformance, registerCombatTower } from './src/combat-performance.js';
 import { renderResultsScreen } from './src/results-ui.js';
 import { createConfirmationFlow } from './src/confirmation-flow.js';
 import { ACHIEVEMENT_DEFINITIONS, renderAchievements as renderProfileAchievements, renderMapOptions as renderProfileMapOptions, renderCampaignMap as renderProfileCampaignMap, renderResearchTree as renderProfileResearchTree, renderRelicLoadout as renderProfileRelicLoadout } from './src/profile-ui.js';
-import { buildTowerInspectorModel, buildTowerUpgradePreview, buildTowerTargetStatus, isTowerLinkedToAnother } from './src/tower-inspector-model.js';
+import { buildTowerInspectorModel, buildTowerUpgradeAction, buildTowerUpgradePreview, buildTowerTargetStatus, isTowerLinkedToAnother } from './src/tower-inspector-model.js';
 import { buildTowerAbilityDockModel, buildTowerAbilityPreview } from './src/tower-ability-dock-model.js';
 import { renderUiSettings } from './src/settings-ui.js';
 import { bindUiSettingsControls } from './src/settings-controller.js';
@@ -712,6 +712,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       resumeDisabled:!hasSavedRun(),upgradeDisabled
     });
     renderHud(document,view);
+    renderTowerUpgradeAction({document,action:buildTowerUpgradeAction({tower:selectedTower,cash,tutorialActive:tutorialPractice.active,tutorialTask:tutorialPractice.task,tutorialTowerId:tutorialPractice.towerId})});
     if(!seedObjectiveControls){
       const legend=document.querySelector('#mapFooter .legend'),outbound=document.createElement('span'),returnPath=document.createElement('span'),status=document.createElement('span');
       outbound.textContent='→ seed cache';returnPath.textContent='← escape route';status.className='seed-objective-status';status.id='seedObjectiveStatus';status.setAttribute('aria-live','off');

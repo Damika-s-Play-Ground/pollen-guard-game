@@ -58,6 +58,22 @@ export function buildTowerUpgradePreview({ tower, towers = [tower], challenge, c
   return `Next · ${changes.length ? changes.join(' · ') : 'No numeric stat change'} · Ability unchanged: ${def.ability} · Cost ${quote.cost} petals · Investment ${quote.investedAfter} · sell return ${quote.refundAfter}${shortfall ? ` · Need ${shortfall} more` : ''}`;
 }
 
+export function buildTowerUpgradeAction({ tower, cash = 0, tutorialActive = false, tutorialTask = 0, tutorialTowerId = null }) {
+  if (!tower) return { upgradeText: 'Upgrade', upgradeTitle: 'Select a defender to upgrade.', upgradeDisabled: true, upgradeFocusForShortfall: false };
+  const def = towersDef[tower.type];
+  if (def.supportStructure) return { upgradeText: 'NO UPGRADES', upgradeTitle: `${def.name} has a fixed support effect.`, upgradeDisabled: true, upgradeFocusForShortfall: false };
+  const level = tower.level, branch = level === 1 ? tower.branchChoice : tower.branch;
+  const hasBranchChoice = branch != null;
+  const cost = level === 3 || !hasBranchChoice ? 0 : towerUpgradeQuote(tower, def).cost;
+  const shortage = Math.max(0, cost - cash);
+  const tutorialBlocked = tutorialActive && (tutorialTask !== 3 || tower.id !== tutorialTowerId);
+  const upgradeDisabled = level >= 3 || (level === 1 && !hasBranchChoice) || shortage > 0 || tutorialBlocked;
+  const upgradeFocusForShortfall = level < 3 && hasBranchChoice && shortage > 0 && !tutorialBlocked;
+  const upgradeText = level === 3 ? 'MAX LEVEL' : !hasBranchChoice ? 'Choose branch' : `Upgrade · ${cost} ✿${shortage ? ` · Need ${shortage} more` : ''}`;
+  const upgradeTitle = level === 3 ? 'This defender is fully upgraded.' : !hasBranchChoice ? 'Choose a branch to preview its upgrade.' : `${def.branches[branch][0]}: ${def.branches[branch][1]}. Upgrade cost: ${cost} petals${shortage ? ` · Need ${shortage} more petals` : ''}.`;
+  return { upgradeText, upgradeTitle, upgradeDisabled, upgradeFocusForShortfall };
+}
+
 export function buildTowerTargetStatus({ tower, enemies = [], challenge, challengeRules = [], linked, enemyPosition, isRunning = false, terrain = 'ground', researchLoadout=[],relicLoadout=[] }) {
   if (!tower) return 'Select a defender to see its target.';
   const def = towersDef[tower.type];
@@ -114,10 +130,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
   }
   const stats = applyBeaconInterval(getEffectiveTowerStats(selectedTower, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), selectedTower, towers,researchLoadout,relicLoadout);
   const chosenBranch = level === 1 ? selectedTower.branchChoice : branch;
-  const hasBranchChoice = chosenBranch != null;
   const quote = towerUpgradeQuote(selectedTower, def);
-  const cost = level === 3 || !hasBranchChoice ? 0 : quote.cost;
-  const shortage = Math.max(0, cost - cash);
   const investment = quote.investment;
   const remaining = Math.max(0, (selectedTower.abilityReadyAt || 0) - gameTime);
   const usedThisWave = selectedTower.type === 'sunflower' && selectedTower.abilityUsedWave === wave;
@@ -168,9 +181,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
     branchOptions,
     selectedBranch: selectedTower.branchChoice,
     onChooseBranch,
-    upgradeText: level === 3 ? 'MAX LEVEL' : level === 1 && !hasBranchChoice ? 'Choose branch' : `Upgrade · ${cost} ✿`,
-    upgradeTitle: level === 3 ? 'This defender is fully upgraded.' : !hasBranchChoice ? 'Choose a branch to preview its upgrade.' : `${def.branches[chosenBranch][0]}: ${def.branches[chosenBranch][1]}. Upgrade cost: ${cost} petals${shortage ? ` · Need ${shortage} more` : ''}.`,
-    upgradeDisabled: level >= 3 || (level === 1 && !hasBranchChoice) || cash < cost || (tutorialActive && (tutorialTask !== 3 || selectedTower.id !== tutorialTowerId)),
+    ...buildTowerUpgradeAction({ tower: selectedTower, cash, tutorialActive, tutorialTask, tutorialTowerId }),
     targetMode: selectedTower.targetMode || 'First',
     targetModeDisabled: Boolean(def.income) || (tutorialActive && (tutorialTask !== 2 || selectedTower.id !== tutorialTowerId)),
     abilityInfo: `${def.ability} · ${usedThisWave ? 'used this wave' : remaining > 0 ? `ready in ${Math.ceil(remaining)}s` : 'ready when combat allows'}`,

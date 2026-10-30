@@ -253,6 +253,8 @@ body[data-palette="high-contrast"]{--state-danger:#ffb29e;--state-warning:#ffe56
 #selectedActionHost .selected-context .branch-choice{min-height:48px}
 #selectedActionHost .selected-context .branch-choice>span:first-child{line-height:1.25}
 #selectedActionHost .selected-context button{min-height:44px}
+#upgradeBtn[aria-disabled="true"]:not(:disabled){opacity:.58;cursor:not-allowed;background:#27382c;color:var(--muted);border-color:#405847}
+#upgradeBtn[aria-disabled="true"]:not(:disabled):hover{transform:none;background:#27382c;border-color:#405847}
 #selectedActionHost .selected-context #upgradeBtn{grid-column:1}
 #selectedActionHost .selected-context #sellBtn{grid-column:2}
 #changeBuildPickBtn[hidden]{display:none!important}

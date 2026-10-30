@@ -6,6 +6,20 @@ export function renderTowerTargetStatus({ document, text }) {
   document.getElementById('targetStatus').textContent = text;
 }
 
+export function renderTowerUpgradeAction({ document, action }) {
+  const button = document.getElementById('upgradeBtn');
+  if (button.textContent !== action.upgradeText) button.textContent = action.upgradeText;
+  if (button.title !== action.upgradeTitle) button.title = action.upgradeTitle;
+  if (button.getAttribute('aria-disabled') !== String(action.upgradeDisabled)) button.setAttribute('aria-disabled', String(action.upgradeDisabled));
+  if (action.upgradeFocusForShortfall) {
+    if (button.disabled) button.disabled = false;
+    if (button.getAttribute('tabindex') !== '0') button.setAttribute('tabindex', '0');
+  } else {
+    if (button.disabled !== action.upgradeDisabled) button.disabled = action.upgradeDisabled;
+    if (button.hasAttribute('tabindex')) button.removeAttribute('tabindex');
+  }
+}
+
 export function renderTowerInspector({ document, canvasHost, view }) {
   const byId = id => document.getElementById(id);
   const empty = Boolean(view.empty);
@@ -51,9 +65,7 @@ export function renderTowerInspector({ document, canvasHost, view }) {
     button.setAttribute('aria-pressed', String(selected));
   }
 
-  byId('upgradeBtn').textContent = view.upgradeText;
-  byId('upgradeBtn').title = view.upgradeTitle;
-  byId('upgradeBtn').disabled = view.upgradeDisabled;
+  renderTowerUpgradeAction({ document, action: view });
   byId('sellBtn').textContent = 'Sell';
   byId('targetModeSelect').value = view.targetMode;
   byId('targetModeSelect').disabled = view.targetModeDisabled;
