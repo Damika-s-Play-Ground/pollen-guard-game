@@ -233,7 +233,19 @@ body[data-palette="high-contrast"]{--state-danger:#ffb29e;--state-warning:#ffe56
 .top-actions #battleSetup[open]{position:static;z-index:auto;flex:1 1 100%;width:100%;min-width:0;max-width:none;max-height:none;overflow:visible;box-shadow:none}
 .top-actions #battleSetup[open]>summary{position:static}
 @media (min-width:701px) and (max-width:860px){.top-actions{flex-wrap:wrap;width:100%}.top-actions #playOptions{flex:1 0 100%;order:2;display:flex;justify-content:flex-end}}
-@media(max-width:700px){.top-actions #playOptions{flex:0 0 180px;min-width:180px}.top-actions #battleSetup{width:100%;flex-basis:100%;padding:0 7px}.top-actions #battleSetup>summary{font-size:calc(10px * var(--ui-text-scale))}}
+@media(max-width:700px){
+  .top-actions #playOptions{flex:0 0 180px;min-width:180px}
+  .top-actions #battleSetup{width:100%;flex-basis:100%;padding:0 7px}
+  .top-actions #battleSetup>summary{font-size:calc(10px * var(--ui-text-scale))}
+  .top-actions:has(#textSizeSelect option[value="125"]:checked, #textSizeSelect option[value="150"]:checked){flex-wrap:wrap;width:100%;justify-content:flex-start}
+  .top-actions:has(#textSizeSelect option[value="125"]:checked, #textSizeSelect option[value="150"]:checked) #resumeBtn{flex:1 0 100%;min-width:0;box-sizing:border-box}
+  .top-actions:has(#textSizeSelect option[value="125"]:checked, #textSizeSelect option[value="150"]:checked) #guideOpenBtn{flex:0 0 auto}
+}
+@media(max-width:340px){
+  .top-actions{flex-wrap:wrap;width:100%;justify-content:flex-start}
+  .top-actions #resumeBtn{flex:1 0 100%;min-width:0;box-sizing:border-box}
+  .top-actions #guideOpenBtn{flex:0 0 auto}
+}
 </style>
 <style id="battle-space-desktop">
 /* Give the battle the first claim on wide desktop space; keep the phone flow intact. */
