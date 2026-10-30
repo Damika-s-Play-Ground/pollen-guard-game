@@ -1,3 +1,5 @@
+import { ENDLESS_CHOICES } from './endless-mode.js';
+
 
 const ENCOUNTER_COUNTERS = Object.freeze({
   armored: Object.freeze({ towerType: 'briar', label: 'Briar Patch', reason: 'neutral toxin damage against armor' }),
@@ -5,6 +7,20 @@ const ENCOUNTER_COUNTERS = Object.freeze({
   flyer: Object.freeze({ towerType: 'gust', label: 'Kite Keeper', reason: 'fast anti-air gusts' }),
   burrower: Object.freeze({ towerType: 'compostTrap', label: 'Compost Trap', reason: 'slows ground pests entering its ring' })
 });
+
+// Derive the compact roster from this run, including its upcoming wave. No profile unlocks.
+export function encounterDefenderTypes({ schedules, throughWave, endlessModifier = null, actions = [] }) {
+  const types = new Set(['sprout', 'dew', 'puff']);
+  const reveal = enemy => { const counter = ENCOUNTER_COUNTERS[enemy]; if (counter) types.add(counter.towerType); };
+  for (const schedule of schedules.slice(0, Math.max(0, throughWave))) {
+    for (const group of schedule.groups) reveal(group.type);
+  }
+  reveal(ENDLESS_CHOICES[endlessModifier]?.type);
+  for (const action of actions) {
+    if (action.type === 'chooseEndlessModifier') reveal(ENDLESS_CHOICES[action.payload.modifierId]?.type);
+  }
+  return [...types];
+}
 
 export function buildEnemyBriefingView({ targetWave, intro, running = false, terminal = false }) {
   if (running || terminal || !intro) return { hidden: true, enemyType: null };

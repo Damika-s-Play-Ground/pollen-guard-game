@@ -14,8 +14,8 @@ const CATALOG_ROLES = Object.freeze({
   pollinatorRelay: 'Links Thorn towers'
 });
 
-export function renderTowerCatalog({ document, root, towersDef, towerRoles, selectedType, filter, challenge, challengeRules = [], researchLoadout=[],relicLoadout=[], keyBindings, keyCodeLabel, getEffectiveTowerStats, towerArtSvg, showAll = false, cash = Infinity }) {
-  const starterIds = new Set(['sprout', 'dew', 'puff']);
+export function renderTowerCatalog({ document, root, towersDef, towerRoles, selectedType, filter, challenge, challengeRules = [], researchLoadout=[],relicLoadout=[], keyBindings, keyCodeLabel, getEffectiveTowerStats, towerArtSvg, showAll = false, cash = Infinity, compactTypes = ['sprout', 'dew', 'puff'] }) {
+  const starterIds = new Set(['sprout', 'dew', 'puff', ...compactTypes.filter(id => Object.hasOwn(towersDef, id))]);
   const expanded = filter !== 'all' || showAll || Boolean(selectedType && !starterIds.has(selectedType));
   const entries = Object.entries(towersDef).filter(([id]) => (filter === 'all' ? expanded || starterIds.has(id) : towerRoles[id] === filter));
   const buttons = entries.map(([id, tower]) => {
@@ -69,7 +69,7 @@ export function renderTowerCatalog({ document, root, towersDef, towerRoles, sele
   toggle.dataset.action = 'toggle-catalog';
   toggle.setAttribute('aria-expanded', String(expanded));
   toggle.setAttribute('aria-controls', 'towerList');
-  toggle.textContent = expanded ? 'Show starter defenders' : `More defenders · ${Object.keys(towersDef).length - starterIds.size}`;
+  toggle.textContent = expanded ? (starterIds.size > 3 ? 'Show encounter defenders' : 'Show starter defenders') : `More defenders · ${Object.keys(towersDef).length - starterIds.size}`;
   root.replaceChildren(...buttons, ...(filter === 'all' ? [toggle] : []));
   root.dataset.affordabilityCash = '';
   updateTowerCatalogAffordability(root, cash);

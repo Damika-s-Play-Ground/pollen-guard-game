@@ -43,7 +43,7 @@ import { buildBestWaveRecord, buildRunProgressEvents } from './src/profile-progr
 import { CAMPAIGN_MISSIONS, CAMPAIGN_MISSION_BY_ID, buildMissionCompletion } from './src/campaign.js';
 import { buildMissionMasteryProgress, missionMasteryResultText } from './src/mission-mastery.js';
 import { ENEMY_INTEL, enemyIntelFor, firstEncounterIntel } from './src/enemy-intel.js';
-import { buildEnemyBriefingView, filterEnemyGuide as filterEnemyGuideCards, renderEnemyBriefing, renderEnemyGuide } from './src/enemy-guide-ui.js';
+import { encounterDefenderTypes, buildEnemyBriefingView, filterEnemyGuide as filterEnemyGuideCards, renderEnemyBriefing, renderEnemyGuide } from './src/enemy-guide-ui.js';
 import { buildPlacementHintView, movePlacementConfirmation, renderPlacementHint } from './src/placement-ui.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
 import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutorialPracticeState, finishTutorialPracticeState, resetTutorialPracticeState } from './src/tutorial-progress.js';
@@ -637,11 +637,23 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
         `${control.preview.range} · ${control.preview.area} · ${control.preview.duration} · ${control.preview.cost}`;
     }
   }
+  let compactRosterCache=null;
+  function compactDefenderTypes() {
+    const schedules=waveSchedulesForMap(selectedMap,waveScheduleVersion),throughWave=guideWaveNumber();
+    if(compactRosterCache?.schedules===schedules&&compactRosterCache.throughWave===throughWave&&compactRosterCache.modifier===endlessModifier&&compactRosterCache.actions===actionLog)return compactRosterCache.types;
+    const types=encounterDefenderTypes({schedules,throughWave,endlessModifier,actions:actionLog});
+    compactRosterCache={schedules,throughWave,modifier:endlessModifier,actions:actionLog,types};
+    return types;
+  }
   function renderTowerOptions() {
+    const root=byId('towerList'), compactTypes=compactDefenderTypes();
+    const focused=root.contains(document.activeElement)?document.activeElement:null;
+    const focusType=focused?.dataset.type, focusDisclosure=focused?.dataset.action==='toggle-catalog';
+    root.dataset.encounterTypes=compactTypes.join(',');
     byId('prospectiveLabel').textContent=selectedType?`Building · ${towersDef[selectedType].icon} ${towersDef[selectedType].name} · ${towersDef[selectedType].cost} petals`:'No build pick · choose a defender to place';
-    renderTowerCatalog({document,root:byId('towerList'),towersDef,towerRoles,selectedType,filter:towerFilter,challenge,challengeRules,researchLoadout,relicLoadout,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg,cash,showAll:byId('towerList').dataset.showAll==='true'});
+    renderTowerCatalog({document,root:byId('towerList'),towersDef,towerRoles,selectedType,filter:towerFilter,challenge,challengeRules,researchLoadout,relicLoadout,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg,cash,showAll:byId('towerList').dataset.showAll==='true',compactTypes});
     document.querySelectorAll('.tower-option').forEach(button=>button.addEventListener('click',()=>{const shortfall=Math.max(0,towersDef[button.dataset.type].cost-cash);if(shortfall){setToast(`Need ${shortfall} more petals.`);return;}if(guardianMoveActive)endGuardianMove();if(aimedSpellId)cancelAimedSpell();selectedType=button.dataset.type;renderTowerOptions();renderSelected();updatePreview();updatePlacementHint();draw();canvas.focus({preventScroll:true});}));
-    document.querySelectorAll('.catalog-more').forEach(button=>button.addEventListener('click',()=>{const root=byId('towerList');const expanded=button.getAttribute('aria-expanded')==='true';root.dataset.showAll=String(!expanded);if(expanded&&selectedType&&!['sprout','dew','puff'].includes(selectedType))selectedType=null;renderTowerOptions();byId('towerList').querySelector('.catalog-more')?.focus({preventScroll:true});}));
+    document.querySelectorAll('.catalog-more').forEach(button=>button.addEventListener('click',()=>{const root=byId('towerList');const expanded=button.getAttribute('aria-expanded')==='true';root.dataset.showAll=String(!expanded);if(expanded&&selectedType&&!compactDefenderTypes().includes(selectedType))selectedType=null;renderTowerOptions();byId('towerList').querySelector('.catalog-more')?.focus({preventScroll:true});}));
     document.querySelectorAll('.tower-filter').forEach(button=>{button.classList.toggle('active',button.dataset.filter===towerFilter);button.setAttribute('aria-pressed',String(button.dataset.filter===towerFilter));});
     byId('cancelPlacementBtn').style.display=selectedType?'block':'none';
     const chosen=selectedType&&towersDef[selectedType];
@@ -649,6 +661,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const supportDetail=chosen?.supportStructure==='beacon'?`buffs up to 3 eligible attackers within ${Math.round(chosenStats.range)} map units with ${Math.round((1-chosenStats.buffMultiplier)*100)}% shorter attack interval, once each; 48-unit footprint.`:chosen?.supportStructure==='trap'?`slows the first ${Math.max(0,chosen.triggerLimit-(researchLoadout.includes('compost-lattice')?1:0))} unique ground pests to enter its ${Math.round(chosenStats.range)} map units ring for ${chosen.slowDuration}s, then expires; footprint ${chosen.footprint} units.`:chosen?.role;
     byId('towerDetail').textContent=chosen?`${chosen.name} · ${chosen.supportStructure?supportDetail:chosen.income?`+${chosenStats.income} petals/wave`:`${chosenStats.damage} damage/hit · ${(1/chosenStats.rate).toFixed(1)} attacks/s`} · ${chosen.range?`range ${Math.round(chosenStats.range)} map units · `:''}${chosen.supportStructure?'':`${chosen.role} · `}${chosen.cost} petals.`:'Choose a defender to preview its role and range.';
     updatePlacementHint();
+    if(focusType)root.querySelector(`[data-type="${focusType}"]`)?.focus({preventScroll:true});
+    else if(focusDisclosure)root.querySelector('.catalog-more')?.focus({preventScroll:true});
   }
   function selectedUpgradeCost(tower) { return towerUpgradeQuote(tower,towersDef[tower.type]).cost; }
   function updateUpgradePreview() {
@@ -707,6 +721,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(mobileLayout.matches)setDefenderSheetOpen(true);
   }
   function updateHud() {
+    if(byId('towerList').dataset.encounterTypes!==compactDefenderTypes().join(','))renderTowerOptions();
     updateTowerCatalogAffordability(byId('towerList'),cash);
     const running=runIsRunning(),gameOver=runIsOver(),paused=runIsPaused();
     const upgradeDisabled=selectedTower?selectedTower.level>=3||(selectedTower.level===1&&selectedTower.branchChoice==null)||cash<selectedUpgradeCost(selectedTower)||(tutorialPractice.active&&(tutorialPractice.task!==3||selectedTower.id!==tutorialPractice.towerId)):undefined;
@@ -1255,7 +1270,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function selectTowerShortcut(type) {
     const def=towersDef[type];if(!def)return;
     if(challenge==='thrifty'&&type==='sunflower'){setToast('Sunflower is unavailable in Thrifty mode.');return;}
-    towerFilter='all';if(!['sprout','dew','puff'].includes(type))byId('towerList').dataset.showAll='true';renderTowerOptions();const choice=byId('towerList').querySelector(`[data-type="${type}"]`);if(!choice)return;
+    towerFilter='all';if(!compactDefenderTypes().includes(type))byId('towerList').dataset.showAll='true';renderTowerOptions();const choice=byId('towerList').querySelector(`[data-type="${type}"]`);if(!choice)return;
     if(mobileLayout.matches)setDefenderSheetOpen(true);
     choice.click();canvas.focus({preventScroll:true});
   }
