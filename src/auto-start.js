@@ -1,5 +1,14 @@
 export const AUTO_START_DELAY_MS = 5_000;
 
+export function isAutoStartEligible({
+  enabled, challenge, wave, running, paused, gameOver,
+  tutorialPractice = false, hidden = false, runStateStopsClock = false,
+  dialogOpen = false, mandatoryChoice = false
+} = {}) {
+  return Boolean(enabled && challenge !== 'endless' && wave > 0 && !running && !paused && !gameOver &&
+    !tutorialPractice && !hidden && !runStateStopsClock && !dialogOpen && !mandatoryChoice);
+}
+
 /** A wall-clock Auto-start timer. Eligibility is supplied by the game shell. */
 export function createAutoStartController({ now = () => Date.now(), delayMs = AUTO_START_DELAY_MS } = {}) {
   let enabled = false;

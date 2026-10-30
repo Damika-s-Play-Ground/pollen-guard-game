@@ -36,7 +36,7 @@ import { createStaticMapCache, drawBattlefield, shotRecoil } from './src/game-re
 import { createRenderSnapshots } from './src/render-snapshot.js';
 import { towerArtSvg } from './src/tower-art.js';
 import { createProfileStorage, UI_SETTINGS_STORAGE_KEY } from './src/profile-storage.js';
-import { createAutoStartController } from './src/auto-start.js';
+import { createAutoStartController, isAutoStartEligible } from './src/auto-start.js';
 import { buildAutoStartControlView } from './src/auto-start-ui.js';
 import { buildBestWaveRecord, buildRunProgressEvents } from './src/profile-progression.js';
 import { CAMPAIGN_MISSIONS, CAMPAIGN_MISSION_BY_ID, buildMissionCompletion } from './src/campaign.js';
@@ -726,9 +726,12 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     updateAutoStartControls();
   }
   function autoStartEligible(){
-    return uiSettings.autoStartWaves&&challenge!=='endless'&&wave>0&&!runIsRunning()&&!runIsPaused()&&!runIsOver()&&
-      !tutorialPractice.active&&!document.hidden&&!runStateStopsClock(runState)&&!document.querySelector('dialog[open]')&&
-      !endlessChoiceRequired({challenge,wave,endlessChoiceWave});
+    return isAutoStartEligible({
+      enabled:uiSettings.autoStartWaves,challenge,wave,running:runIsRunning(),paused:runIsPaused(),gameOver:runIsOver(),
+      tutorialPractice:tutorialPractice.active,hidden:document.hidden,runStateStopsClock:runStateStopsClock(runState),
+      dialogOpen:Boolean(document.querySelector('dialog[open]')),
+      mandatoryChoice:endlessChoiceRequired({challenge,wave,endlessChoiceWave})
+    });
   }
   function updateAutoStartControls(){
     const state=autoStartController.snapshot(),status=byId('autoStartStatus'),hold=byId('holdNextWaveBtn'),toggle=byId('autoStartToggleBtn');
