@@ -38,6 +38,7 @@ import { towerArtSvg } from './src/tower-art.js';
 import { createProfileStorage, UI_SETTINGS_STORAGE_KEY } from './src/profile-storage.js';
 import { createAutoStartController, isAutoStartEligible } from './src/auto-start.js';
 import { buildAutoStartControlView } from './src/auto-start-ui.js';
+import { requiresUpgradeBranchConfirmation } from './src/upgrade-confirmation.js';
 import { buildBestWaveRecord, buildRunProgressEvents } from './src/profile-progression.js';
 import { CAMPAIGN_MISSIONS, CAMPAIGN_MISSION_BY_ID, buildMissionCompletion } from './src/campaign.js';
 import { buildMissionMasteryProgress, missionMasteryResultText } from './src/mission-mastery.js';
@@ -1125,7 +1126,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       const result=performPlayerAction('upgradeTower',{towerId:t.id,level,branch});if(!result.ok){setToast(result.reason);return;}
       setToast(level===2?`${def.name}: ${def.branches[branch][0]} · −${cost} petals · ${remaining} left.`:`${def.name} reached level ${level} · −${cost} petals · ${remaining} left.`);playCue('upgrade');advanceTutorialPractice('upgrade',{towerId:t.id});renderSelected();updateHud();saveRun();draw();
     };
-    if(level===2){
+    if(requiresUpgradeBranchConfirmation(t)){
       const {investedAfter,refundAfter}=quote;
       requestConfirmation(`Commit ${def.branches[branch][0]}?`,`This choice locks the ${def.branches[branch][0]} branch. Spend ${cost} petals on ${def.name}? Funds after: ${Math.floor(cash-cost)} · total investment: ${investedAfter} · sell return: ${refundAfter}.`,purchase,`Upgrade · ${cost} ✿`);
       return;

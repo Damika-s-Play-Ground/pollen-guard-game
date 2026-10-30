@@ -85,6 +85,7 @@
   "./src/tower-test-range.js",
   "./src/tutorial-progress.js",
   "./src/tutorial-ui.js",
+  "./src/upgrade-confirmation.js",
   "./src/visual-preferences.js",
   "./src/wave-ui.js",
   "./src/waves.js"
