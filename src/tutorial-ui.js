@@ -52,10 +52,11 @@ export function buildTutorialCoachView({active,task}) {
 }
 
 export function buildFirstActionCoachView({visible,selectedType='sprout',selectedName='Sprout'}) {
-  const resourceIntro='Petals buy defenders. Escaped pests lower Garden health; at zero, the run ends. ';
-  const text=selectedType
-    ? `${resourceIntro}${selectedName} is selected. Tap open grass beside the trail, then launch wave 1 when ready.`
-    : `${resourceIntro}Choose a defender, then tap open grass beside the trail. Launch wave 1 when ready.`;
+  const resourceNote='Petals buy defenders. Escaped pests lower Garden health; at zero, the run ends.';
+  const firstAction=selectedType
+    ? `${selectedName} is selected. Tap open grass beside the trail, then launch wave 1 when ready.`
+    : 'Choose a defender, then tap open grass beside the trail. Launch wave 1 when ready.';
+  const text=`${firstAction} ${resourceNote}`;
   return visible
     ? {visible:true,text,focusSelector:null,focusMap:false}
     : {visible:false,text:'',focusSelector:null,focusMap:false};
