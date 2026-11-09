@@ -1235,6 +1235,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     saveClock+=dt;if(saveClock>=1){saveClock=0;if(wave||towers.length||guardianMode!=='none')saveRun();}
   }
   function resetRun() {
+    byId('pauseMenu').hidden=true;
     const hadRun=Boolean(wave||towers.length||guardianMode!=='none'||hasSavedRun());
     towerPlantingAt.clear();armorImpactCues.clear();armorFeedbackSeen.clear();impactCausalityCues.clear();healerPulses.clear();burrowEmergenceCues.clear();bossChoreoCues.clear();healerInterventionObserved=false;gateRoute=defaultGateRoute(maps[selectedMap]);gateSwitchesRemaining=gateSwitchesForMap(maps[selectedMap]);path=pathForGateRoute(maps[selectedMap],gateRoute);
     const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];relicLoadout=relicRulesEligible()?relicLoadoutIds(profile.relics):[];const researchStart=researchStartingAdjustment(researchLoadout);terrainRulesVersion=1;rewardRulesVersion=WAVE_REWARD_RULES_VERSION;uiSettings.autoStartHold=false;saveUiSettings();cash=tutorialPractice.active?1200:Math.max(0,config().cash+preset.cashDelta+researchStart.cash);lives=tutorialPractice.active?99:Math.max(1,kit.lives+preset.livesDelta+researchStart.lives);popped=0;wave=0;bloomCharge=0;endlessModifier=null;endlessChoiceWave=0;guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=challengeBoardId?[...CHALLENGE_SPELL_LOADOUT]:normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;nextEntityId=1;combatPerformance=createCombatPerformance();
@@ -1251,7 +1252,27 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('holdNextBtn').onclick=()=>{uiSettings.autoStartHold=!uiSettings.autoStartHold;saveUiSettings();syncAutoStart();updateHud();};
   byId('magnifierToggle').onclick=event=>{magnifierEnabled=!magnifierEnabled;event.currentTarget.setAttribute('aria-pressed',String(magnifierEnabled));drawMapMagnifier();};
 
-  byId('pauseBtn').onclick=()=>measureActionFeedback('pause',()=>{transitionRun({type:'TOGGLE_USER_PAUSE'});updateHud();updateGatePanel();saveRun();});
+  function toggleGardenPause(){
+    measureActionFeedback('pause',()=>{
+      transitionRun({type:'TOGGLE_USER_PAUSE'});
+      byId('pauseMenu').hidden=!runIsPaused();
+      updateHud();updateGatePanel();saveRun();
+    });
+  }
+  byId('pauseBtn').onclick=toggleGardenPause;
+  byId('pauseResumeBtn').onclick=toggleGardenPause;
+  byId('pauseRestartBtn').onclick=()=>requestConfirmation('Restart this garden?',`Restart the ${config().label} run on ${maps[selectedMap].name}? Current towers and wave progress will be lost.`,()=>{
+    byId('pauseMenu').hidden=true;resetRun();explainFreshGarden('Fresh garden. Choose your trail and defenders.');
+  },'Restart run');
+  byId('pauseSettingsBtn').onclick=()=>{
+    byId('pauseMenu').hidden=true;
+    const settings=byId('settingsPanel');settings.open=true;settings.querySelector('summary').focus();
+  };
+  byId('pauseLeaveBtn').onclick=()=>{
+    byId('pauseMenu').hidden=true;byId('missionPreparation').open=true;
+    byId('missionPreparation').scrollIntoView({block:'start',behavior:'smooth'});
+    byId('missionPreparation').querySelector('summary').focus({preventScroll:true});
+  };
   byId('speedBtn').onclick=()=>{speed=toggleGameSpeed(speed);updateHud();};
   defenderSheetToggle.onclick=()=>setDefenderSheetOpen(!defenderSheet.classList.contains('open'));
   function openJournal(destination,trigger){journalReturnFocus=trigger;setJournalDestination(byId('journalDestinations').parentElement,destination);renderChallenges();renderResearch();renderLocalRunHistory();renderPracticeRange();renderLocalMapEditor();byId('guideDialog').showModal();transitionRun({type:'DIALOG_OPEN'});updateHud();}
@@ -1332,7 +1353,6 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('sellBtn').onclick=()=>{if(!selectedTower)return;const tower=selectedTower,refund=saleRefund(tower.invested,towersDef[tower.type].cost);requestConfirmation('Sell this defender?',`Sell ${towersDef[tower.type].name}? Investment: ${tower.invested} petals · refund: ${refund} petals.`,()=>{const result=performPlayerAction('sellTower',{towerId:tower.id,refund});if(!result.ok){setToast(result.reason);return;}queueRewardFeedback([{amount:result.refund,x:tower.x,y:tower.y}]);selectedTower=null;renderSelected();updateHud();if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}saveRun();draw();},`Sell · +${refund} ✿`);};
   byId('contextUpgradeBtn').onclick=()=>byId('upgradeBtn').click();
   byId('contextSellBtn').onclick=()=>byId('sellBtn').click();
-  byId('resetBtn').onclick=()=>requestConfirmation('Restart this garden?',`Restart the ${config().label} run on ${maps[selectedMap].name}? Current towers and wave progress will be lost.`,()=>{resetRun();explainFreshGarden('Fresh garden. Choose your trail and defenders.');},'Restart run');
   byId('mapSelect').onchange=event=>{const previous=selectedMap,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the trail',()=>{selectedMap=next;challengeBoardId=null;path=maps[selectedMap].path;calcPath();renderMapOptions();updatePlayOptionsLabel();applyChallenge();renderChallenges();explainFreshGarden(`${maps[selectedMap].name} selected.`);});};
   byId('routeGatePanel').addEventListener('toggle',()=>{draw();});
   byId('gateRouteOptions').addEventListener('click',event=>{if(event.target.closest('.route-gate-option'))draw();});
@@ -1395,7 +1415,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     guardianMoveActive,
     towerTypes:Object.keys(towersDef),bindings:keyBindings
   }),command=>{
-    if(command.type==='toggle-pause')measureActionFeedback('pause',()=>{transitionRun({type:'TOGGLE_USER_PAUSE'});updateHud();updateGatePanel();saveRun();});
+    if(command.type==='toggle-pause')toggleGardenPause();
     else if(command.type==='cancel-interaction')cancelCurrentInteraction();
     else if(command.type==='cancel-placement')cancelCurrentInteraction();
     else if(command.type==='move-placement-cursor'){
