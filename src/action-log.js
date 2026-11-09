@@ -5,7 +5,7 @@ export const ACTION_LOG_VERSION = 2;
 export const MAX_RUN_ACTIONS = 20_000;
 
 const TOWER_TYPES = new Set(['sprout', 'dew', 'puff', 'thorn', 'sunflower', 'gust', 'ember', 'briar', 'pollenBeacon', 'compostTrap', 'pollinatorRelay']);
-const TARGET_MODES = new Set(['First', 'Last', 'Strongest', 'Weakest', 'Closest', 'Support']);
+const TARGET_MODES = new Set(['First', 'Last', 'Strongest', 'Weakest', 'Closest', 'AirFirst', 'Support']);
 const ACTION_TYPES = new Set(['placeTower', 'startWave', 'chooseEndlessModifier', 'chooseBranch', 'upgradeTower', 'setTarget', 'sellTower', 'towerAbility', 'bloom', 'snare', 'aimedSpell', 'moveGuardian', 'guardianPulse', 'switchGate']);
 
 function validId(value) { return Number.isSafeInteger(value) && value > 0; }

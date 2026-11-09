@@ -109,7 +109,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
       investment:`${selectedTower.invested || def.cost} invested · sell returns ${saleRefund(selectedTower.invested || def.cost, def.cost)}`,
       showBranches:false, branchOptions:null, selectedBranch:null, onChooseBranch,
       upgradeText:'NO UPGRADES', upgradeTitle:`${def.name} has a fixed support effect.`, upgradeDisabled:true,
-      contextUpgradeText:'No upgrades', targetMode:selectedTower.targetMode || 'First', targetModeDisabled:true,supportTargetingAvailable:selectedTower.targetMode==='Support',
+      contextUpgradeText:'No upgrades', targetMode:selectedTower.targetMode || 'First', targetModeDisabled:true,airTargetingAvailable:selectedTower.targetMode==='AirFirst',supportTargetingAvailable:selectedTower.targetMode==='Support',
       abilityInfo:details, contextTitle:def.name
     };
   }
@@ -181,6 +181,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
     contextUpgradeText: level === 3 ? 'Max level' : !hasBranchChoice ? 'Choose branch' : shortage ? `Need ${shortage} more ✿` : `Upgrade · ${cost} ✿`,
     targetMode: selectedTower.targetMode || 'First',
     targetModeDisabled: Boolean(def.income) || (tutorialActive && (tutorialTask !== 2 || selectedTower.id !== tutorialTowerId)),
+    airTargetingAvailable:Boolean(def.antiAir)||selectedTower.targetMode==='AirFirst',
     supportTargetingAvailable:supportTargetingAvailable||selectedTower.targetMode==='Support',
     abilityInfo: `${def.ability} · ${usedThisWave ? 'used this wave' : remaining > 0 ? `ready in ${Math.ceil(remaining)}s` : 'ready when combat allows'}`,
     contextTitle: `${def.name} · Lv ${level}`

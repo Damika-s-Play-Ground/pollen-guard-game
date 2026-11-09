@@ -25,7 +25,7 @@ const MAX_FRAME_DELTA = 0.25;
 const TOWER_TYPES = new Set(['sprout', 'dew', 'puff', 'thorn', 'sunflower', 'gust', 'ember', 'briar', 'pollenBeacon', 'compostTrap', 'pollinatorRelay']);
 const SUPPORT_TOWER_TYPES = new Set(['pollenBeacon', 'compostTrap', 'pollinatorRelay']);
 const ENEMY_TYPES = new Set(['mite', 'zip', 'armored', 'shield', 'splitter', 'flyer', 'crumb', 'boss', 'healer', 'carrier', 'burrower']);
-const TARGET_MODES = new Set(['First', 'Last', 'Strongest', 'Weakest', 'Closest', 'Support']);
+const TARGET_MODES = new Set(['First', 'Last', 'Strongest', 'Weakest', 'Closest', 'AirFirst', 'Support']);
 
 export function isUnsupportedRunVersion(value) {
   return Boolean(value && Number.isInteger(value.version) && value.version > RUN_SAVE_VERSION);

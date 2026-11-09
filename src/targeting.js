@@ -4,10 +4,12 @@ export const targetPriorityInfo = Object.freeze({
   Strongest: 'most hit points plus shield',
   Weakest: 'fewest hit points',
   Closest: 'nearest to this defender',
+  AirFirst: 'flying pests first; then furthest along the trail',
   Support: 'healers and shield carriers first; then furthest along the trail'
 });
 
 const isSupportTarget = enemy => enemy.type === 'healer' || enemy.type === 'carrier';
+const isFlyingTarget = enemy => Boolean(enemy.flying || enemy.type === 'flyer');
 
 export function chooseTargetForTower(tower, candidates, positionOf = target => ({ x: target.x, y: target.y })) {
   if (!candidates.length) return null;
@@ -22,6 +24,7 @@ export function chooseTargetForTower(tower, candidates, positionOf = target => (
       case 'Strongest': return b.hp + (b.shield || 0) - a.hp - (a.shield || 0);
       case 'Weakest': return a.hp - b.hp;
       case 'Closest': return distance(a) - distance(b);
+      case 'AirFirst': return Number(!isFlyingTarget(a)) - Number(!isFlyingTarget(b)) || b.progress - a.progress;
       case 'Support': return Number(!isSupportTarget(a)) - Number(!isSupportTarget(b)) || b.progress - a.progress;
       default: return b.progress - a.progress;
     }

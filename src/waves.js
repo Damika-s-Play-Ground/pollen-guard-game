@@ -38,7 +38,9 @@ export const PRE_ARMOR_DEMONSTRATION_SCHEDULE_VERSION = OPENING_DECISION_SCHEDUL
 export const ARMOR_DEMONSTRATION_SCHEDULE_VERSION = PRE_ARMOR_DEMONSTRATION_SCHEDULE_VERSION + 1;
 export const PRE_GENTLE_OPENING_SCHEDULE_VERSION = ARMOR_DEMONSTRATION_SCHEDULE_VERSION;
 export const GENTLE_OPENING_SCHEDULE_VERSION = PRE_GENTLE_OPENING_SCHEDULE_VERSION + 1;
-export const WAVE_SCHEDULE_VERSION = GENTLE_OPENING_SCHEDULE_VERSION;
+export const PRE_AIR_INTRODUCTION_SCHEDULE_VERSION = GENTLE_OPENING_SCHEDULE_VERSION;
+export const AIR_INTRODUCTION_SCHEDULE_VERSION = PRE_AIR_INTRODUCTION_SCHEDULE_VERSION + 1;
+export const WAVE_SCHEDULE_VERSION = AIR_INTRODUCTION_SCHEDULE_VERSION;
 export const SUPPORTED_WAVE_SCHEDULE_VERSIONS = Object.freeze(Array.from({length:WAVE_SCHEDULE_VERSION+1},(_,version)=>version));
 
 const threatWeights = { mite: 1, zip: 1.3, armored: 3, shield: 2.5, splitter: 2.4, flyer: 2.2, boss: 18, healer:3, carrier:4, burrower:2.3 };
@@ -257,6 +259,14 @@ export const GENTLE_OPENING_CAMPAIGN_WAVES=Object.freeze({
   ...ARMOR_DEMONSTRATION_CAMPAIGN_WAVES,
   meadow:gentleOpeningMeadow
 });
+const airIntroductionMeadow=replaceAuthoredWave(GENTLE_OPENING_CAMPAIGN_WAVES.meadow,6,
+  'One sky gnat follows the ground pests on the cyan sky route. Kite Keeper or Thorn Beacon; set Air First to focus it.',[
+    {type:'mite',count:10,interval:.62},{type:'flyer',count:1,interval:.62,lane:'air'}
+  ]);
+export const AIR_INTRODUCTION_CAMPAIGN_WAVES=Object.freeze({
+  ...GENTLE_OPENING_CAMPAIGN_WAVES,
+  meadow:airIntroductionMeadow
+});
 
 const customWaveSchedules=new Map();
 export function registerCustomWaveSchedules(mapId,schedules){
@@ -267,7 +277,8 @@ export function registerCustomWaveSchedules(mapId,schedules){
 export function waveSchedulesForMap(mapId = 'meadow', version = WAVE_SCHEDULE_VERSION) {
   if(customWaveSchedules.has(mapId))return customWaveSchedules.get(mapId);
   if (version === LEGACY_WAVE_SCHEDULE_VERSION) return AUTHORED_WAVES;
-  const schedules = version >= GENTLE_OPENING_SCHEDULE_VERSION ? GENTLE_OPENING_CAMPAIGN_WAVES :
+  const schedules = version >= AIR_INTRODUCTION_SCHEDULE_VERSION ? AIR_INTRODUCTION_CAMPAIGN_WAVES :
+    version >= GENTLE_OPENING_SCHEDULE_VERSION ? GENTLE_OPENING_CAMPAIGN_WAVES :
     version >= ARMOR_DEMONSTRATION_SCHEDULE_VERSION ? ARMOR_DEMONSTRATION_CAMPAIGN_WAVES :
     version >= OPENING_DECISION_SCHEDULE_VERSION ? OPENING_DECISION_CAMPAIGN_WAVES :
     version >= PRE_OPENING_DECISION_SCHEDULE_VERSION ? BALANCED_CAMPAIGN_WAVES :

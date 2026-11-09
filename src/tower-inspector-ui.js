@@ -91,6 +91,8 @@ export function renderTowerInspector({ document, canvasHost, view }) {
   byId('targetModeSelect').disabled = view.targetModeDisabled;
   const supportTargetOption=byId('supportTargetModeOption');
   if(supportTargetOption){supportTargetOption.hidden=!view.supportTargetingAvailable;supportTargetOption.disabled=!view.supportTargetingAvailable;}
+  const airTargetOption=byId('airTargetModeOption');
+  if(airTargetOption){airTargetOption.hidden=!view.airTargetingAvailable;airTargetOption.disabled=!view.airTargetingAvailable;}
   byId('towerAbilityInfo').textContent = view.abilityInfo;
   byId('contextTitle').textContent = view.contextTitle;
 }

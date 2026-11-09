@@ -63,7 +63,7 @@ export const towersDef = {
   pollinatorRelay: { name:'Pollinator Relay', icon:'🦋', cost:125, range:88, footprint:38, rate:0, damage:0, color:'#8acbd1', role:'Extends Windcarved Thorns from 132 to less than 160 units when within 88 units of both partners; one Relay per pair. Footprint 38 units; costs 125 petals.', supportStructure:'relay', ability:'Windcarved Thorns link', branches:[], kind:'structure' }
 };
 
-export const targetModes = ['First','Last','Strongest','Weakest','Closest','Support'];
+export const targetModes = ['First','Last','Strongest','Weakest','Closest','AirFirst','Support'];
 export const towerRoles = { sprout:'attack',dew:'support',puff:'attack',thorn:'attack',sunflower:'economy',gust:'support',ember:'attack',briar:'support',pollenBeacon:'support',compostTrap:'support',pollinatorRelay:'support' };
 
 const equalResistances = Object.freeze({ physical: 1, heat: 1, toxin: 1 });
