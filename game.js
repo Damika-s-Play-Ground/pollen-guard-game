@@ -60,7 +60,7 @@ import { createGameAudio } from './src/game-audio.js';
 import { appendCosmeticParticles } from './src/effect-budget.js';
 import { MAX_ACTIVE_REWARD_SPRITES, packRewardGains } from './src/reward-feedback.js';
 import { plantingSettleExpired, plantingDustParticles } from './src/planting-effects.js';
-import { attackAnticipation } from './src/attack-anticipation.js';
+import { ATTACK_ANTICIPATION_SECONDS, attackAnticipation } from './src/attack-anticipation.js';
 import { defeatResponseParticles } from './src/defeat-effects.js';
 import { activeArmorFeedback, armorImpactFeedback } from './src/armor-feedback.js';
 import { buildWavePreviewView, buildWaveTimelineView, renderWavePreview, renderWaveTimeline } from './src/wave-ui.js';
@@ -1145,7 +1145,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       visualTime:uiSettings.animation==='full'?gameTime:0,enemyHitFlash:enemy=>renderSnapshots.hitFlash(enemy.id),
       impactCausalityForEnemy:enemy=>{const cue=impactCausalityCues.get(enemy.id);if(!cue||uiSettings.animation==='off')return null;const age=gameTime-cue.time;return age<0||age>=.32?null:{from:cue.from,color:cue.color,alpha:1-age/.32};},
       recoilForTower:id=>shotRecoil(uiSettings.animation,gameTime,towerRecoilAt.get(id)?.time),
-      attackCueForTower:tower=>{if(uiSettings.animation!=='full'||tower.cooldown<=0||tower.cooldown>.14)return null;const def=towersDef[tower.type];if(!def||def.income||def.supportStructure)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other)),stats=getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def),candidates=enemies.filter(enemy=>canHitTarget({canHitAir:def.antiAir},enemy)&&Math.hypot(tower.x-enemyPosition(enemy).x,tower.y-enemyPosition(enemy).y)<=stats.range),target=chooseTargetForTower(tower,candidates,enemyPosition);return target?attackAnticipation(uiSettings.animation,tower,enemyPosition(target)) : null;},
+      attackCueForTower:tower=>{if(uiSettings.animation!=='full'||tower.cooldown<=0||tower.cooldown>ATTACK_ANTICIPATION_SECONDS)return null;const def=towersDef[tower.type];if(!def||def.income||def.supportStructure)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other)),stats=getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def),candidates=enemies.filter(enemy=>canHitTarget({canHitAir:def.antiAir},enemy)&&Math.hypot(tower.x-enemyPosition(enemy).x,tower.y-enemyPosition(enemy).y)<=stats.range),target=chooseTargetForTower(tower,candidates,enemyPosition);return target?attackAnticipation(uiSettings.animation,tower,enemyPosition(target)) : null;},
       plantingForTower:id=>plantingSettle(uiSettings.animation,gameTime,towerPlantingAt.get(id)),
       armorFeedbackForEnemy:enemy=>activeArmorFeedback(armorImpactCues.get(enemy.id),gameTime),
       healerLinks,healerFeedbackForEnemy:enemy=>{const pulse=healerPulses.get(enemy.id);return pulse?{amount:pulse.amount,alpha:Math.max(.25,1-(gameTime-pulse.time)/.5)}:null;},
