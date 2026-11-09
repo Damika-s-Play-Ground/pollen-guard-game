@@ -21,4 +21,5 @@ export function bindUiSettingsControls({ controls, settings, saveSettings, apply
   controls.compact.onchange = event => { settings.compact = event.target.checked; saveSettings(); applySettings(); };
   controls.palette.onchange = event => { settings.palette = event.target.value; saveSettings(); applySettings(); redraw(); };
   controls.textSize.onchange = event => { settings.textSize = event.target.value; saveSettings(); applySettings(); };
+  controls.showAirRoute.onchange = event => { settings.showAirRoute = event.target.checked; saveSettings(); redraw(); applySettings(); };
 }

@@ -10,7 +10,7 @@ export const UI_SETTINGS_STORAGE_KEY = 'pollen-guard.ui.v1';
 
 export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlockedMissions:['meadow'], completedMissions:[], missionRecords:{}, missionMastery:{}, research:{unlocked:[],loadout:{}}, relics:{unlocked:[],loadout:[]}, achievements: [], bestWave: {}, challengeBests:{} });
 export const DEFAULT_UI_SETTINGS = Object.freeze({
-  animation: 'full', shake: true, flashes: true, compact: false, palette: 'garden',
+  animation: 'full', shake: true, flashes: true, compact: false, palette: 'garden', showAirRoute: false,
   textSize: 'normal', tutorialSeen: false, tutorialInProgress: false, tutorialReturnToSavedRun: false, sound: false,
   masterVolume: 80, musicVolume: 20, effectsVolume: 70,
   keyBindings: DEFAULT_KEY_BINDINGS, spellLoadout: DEFAULT_SPELL_LOADOUT, autoStart: false, autoStartHold: false
@@ -82,6 +82,7 @@ export function normalizeUiSettings(value) {
     shake: typeof source.shake === 'boolean' ? source.shake : DEFAULT_UI_SETTINGS.shake,
     flashes: typeof source.flashes === 'boolean' ? source.flashes : DEFAULT_UI_SETTINGS.flashes,
     compact: typeof source.compact === 'boolean' ? source.compact : DEFAULT_UI_SETTINGS.compact,
+    showAirRoute: typeof source.showAirRoute === 'boolean' ? source.showAirRoute : DEFAULT_UI_SETTINGS.showAirRoute,
     palette: ['garden', 'high-contrast'].includes(source.palette) ? source.palette : DEFAULT_UI_SETTINGS.palette,
     textSize: source.textSize === 'large' ? '150' : ['normal', '125', '150'].includes(source.textSize) ? source.textSize : DEFAULT_UI_SETTINGS.textSize,
     tutorialSeen: typeof source.tutorialSeen === 'boolean' ? source.tutorialSeen : DEFAULT_UI_SETTINGS.tutorialSeen,

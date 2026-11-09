@@ -17,4 +17,5 @@ export function renderUiSettings({ app, root, body, settings, controls }) {
   controls.compact.checked = Boolean(settings.compact);
   controls.palette.value = settings.palette;
   controls.textSize.value = settings.textSize;
+  controls.showAirRoute.checked = Boolean(settings.showAirRoute);
 }

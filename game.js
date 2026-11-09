@@ -207,7 +207,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const healerPulses=new Map(),burrowEmergenceCues=new Map(),bossChoreoCues=new Map();
   let healerInterventionObserved=false;
   const renderSnapshots=createRenderSnapshots();
-  let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='';
+  let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
   const aimedSpellControls=new Map();
   let runState=createRunState();
   let combatPerformance=createCombatPerformance();
@@ -276,7 +276,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
         masterVolume:byId('masterVolume'), masterVolumeValue:byId('masterVolumeValue'),
         musicVolume:byId('musicVolume'), musicVolumeValue:byId('musicVolumeValue'),
         effectsVolume:byId('effectsVolume'), effectsVolumeValue:byId('effectsVolumeValue'),
-        compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect')
+        compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'), showAirRoute:byId('showAirRouteToggle')
       }
     });
   }
@@ -440,7 +440,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     syncGuidanceVisibility(criticalWarningActive,currentPlacementError);
   }
   function selectPlacedTower(tower) {
-    applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updateHud();revealSelectedTower();updatePlacementHint();draw();announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});
+    applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updateHud();updatePreview();revealSelectedTower();updatePlacementHint();draw();announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});
   }
   function showSelectionChooser(candidates) {
     showTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement,candidates,towerDefinitions:towersDef,onSelect:selectPlacedTower,document});
@@ -959,6 +959,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       bossName:waveScheduleVersion>=2?BOSS_VARIANTS[selectedMap]?.name:undefined,mapLabel:CAMPAIGN_MISSION_BY_ID[selectedMap]?`CHAPTER ${CAMPAIGN_MISSION_BY_ID[selectedMap].chapter} · ${CAMPAIGN_MISSION_BY_ID[selectedMap].name.toUpperCase()}`:maps[selectedMap].name.toUpperCase(),
       schedules:waveSchedulesForMap(selectedMap,waveScheduleVersion),airRouteEnabled:waveScheduleVersion>=AIR_ROUTE_SCHEDULE_VERSION,difficulty,challengeRules,endless:challenge==='endless',endlessModifier,rewardRulesVersion,scheduleVersion:waveScheduleVersion
     });
+    airRoutePreviewed=Boolean(view.preview?.counts?.flyer);
+    view.airRouteEnabled=Boolean(view.airRouteEnabled&&(airRoutePreviewed||enemies.some(enemy=>enemy.flying)||uiSettings.showAirRoute||(selectedTower&&towersDef[selectedTower.type]?.antiAir)));
     renderWavePreview({document,enemyPreview:byId('enemyPreview'),waveThreat:byId('waveThreat'),mapNote:byId('mapNote'),waveInfo:byId('waveInfo'),upcomingThreat:byId('upcomingThreat'),view});
     const revealCue=byId('specialistRevealCue');
     const revealSchedules=waveSchedulesForMap(selectedMap,waveScheduleVersion);
@@ -1106,7 +1108,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     drawBattlefield(ctx,{
       width:canvas.width,height:canvas.height,displayScale:canvasDisplayScale,map:maps[selectedMap],path,pathLength,
       gateRoutePreviews:!runIsActivelyRunning()&&!enemies.length&&!spawnQueue.length&&maps[selectedMap].gateRoutes?Object.entries(maps[selectedMap].gateRoutes).map(([id,route])=>({id,label:route.label,path:route.path})):null,selectedGateRoute:gateRoute,
-      airPath:distinctAirRoutePath(routeGeometry),
+      airPath:distinctAirRoutePath(routeGeometry),showAirRoute:Boolean(uiSettings.showAirRoute||airRoutePreviewed||enemies.some(enemy=>enemy.flying)||(selectedTower&&towersDef[selectedTower.type]?.antiAir)),
       towers,selectedTower,towersDef,towersLinked,
       selectedTowerRange(tower){const def=towersDef[tower.type];if(def.supportStructure)return getEffectiveTowerStats(tower,{researchLoadout,relicLoadout},def).range; if(!def.range)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));return getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def).range;},
       placementPreviewRange(type,point){return getEffectiveTowerStats({type,level:1},{challenge,challengeRules,linked:false,terrain:terrainAt(point),researchLoadout,relicLoadout},towersDef[type]).range;},abilityPreview:liveAbilityPreview,
@@ -1346,8 +1348,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       masterVolume:byId('masterVolume'), masterVolumeValue:byId('masterVolumeValue'),
       musicVolume:byId('musicVolume'), musicVolumeValue:byId('musicVolumeValue'),
       effectsVolume:byId('effectsVolume'), effectsVolumeValue:byId('effectsVolumeValue'),
-      compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect')
-    }, settings:uiSettings, saveSettings:saveUiSettings, applySettings:applyUiSettings,
+      compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'), showAirRoute:byId('showAirRouteToggle')
+    }, settings:uiSettings, saveSettings:saveUiSettings, applySettings:()=>{applyUiSettings();updatePreview();},
     redraw:draw, syncAudio:()=>gameAudio.sync(),
     setSoundEnabled:enabled=>{soundOn=enabled;gameAudio.sync();if(enabled)playCue('soundOn');}
   });
