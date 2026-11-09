@@ -4,6 +4,7 @@
   "./game.js",
   "./index.html",
   "./manifest.webmanifest",
+  "./src/action-feedback-metrics.js",
   "./src/action-log.js",
   "./src/affordability-ui.js",
   "./src/air-routes.js",
