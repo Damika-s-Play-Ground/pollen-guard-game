@@ -72,7 +72,7 @@ import { createHudResourceAnnouncements } from './src/hud-announcements.js';
 import { buildRunDebrief, createCombatPerformance, registerCombatTower } from './src/combat-performance.js';
 import { renderResultsScreen } from './src/results-ui.js';
 import { createConfirmationFlow } from './src/confirmation-flow.js';
-import { activateUpgrade, createUpgradeActivationGate } from './src/upgrade-interaction.js';
+import { activateUpgrade, branchCommitConfirmation, createUpgradeActivationGate } from './src/upgrade-interaction.js';
 import { createWaveTransitionController, waveTransitionPhase } from './src/wave-controller.js';
 import { mountBattleSupport } from './src/battle-layout-ui.js';
 import { ACHIEVEMENT_DEFINITIONS, renderAchievements as renderProfileAchievements, renderMapOptions as renderProfileMapOptions, renderCampaignMap as renderProfileCampaignMap, renderResearchTree as renderProfileResearchTree, renderRelicLoadout as renderProfileRelicLoadout } from './src/profile-ui.js';
@@ -1294,7 +1294,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     };
     const activation=activateUpgrade({tower:t,nextLevel:level,now:performance.now(),canActivate:canActivateUpgrade,purchase,confirmBranch:commit=>{
       const branchName=def.branches[branch][0];
-      requestConfirmation(`Commit ${branchName}?`,`Spend ${cost} petals to commit ${def.name} to the ${branchName} branch? This choice cannot be changed for this defender. Funds after: ${Math.floor(cash-cost)} · total investment: ${investedAfter} · sell return after upgrade: ${refundAfter}.`,commit,`Commit branch · ${cost} ✿`);
+      const confirmation=branchCommitConfirmation({branchName,towerName:def.name,cost,cash,investedAfter,refundAfter});
+      requestConfirmation(confirmation.title,confirmation.message,commit,confirmation.acceptLabel);
     }});
     if(activation==='duplicate')setToast('Upgrade already registered.');
   };

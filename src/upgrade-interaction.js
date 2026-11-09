@@ -4,6 +4,14 @@ export function upgradeConfirmationKind(tower, nextLevel) {
     : null;
 }
 
+export function branchCommitConfirmation({ branchName, towerName, cost, cash, investedAfter, refundAfter }) {
+  return {
+    title:`Commit ${branchName}?`,
+    message:`Spend ${cost} petals to commit ${towerName} to the ${branchName} branch? This choice cannot be changed for this defender. Funds after: ${Math.floor(cash-cost)} · total investment: ${investedAfter} · sell return after upgrade: ${refundAfter}.`,
+    acceptLabel:`Commit branch · ${cost} ✿`
+  };
+}
+
 export function activateUpgrade({ tower, nextLevel, now, canActivate, purchase, confirmBranch }) {
   if (!canActivate(now)) return 'duplicate';
   if (upgradeConfirmationKind(tower, nextLevel) === 'branch-commit') {
