@@ -15,11 +15,11 @@ export function buildHudView({
 
   return {
     counters: { cash: cashValue, lives, popped, wave },
-    life: { percent: lifePercent, value: lives, maximum: lifeCapacity },
+    life: { percent: lifePercent, value: lives, max:lifeCapacity },
     bloom: { percent: bloomCharge },
     waveLimit: limit === Infinity ? '· ∞' : `/ ${limit}`,
-    battlefieldSummary: `${mapName}, ${challengeLabel} rules. Wave ${wave} of ${limit === Infinity ? 'unlimited' : limit}; ${runStatus}. ${cashValue} petals and ${lives} garden health. ${roster.length} defenders: ${rosterText} ${selectedDescription} Use arrow keys to aim a selected build, Enter to preview and place, Escape to cancel. Cycle placed defenders with ${previousTowerKey} and ${nextTowerKey}.`,
-    battlefieldLabel: `${mapName} battlefield. Wave ${wave}, ${lives} garden health, ${cashValue} petals. ${selectedDescription} Arrow keys aim; Enter previews then places; Escape to cancel.`,
+    battlefieldSummary: `${mapName}, ${challengeLabel} rules. Wave ${wave} of ${limit === Infinity ? 'unlimited' : limit}; ${runStatus}. ${cashValue} spendable petals. Garden health: ${lives} of ${lifeCapacity}. ${roster.length} defenders: ${rosterText} ${selectedDescription} Use arrow keys to aim a selected build, Enter to preview and place, Escape to cancel. Cycle placed defenders with ${previousTowerKey} and ${nextTowerKey}.`,
+    battlefieldLabel: `${mapName} battlefield. Wave ${wave}, garden health ${lives} of ${lifeCapacity}, ${cashValue} spendable petals. ${selectedDescription} Arrow keys aim; Enter previews then places; Escape to cancel.`,
     buttons: {
       startBtn: { disabled: running || paused || finished || (tutorialActive && tutorialTask !== 4), text: finished ? (lives > 0 ? 'Garden saved' : 'Meadow over') : paused ? 'Game paused' : running ? 'Wave in progress…' : `Launch wave ${wave + 1}  ↗` },
       pauseBtn: { text: paused ? '▶' : 'Ⅱ', label: paused ? 'Resume game (Space)' : 'Pause game (Space)', pressed: paused },
@@ -27,7 +27,7 @@ export function buildHudView({
       snareBtn: { disabled: cash < 45 || !hasEnemies || gameOver || (tutorialActive && tutorialTask !== 5) },
       speedBtn: { text: `${speed}× speed`, shortLabel: `${speed}×`, label: `Game speed ${speed}×`, active: speed > 1 }
     },
-    waveTag: running ? 'DEFEND THE POD' : finished ? 'RUN COMPLETE' : `WAVE ${wave + 1} INCOMING`,
+    waveTag: running ? 'DEFEND THE POD' : finished ? 'RUN COMPLETE' : intermission > 0 ? `PREP ${Math.ceil(intermission)}s` : `WAVE ${wave + 1} INCOMING`,
     bloomStatus: gameOver ? 'Run ended.' : !hasEnemies ? 'Wait for enemies on the trail.' : bloomCharge < 100 ? `Charge by popping enemies · ${100 - bloomCharge} more needed.` : 'Ready · affects every enemy on the trail.',
     snareStatus: gameOver ? 'Run ended.' : cash < 45 ? `Need ${45 - cash} more petals.` : !hasEnemies ? 'Wait for enemies on the trail.' : 'Ready · stuns every enemy on the trail.',
     resumeDisabled,
@@ -40,8 +40,8 @@ export function renderHud(document, view) {
   for (const [id, value] of Object.entries(view.counters)) byId(id).textContent = value;
 
   byId('lifeBar').style.width = `${view.life.percent}%`;
+  byId('lifeBar').parentElement.setAttribute('aria-valuemax', view.life.max);
   byId('lifeBar').parentElement.setAttribute('aria-valuenow', view.life.value);
-  byId('lifeBar').parentElement.setAttribute('aria-valuemax', view.life.maximum);
   byId('bloomBar').style.width = `${view.bloom.percent}%`;
   byId('bloomBar').parentElement.setAttribute('aria-valuenow', view.bloom.percent);
   byId('waveLimit').textContent = view.waveLimit;
@@ -63,4 +63,6 @@ export function renderHud(document, view) {
   byId('snareStatus').textContent = view.snareStatus;
   const resume = byId('resumeBtn');
   if (resume.disabled !== view.resumeDisabled) resume.disabled = view.resumeDisabled;
+  const upgrade = byId('upgradeBtn');
+  if (view.upgradeDisabled !== undefined && upgrade.disabled !== view.upgradeDisabled) upgrade.disabled = view.upgradeDisabled;
 }

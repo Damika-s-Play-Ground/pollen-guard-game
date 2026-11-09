@@ -50,6 +50,7 @@ export function buildTowerAbilityDockModel({ tower, enemies = [], wave, gameTime
 
   return {
     hidden: false,
+    aiming:previewing,
     label: usedThisWave ? `${def.ability} · used this wave` : remaining > 0 ? `${def.ability} · ${Math.ceil(remaining)}s` : `✦ ${def.income ? 'Use' : 'Preview'} ${def.ability}`,
     disabled: !ready,
     cooldownProgress,

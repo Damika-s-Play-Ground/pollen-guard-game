@@ -1,4 +1,5 @@
 import { DEFAULT_KEY_BINDINGS } from './keyboard-bindings.js';
+import { cancelInteractionCommand } from './interaction-mode.js';
 
 export function canvasPoint(event, canvas) {
   const rect = canvas.getBoundingClientRect();
@@ -7,7 +8,6 @@ export function canvasPoint(event, canvas) {
     y: (event.clientY - rect.top) * canvas.height / rect.height
   };
 }
-
 export function findTowerAtPoint(towers, point, radius = 20) {
   return [...towers].reverse().find(tower => Math.hypot(tower.x - point.x, tower.y - point.y) < radius) || null;
 }
@@ -19,10 +19,6 @@ export function findTowersAtPoint(towers, point, radius = 20) {
 export function worldRadiusForCssPixels(cssPixels, canvas) {
   const rect = canvas.getBoundingClientRect();
   return cssPixels * canvas.width / Math.max(1, rect.width);
-}
-
-export function shouldPrioritizeBuildPick({ hasBuildPick, point, placementError }) {
-  return Boolean(hasBuildPick && point && !placementError(point));
 }
 
 export function movePlacementCursor(point, direction, width, height, step = 18, candidate = null) {
@@ -90,13 +86,14 @@ function targetMatches(event, selector) {
   return typeof event.target?.matches === 'function' && event.target.matches(selector);
 }
 
-export function resolveKeyboardCommand(event, { dialogOpen = false, placementActive = false, guardianMoveActive = false, towerTypes = [], bindings = DEFAULT_KEY_BINDINGS } = {}) {
+export function resolveKeyboardCommand(event, { dialogOpen = false, placementActive = false, interactionMode = null, guardianMoveActive = false, towerTypes = [], bindings = DEFAULT_KEY_BINDINGS } = {}) {
   if (targetMatches(event, 'input,select,textarea,[contenteditable="true"]') || dialogOpen) return null;
   if (targetMatches(event, 'button,summary') && (event.code === 'Space' || event.key === 'Enter')) return null;
   if (event.code === 'Space' && bindings.pause === 'Space') return { type: 'toggle-pause', preventDefault: true };
   if (guardianMoveActive && event.key === 'Escape') return { type: 'cancel-guardian-move', preventDefault: true };
   if (guardianMoveActive && /^Arrow(Up|Down|Left|Right)$/.test(event.key)) return { type: 'move-guardian-cursor', direction: event.key.slice(5), preventDefault: true };
   if (guardianMoveActive && event.key === 'Enter') return { type: 'commit-guardian-move', preventDefault: true };
+  if (event.key === 'Escape'&&interactionMode) {const cancel=cancelInteractionCommand(interactionMode);return cancel?{type:cancel,preventDefault:true}:null;}
   if (event.key === 'Escape') return placementActive ? { type: 'cancel-placement', preventDefault: true } : null;
   if (placementActive && /^Arrow(Up|Down|Left|Right)$/.test(event.key)) return { type: 'move-placement-cursor', direction: event.key.slice(5), preventDefault: true };
   if (placementActive && event.key === 'Enter') return { type: 'keyboard-placement', preventDefault: true };
@@ -127,4 +124,3 @@ export function bindKeyboardInput(documentObject, getState, onCommand) {
   documentObject.addEventListener('keydown', onKeyDown);
   return () => documentObject.removeEventListener('keydown', onKeyDown);
 }
-

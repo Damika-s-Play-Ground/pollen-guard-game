@@ -76,7 +76,7 @@ export function renderCampaignMap({ document, root, missions, profile, selectedM
   root.prepend(count);
 }
 
-export function renderResearchTree({ document, root, profile, canRespec=true }) {
+export function renderResearchTree({ document, root, profile, canRespec=true, relicLoadout=[] }) {
   const points=earnedResearchPoints(profile),state=normalizeResearchState(profile.research,points);
   root.replaceChildren();
   const status=document.createElement('p');status.className='research-summary';
@@ -89,14 +89,15 @@ export function renderResearchTree({ document, root, profile, canRespec=true }) 
     const description=document.createElement('p');description.textContent=path.summary;group.append(heading,description);
     for(const node of RESEARCH_NODES.filter(item=>item.path===path.id)){
       const unlocked=state.unlocked.includes(node.id),active=state.loadout[path.id]===node.id;
+      const relicConflict=active?null:relicLoadout.map(id=>RELICS.find(relic=>relic.id===id)).find(relic=>relic?.type===node.effect?.type);
       const prior=RESEARCH_NODES.find(item=>item.path===path.id&&item.tier===node.tier-1);
       const available=unlocked||(!prior||state.unlocked.includes(prior.id))&&state.unlocked.length<points;
       const card=document.createElement('article');card.className=`research-node${active?' equipped':''}${unlocked?' researched':''}`;
       const title=document.createElement('h5');title.textContent=`${node.tier}. ${node.name}`;
       const copy=document.createElement('p');copy.id=`research-description-${node.id}`;copy.textContent=node.description;
       const button=document.createElement('button');button.type='button';button.dataset.researchNode=node.id;
-      button.disabled=!canRespec||!available;
-      button.textContent=active?'Equipped':unlocked?'Equip':available?'Research · 1 point':prior?`Locked · research ${prior.name}`:'Locked · earn a point';
+      button.disabled=!canRespec||!available||Boolean(relicConflict&&unlocked);
+      button.textContent=active?'Unequip':relicConflict?unlocked?`Role in kit · ${relicConflict.name}`:'Research · 1 point (relic stays)':unlocked?'Equip':available?'Research · 1 point':prior?`Locked · research ${prior.name}`:'Locked · earn a point';
       button.setAttribute('aria-pressed',String(active));
       button.setAttribute('aria-label',`${active?'Equipped':unlocked?'Equip':'Research'} ${node.name}`);
       button.setAttribute('aria-describedby',copy.id);
@@ -109,7 +110,7 @@ export function renderResearchTree({ document, root, profile, canRespec=true }) 
   return {points,state};
 }
 
-export function renderRelicLoadout({document,root,profile,canRefit=true}){
+export function renderRelicLoadout({document,root,profile,canRefit=true,researchLoadout=[]}){
   const state=normalizeRelicState(profile.relics,profile.completedMissions||[]);
   root.replaceChildren();
   const summary=document.createElement('p');summary.className='relic-summary';
@@ -124,6 +125,7 @@ export function renderRelicLoadout({document,root,profile,canRefit=true}){
     const owned=unlocked.has(relic.id),equipped=state.loadout.includes(relic.id);
     const blockedBy=state.loadout.filter(id=>relic.incompatible.includes(id)||RELICS.find(item=>item.id===id)?.incompatible.includes(relic.id));
     const conflict=blockedBy[0];
+    const researchConflict=relic.type?RESEARCH_NODES.find(node=>researchLoadout.includes(node.id)&&node.effect?.type===relic.type):null;
     const full=state.loadout.length>=RELIC_LOADOUT_SIZE&&!equipped;
     const card=document.createElement('article');card.className=`relic-card${equipped?' equipped':''}${owned?' unlocked':''}`;
     const title=document.createElement('h4');title.textContent=relic.name;
@@ -133,8 +135,8 @@ export function renderRelicLoadout({document,root,profile,canRefit=true}){
     const missionName=CAMPAIGN_MISSIONS.find(item=>item.id===rewardMission?.missionId)?.name||'campaign clear';
     reward.textContent=owned?'Unlocked':`Unlock: clear ${missionName}`;
     const button=document.createElement('button');button.type='button';button.dataset.relic=relic.id;
-    button.disabled=!canRefit||!owned||Boolean(conflict)||full&&!equipped;
-    button.textContent=equipped?'Unequip':conflict?`Incompatible with ${RELICS.find(item=>item.id===conflict)?.name||'equipped relic'}`:full?'Unequip a relic first':owned?'Equip relic':'Locked';
+    button.disabled=!canRefit||!owned||Boolean(conflict)||full&&!equipped||Boolean(researchConflict&&!equipped);
+    button.textContent=equipped?'Unequip':researchConflict?`Role in kit · ${researchConflict.name}`:conflict?`Incompatible with ${RELICS.find(item=>item.id===conflict)?.name||'equipped relic'}`:full?'Unequip a relic first':owned?'Equip relic':'Locked';
     button.setAttribute('aria-pressed',String(equipped));
     button.setAttribute('aria-label',`${equipped?'Unequip':'Equip'} ${relic.name}`);
     button.setAttribute('aria-describedby',`relic-description-${relic.id}`);detail.id=`relic-description-${relic.id}`;

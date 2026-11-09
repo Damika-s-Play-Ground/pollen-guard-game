@@ -1,0 +1,6 @@
+.reward-fx-layer{position:fixed;inset:0;z-index:40;overflow:hidden;pointer-events:none}
+.reward-flyout{position:fixed;left:0;top:0;white-space:nowrap;padding:4px 7px;border:1px solid #f4d677;border-radius:999px;background:#18251df2;color:#ffe695;font:700 11px 'DM Mono',monospace;box-shadow:0 3px 12px #08110bcc;will-change:transform,opacity}
+.reward-flyout-static{transform:translate(-50%,-50%);animation:reward-fade .65s ease-out both}
+.reward-flyout-reduced{animation:none;opacity:1}
+@keyframes reward-fade{0%{opacity:1}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.reward-flyout-static{animation:none;opacity:1}}

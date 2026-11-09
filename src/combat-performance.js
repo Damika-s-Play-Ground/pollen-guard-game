@@ -19,7 +19,9 @@ export function normalizeCombatPerformance(value) {
     if (!/^[1-9]\d*$/.test(id) || !tower || typeof tower !== 'object' || typeof tower.type !== 'string' ||
         !['sprout','dew','puff','thorn','sunflower','gust','ember','briar','pollenBeacon','compostTrap','pollinatorRelay'].includes(tower.type) ||
         (tower.level !== undefined && (!Number.isInteger(tower.level) || tower.level < 1 || tower.level > 3)) ||
-        !['damage','kills','income','slowSeconds','stunSeconds'].every(key => finiteCount(tower[key] ?? 0))) return null;
+        !['damage','kills','income','slowSeconds','stunSeconds'].every(key => finiteCount(tower[key] ?? 0)) ||
+        (tower.comboEffects !== undefined && (!tower.comboEffects || typeof tower.comboEffects !== 'object' || Array.isArray(tower.comboEffects) ||
+          Object.entries(tower.comboEffects).some(([id,count]) => !['frosted-seeds','steam-burst','sporecap','windcarved-thorns','cyclone-cap'].includes(id) || !finiteCount(count))))) return null;
   }
   for (const [type, enemy] of Object.entries(value.enemies)) {
     if (!/^(mite|zip|armored|shield|splitter|flyer|crumb|boss|healer|carrier|burrower)$/.test(type) || !enemy || typeof enemy !== 'object' ||
@@ -61,6 +63,18 @@ export function recordCombatDamage(performance, towerId, towerType, enemy, resul
 export function registerCombatTower(performance, tower) {
   const record = towerRecord(performance, tower?.id, tower?.type);
   if (record) record.level = tower.level;
+}
+
+export function recordComboImpact(performance, towerId, towerType, combinationId, results, primaryTargetId) {
+  const tower = towerRecord(performance, towerId, towerType);
+  if (!tower || !['frosted-seeds','steam-burst','sporecap','windcarved-thorns','cyclone-cap'].includes(combinationId)) return;
+  const hits = results.filter(result => result.hit).length;
+  if (!hits) return;
+  tower.comboEffects ||= {};
+  const count = combinationId === 'steam-burst'
+    ? results.filter(result => result.hit && result.enemy.id !== primaryTargetId).length
+    : hits;
+  if (count) tower.comboEffects[combinationId] = (tower.comboEffects[combinationId] || 0) + count;
 }
 
 export function recordCombatControl(performance, towerId, towerType, kind, seconds) {

@@ -17,6 +17,12 @@ export function createEnemyRouteGeometry(map, waveScheduleVersion) {
   };
 }
 
+export function distinctAirRoutePath(routeGeometry) {
+  if(!routeGeometry?.pathFor)return null;
+  const ground=routeGeometry.pathFor({flying:false}),air=routeGeometry.pathFor({flying:true});
+  return air===ground?null:air;
+}
+
 export function createRoutePathLengthResolver(activeGeometry, fallbackPathLength) {
   return enemy => activeGeometry
     ? activeGeometry.pathLengthFor(enemy)

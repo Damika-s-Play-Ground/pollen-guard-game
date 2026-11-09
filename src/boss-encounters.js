@@ -37,12 +37,13 @@ export function validBossEncounter(enemy, revision, mapId) {
     : enemy.bossPendingPhase === undefined && enemy.bossTelegraph === '';
 }
 
-function triggerPhase(enemy, phase, state) {
+function triggerPhase(enemy, phase, state, hooks) {
   const variant = BOSS_PHASE_CUES[enemy.bossVariant] ? enemy.bossVariant : 'meadow';
   enemy.bossPendingPhase = phase;
   enemy.bossTelegraphTimer = TELEGRAPH_SECONDS;
   enemy.bossTelegraph = BOSS_PHASE_CUES[variant][phase - 1];
   state.bossSummons ||= [];
+  hooks.onTelegraph?.(enemy,phase);
 }
 
 function resolvePhase(enemy, state) {
@@ -69,25 +70,29 @@ function resolvePhase(enemy, state) {
   enemy.bossTelegraph = '';
 }
 
-export function advanceBossEncounter(enemy, state, dt) {
+export function advanceBossEncounter(enemy, state, dt, hooks = {}) {
   if (!enemy.boss || !(state.waveScheduleVersion >= 2)) return 1;
   if (!Number.isInteger(enemy.bossPhase)) enemy.bossPhase = 0;
   if (!Number.isFinite(enemy.bossTelegraphTimer)) enemy.bossTelegraphTimer = 0;
   if (!Number.isFinite(enemy.bossRushTimer)) enemy.bossRushTimer = 0;
   if (enemy.bossTelegraphTimer > 0) {
     enemy.bossTelegraphTimer = Math.max(0, enemy.bossTelegraphTimer - dt);
-    if (enemy.bossTelegraphTimer === 0) resolvePhase(enemy, state);
+    if (enemy.bossTelegraphTimer === 0) {
+      resolvePhase(enemy, state);
+      hooks.onPhaseResolved?.(enemy, enemy.bossPhase);
+    }
     return 1;
   }
   if (enemy.bossPhase < 2) {
     const nextPhase = enemy.bossPhase + 1;
     if (enemy.hp <= enemy.maxHp * PHASE_THRESHOLDS[nextPhase - 1]) {
-      triggerPhase(enemy, nextPhase, state);
+      triggerPhase(enemy, nextPhase, state, hooks);
       return 1;
     }
   }
   if (enemy.bossRushTimer > 0) {
     enemy.bossRushTimer = Math.max(0, enemy.bossRushTimer - dt);
+    if (enemy.bossRushTimer === 0) hooks.onRecovery?.(enemy, enemy.bossPhase);
     return 1.8;
   }
   return 1;

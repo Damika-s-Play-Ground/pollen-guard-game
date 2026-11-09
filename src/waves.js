@@ -1,6 +1,7 @@
 import { AIR_ROUTE_SCHEDULE_VERSION } from './air-routes.js';
 import { adjustedSpawnGroups, tuneSpawnGroup } from './challenge-rules.js';
 import { ENDLESS_CHOICES, ENDLESS_ENEMY_CAP, ENDLESS_MIN_SPAWN_INTERVAL, ENDLESS_THREAT_BUDGET, isEndlessChoice } from './endless-mode.js';
+import { LEGACY_WAVE_REWARD_RULES_VERSION, waveClearBonus } from './wave-rewards.js';
 
 export const AUTHORED_WAVES = [
   { groups: [{ type: 'mite', count: 10, interval: 0.56 }], cue: 'Fragile mites arrive in a steady line.' },
@@ -30,7 +31,11 @@ export const PRE_MIXED_TACTICAL_SCHEDULE_VERSION = 5;
 export const PRE_AIR_ROUTE_SCHEDULE_VERSION = 6;
 export const MIXED_ROLE_SCHEDULE_VERSION = 6;
 export const PRE_RIDGE_BALANCE_SCHEDULE_VERSION = AIR_ROUTE_SCHEDULE_VERSION;
-export const WAVE_SCHEDULE_VERSION = PRE_RIDGE_BALANCE_SCHEDULE_VERSION + 1;
+export const RIDGE_BALANCE_SCHEDULE_VERSION = PRE_RIDGE_BALANCE_SCHEDULE_VERSION + 1;
+export const PRE_OPENING_DECISION_SCHEDULE_VERSION = RIDGE_BALANCE_SCHEDULE_VERSION;
+export const OPENING_DECISION_SCHEDULE_VERSION = PRE_OPENING_DECISION_SCHEDULE_VERSION + 1;
+export const PRE_ARMOR_DEMONSTRATION_SCHEDULE_VERSION = OPENING_DECISION_SCHEDULE_VERSION;
+export const WAVE_SCHEDULE_VERSION = PRE_ARMOR_DEMONSTRATION_SCHEDULE_VERSION + 1;
 
 const threatWeights = { mite: 1, zip: 1.3, armored: 3, shield: 2.5, splitter: 2.4, flyer: 2.2, boss: 18, healer:3, carrier:4, burrower:2.3 };
 const enemyBounties = { mite: 2, zip: 3, armored: 6, shield: 5, splitter: 5, flyer: 6, crumb: 1, boss: 35, healer:5, carrier:6, burrower:5 };
@@ -219,6 +224,28 @@ export const BALANCED_CAMPAIGN_WAVES=Object.freeze({
   'ridge-summit':ridgeSummitBalanced
 });
 
+const meadowDecisionBeats=replaceAuthoredWave(
+  replaceAuthoredWave(
+    replaceAuthoredWave(BALANCED_CAMPAIGN_WAVES.meadow,1,'A gentle line of fragile mites gives your first defender room to work.',[
+      {type:'mite',count:10,interval:.56}
+    ]),2,'A close-packed crowd of mites tests how much trail your defenders can cover.',[
+      {type:'mite',count:16,interval:.32}
+    ]),3,'Two plated beetles lead the crowd. A branch upgrade or heavier seed hit can help.',[
+      {type:'mite',count:8,interval:.4},{type:'armored',count:2,interval:.85}
+    ]);
+export const OPENING_DECISION_CAMPAIGN_WAVES=Object.freeze({
+  ...BALANCED_CAMPAIGN_WAVES,
+  meadow:meadowDecisionBeats
+});
+const armoredDemonstrationMeadow=replaceAuthoredWave(OPENING_DECISION_CAMPAIGN_WAVES.meadow,3,
+  'One slow plated beetle arrives alone. Watch which attacks armor stops and which get through.',[
+    {type:'armored',count:1,interval:.85}
+  ]);
+export const ARMOR_DEMONSTRATION_CAMPAIGN_WAVES=Object.freeze({
+  ...OPENING_DECISION_CAMPAIGN_WAVES,
+  meadow:armoredDemonstrationMeadow
+});
+
 const customWaveSchedules=new Map();
 export function registerCustomWaveSchedules(mapId,schedules){
   if(typeof mapId!=='string'||!/^custom-[a-z][a-z0-9-]{1,31}$/.test(mapId)||!Array.isArray(schedules)||schedules.length!==15)return false;
@@ -228,8 +255,10 @@ export function registerCustomWaveSchedules(mapId,schedules){
 export function waveSchedulesForMap(mapId = 'meadow', version = WAVE_SCHEDULE_VERSION) {
   if(customWaveSchedules.has(mapId))return customWaveSchedules.get(mapId);
   if (version === LEGACY_WAVE_SCHEDULE_VERSION) return AUTHORED_WAVES;
-  const schedules = version >= WAVE_SCHEDULE_VERSION ? BALANCED_CAMPAIGN_WAVES :
-    version >= AIR_ROUTE_SCHEDULE_VERSION ? AIR_ROUTE_CAMPAIGN_WAVES :
+  const schedules = version >= WAVE_SCHEDULE_VERSION ? ARMOR_DEMONSTRATION_CAMPAIGN_WAVES :
+    version >= OPENING_DECISION_SCHEDULE_VERSION ? OPENING_DECISION_CAMPAIGN_WAVES :
+    version >= PRE_OPENING_DECISION_SCHEDULE_VERSION ? BALANCED_CAMPAIGN_WAVES :
+      version >= AIR_ROUTE_SCHEDULE_VERSION ? AIR_ROUTE_CAMPAIGN_WAVES :
     version >= MIXED_ROLE_SCHEDULE_VERSION ? MIXED_ROLE_CAMPAIGN_WAVES :
       version >= PRE_MIXED_TACTICAL_SCHEDULE_VERSION ? BURROWER_CAMPAIGN_WAVES :
       version >= PRE_BURROWER_SCHEDULE_VERSION ? CARRIER_CAMPAIGN_WAVES :
@@ -261,7 +290,7 @@ export function summarizeWave(waveNumber, schedules = AUTHORED_WAVES, options = 
   const bounty = queue.reduce((total, spawn) => total + (enemyBounties[spawn.type] || 0) + (spawn.type === 'splitter' ? 2 : 0), 0);
   return {
     wave: waveNumber, groups, total: queue.length, budget: calculateWaveBudget(queue),
-    spawnSpan, bounty, clearBonus: (options.economyRulesVersion ?? 0) >= 1 ? 12 : 12 + waveNumber * 2,
+    spawnSpan, bounty, clearBonus: waveClearBonus(waveNumber, options.rewardRulesVersion ?? LEGACY_WAVE_REWARD_RULES_VERSION),
     cue:`${seedCarrierIndex>=0?`${schedule.cue} A marked seed thief turns back to the entry with one cache seed.`:schedule.cue}${options.endless&&options.endlessModifier&&ENDLESS_CHOICES[options.endlessModifier]?` ${ENDLESS_CHOICES[options.endlessModifier].description}`:''}${options.endless&&waveNumber%5===0?' Periodic boss warning: a Bramble boss joins this wave.':''}`
   };
 }

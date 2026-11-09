@@ -3,12 +3,13 @@ import { towersDef, enemyCombatProfiles } from './game-data.js';
 import { assignEnemyCombatProfile, canHitTarget, DOT_TICK_RULES, tickEnemyStatuses } from './combat-rules.js';
 import { resolveProjectileImpact } from './combat-actions.js';
 import { chooseTargetForTower } from './targeting.js';
-import { recordCombatControl, recordCombatDamage, recordEnemyDefeat, recordEnemyLeak, recordTowerIncome } from './combat-performance.js';
+import { recordCombatControl, recordCombatDamage, recordComboImpact, recordEnemyDefeat, recordEnemyLeak, recordTowerIncome } from './combat-performance.js';
 import { advanceBossEncounter, BOSS_VARIANTS, bossLeakCost } from './boss-encounters.js';
 import { combinationForPair } from './tower-combinations.js';
 import { assignPollenBeaconBuffs, triggerCompostTraps } from './support-structures.js';
 import { terrainZoneAt } from './terrain.js';
 import { advanceDroppedSeeds, claimSeedForCarrier, dropCarriedSeed, escapeCarriedSeed } from './seed-objective.js';
+import { waveClearBonus } from './wave-rewards.js';
 
 export const ENEMY_LEAK_COST = 1;
 
@@ -117,6 +118,7 @@ function tickTower(tower, state, dt, positionOf, hooks = {}, pollenBeaconBuffedI
     poisonDamage: sporecap?.poisonDamage ?? stats.poisonDamage,
     burn: stats.burn, burnDamage: stats.burnDamage, pierce: stats.pierce, armorBreak: stats.armorBreak
   };
+  shot.combinationEffect = steamBurst ? 'steam-burst' : frostedSeeds ? 'frosted-seeds' : sporecap ? 'sporecap' : cycloneCap ? 'cyclone-cap' : windcarvedThorns ? 'windcarved-thorns' : null;
   state.shots.push(shot);
   hooks.onShot?.(shot);
 }
@@ -126,7 +128,7 @@ function defeat(state, enemy, hooks, positionOf) {
   hooks.onDefeat?.(enemy);
 }
 
-function tickHealerSupport(enemy, enemies, dt, positionOf) {
+function tickHealerSupport(enemy, enemies, dt, positionOf, hooks = {}) {
   if (enemy.healerCharges <= 0) return;
   if (enemy.healerTelegraphTimer > 0) {
     enemy.healerTelegraphTimer = Math.max(0, enemy.healerTelegraphTimer - dt);
@@ -136,8 +138,9 @@ function tickHealerSupport(enemy, enemies, dt, positionOf) {
       Math.hypot(positionOf(other).x - origin.x, positionOf(other).y - origin.y) <= 84)
       .sort((a,b) => (b.maxHp - b.hp) - (a.maxHp - a.hp) || a.id - b.id)[0];
     if (!target) { enemy.healerCooldown = .25; return; }
-    target.hp = Math.min(target.maxHp, target.hp + 5);
+    const previousHp=target.hp;target.hp = Math.min(target.maxHp, target.hp + 5);
     target.supportFlash = .45;
+    hooks.onHealerHeal?.(enemy,target,target.hp-previousHp);
     enemy.healerCharges--;
     enemy.healerCooldown = enemy.healerCharges ? 2.6 : 0;
     return;
@@ -172,10 +175,10 @@ function tickCarrierSupport(enemy, enemies, dt, positionOf) {
   if (enemy.carrierCooldown <= 0 && eligible().length) enemy.carrierTelegraphTimer = .75;
 }
 
-function tickBurrower(enemy, dt) {
+function tickBurrower(enemy, dt, hooks = {}) {
   if (enemy.burrowTimer > 0) {
     enemy.burrowTimer = Math.max(0, enemy.burrowTimer - dt);
-    if (enemy.burrowTimer === 0) enemy.burrowCooldown = 2.5;
+    if (enemy.burrowTimer === 0) { enemy.burrowCooldown = 2.5; hooks.onBurrowEmerge?.(enemy); }
     return;
   }
   if (enemy.burrowTelegraphTimer > 0) {
@@ -189,9 +192,9 @@ function tickBurrower(enemy, dt) {
 
 // Mutates only the supplied gameplay state. Hooks are cosmetic/UI notifications;
 // all combat, spawning, rewards, leaks, and wave-clear decisions stay deterministic here.
-export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak, onStatusTick, onShot, onImpact } = {}) {
+export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak, onStatusTick, onShot, onImpact, onHealerHeal, onBurrowEmerge, onBossTelegraph, onBossPhaseResolved, onBossRecovery } = {}) {
   advanceDroppedSeeds(state.seedObjective,dt);
-  const hooks = { onDefeat, onLeak, onStatusTick, onShot, onImpact };
+  const hooks = { onDefeat, onLeak, onStatusTick, onShot, onImpact, onHealerHeal, onBurrowEmerge, onBossTelegraph, onBossPhaseResolved, onBossRecovery };
   if (!state.running || state.gameOver) return { defeated: [], leaked: [], waveClear: null, lost: false };
   if (state.rejuvenationField?.duration>0) {
     state.rejuvenationField.duration=Math.max(0,state.rejuvenationField.duration-dt);
@@ -219,10 +222,14 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
     if (enemy.type !== 'healer' && enemy.supportFlash > 0) enemy.supportFlash = Math.max(0, enemy.supportFlash - dt);
     if (enemy.type !== 'carrier' && enemy.wardFlash > 0) enemy.wardFlash = Math.max(0, enemy.wardFlash - dt);
     if (enemy.stun > 0) continue;
-    if (enemy.type === 'healer') tickHealerSupport(enemy, state.enemies, dt, positionOf);
+    if (enemy.type === 'healer') tickHealerSupport(enemy, state.enemies, dt, positionOf, hooks);
     if (enemy.type === 'carrier') tickCarrierSupport(enemy, state.enemies, dt, positionOf);
-    if (enemy.type === 'burrower') tickBurrower(enemy, dt);
-    const bossSpeedFactor = advanceBossEncounter(enemy, { waveScheduleVersion:state.waveScheduleVersion, bossSummons }, dt);
+    if (enemy.type === 'burrower') tickBurrower(enemy, dt, hooks);
+    const bossSpeedFactor = advanceBossEncounter(enemy, { waveScheduleVersion:state.waveScheduleVersion, bossSummons }, dt, {
+      onPhaseResolved:hooks.onBossPhaseResolved,
+      onRecovery:hooks.onBossRecovery,
+      onTelegraph:hooks.onBossTelegraph
+    });
     const factor = (enemy.slow > 0 ? .55 : 1) * (enemy.burrowTimer > 0 ? 1.7 : 1) * bossSpeedFactor;
     const enemyPathLength = typeof pathLength === 'function' ? pathLength(enemy) : pathLength;
     const moveDistance=enemy.speed*factor*dt;
@@ -280,6 +287,7 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
       const impactPosition = positionOf(shot.target);
       const impact = resolveProjectileImpact(shot, state.enemies, positionOf);
       impact.results.forEach(result => recordCombatDamage(state.performance, shot.sourceTowerId, shot.sourceTowerType, result.enemy, result));
+      if (shot.combinationEffect) recordComboImpact(state.performance, shot.sourceTowerId, shot.sourceTowerType, shot.combinationEffect, impact.results, shot.targetId);
       impact.defeated.forEach(enemy => { defeat(state, enemy, hooks,positionOf); defeated.push(enemy); });
       impact.splitTargets.forEach(target => {
         const splitShot={id:state.nextEntityId++,target,targetId:target.id,sourceTowerId:shot.sourceTowerId,sourceTowerType:shot.sourceTowerType,
@@ -308,8 +316,7 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
     for (const tower of state.towers.filter(tower => tower.type === 'sunflower')) {
       recordTowerIncome(state.performance, tower.id, tower.type, getEffectiveTowerStats(tower, {terrain:state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground',researchLoadout:state.researchLoadout??[],relicLoadout:state.relicLoadout??[]}, towersDef.sunflower).income);
     }
-    const clearReward = (state.economyRulesVersion ?? 0) >= 1 ? 12 : 12 + state.wave * 2;
-    const bonus = clearReward + income;
+    const bonus = waveClearBonus(state.wave, state.rewardRulesVersion) + income;
     state.cash += bonus;
     state.intermission = 12;
     return { defeated, leaked, waveClear: { bonus, income }, lost: false };

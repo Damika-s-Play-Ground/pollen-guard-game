@@ -1,7 +1,7 @@
 export const TUTORIAL_STEPS = Object.freeze([
   Object.freeze(['Welcome to the meadow', 'Place defenders on open grass beside the trail. Their range preview helps you cover long stretches.']),
   Object.freeze(['Choose a defender', 'Sprout Slinger is a simple first pick. You can filter defenders by attack, support, or economy role.']),
-  Object.freeze(['Plan each wave', 'Preview enemy counts, place defenders, then launch when your garden is ready. Mission kit is optional: the Meadow Guardian can move over safe grass and slow nearby ground pests, while Pollen Ward adds two starting seeds. Sudden Death with Ward is labeled as a three-seed variant. Core missions work without either kit.']),
+  Object.freeze(['Plan each wave', 'Preview enemy counts, then launch the wave whenever you are ready. Mission kit is optional: the Meadow Guardian can move over safe grass and slow nearby ground pests, while Pollen Ward adds two starting seeds. Sudden Death with Ward is labeled as a three-seed variant. Core missions work without either kit.']),
   Object.freeze(['Inspect and specialize', 'Select a placed tower to change its target priority, choose an upgrade branch, and use its ability.'])
 ]);
 
@@ -49,6 +49,22 @@ export function buildTutorialCoachView({active,task}) {
   if(!active)return {visible:false,text:'',focusSelector:null,focusMap:false};
   const current=Number.isInteger(task)&&task>=0?TUTORIAL_COACH_TASKS[task]:null;
   return {visible:true,text:current?.text||'Practice complete.',focusSelector:current?.focusSelector||null,focusMap:Boolean(current?.focusMap)};
+}
+
+export function buildFirstActionCoachView({visible,selectedType='sprout',selectedName='Sprout'}) {
+  const resourceIntro='Petals buy defenders. Escaped pests lower Garden health; at zero, the run ends. ';
+  const text=selectedType
+    ? `${resourceIntro}${selectedName} is selected. Tap open grass beside the trail, then launch wave 1 when ready.`
+    : `${resourceIntro}Choose a defender, then tap open grass beside the trail. Launch wave 1 when ready.`;
+  return visible
+    ? {visible:true,text,focusSelector:null,focusMap:false}
+    : {visible:false,text:'',focusSelector:null,focusMap:false};
+}
+
+export function mountTutorialCoach({coach,dock,anchor=null}) {
+  if (!coach || !dock || coach.parentElement === dock) return coach;
+  dock.insertBefore(coach,anchor);
+  return coach;
 }
 
 export function clearTutorialCoach({coach,board,document}) {

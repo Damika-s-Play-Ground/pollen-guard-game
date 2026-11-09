@@ -1,6 +1,7 @@
 import { enemyCombatProfiles } from './game-data.js';
-import { AUTHORED_WAVES, buildWaveQueue, calculateWaveBudget, summarizeWave, upcomingWaves } from './waves.js';
+import { AUTHORED_WAVES, WAVE_SCHEDULE_VERSION, buildWaveQueue, calculateWaveBudget, summarizeWave, upcomingWaves } from './waves.js';
 import { ENDLESS_CHOICES } from './endless-mode.js';
+import { enemyIntelFor, firstEncounterIntel } from './enemy-intel.js';
 
 const pluralNames = {
   mite: 'moss mites', zip: 'zip mites', armored: 'armored beetles', shield: 'shield bugs',
@@ -21,8 +22,8 @@ function bossCue(cue, name) {
   return name ? cue.replace(/Bramble bosses/g, `${name} bosses`).replace(/Bramble boss|Bramble beetle/g, name) : cue;
 }
 
-export function buildWaveTimelineView({ bossName, terminal, won, running, paused, wave, scheduled, enemyCount, sunflowerIncome, intermission, challenge, limit, difficulty, challengeRules, endlessModifier = null, economyRulesVersion=0, schedules = AUTHORED_WAVES }) {
-  const options={difficulty,challengeRules,endless:challenge==='endless',endlessModifier,economyRulesVersion};
+export function buildWaveTimelineView({ bossName, terminal, won, running, paused, wave, scheduled, enemyCount, sunflowerIncome, intermission, challenge, limit, difficulty, challengeRules, endlessModifier = null, rewardRulesVersion, schedules = AUTHORED_WAVES }) {
+  const options={difficulty,challengeRules,endless:challenge==='endless',endlessModifier,rewardRulesVersion};
   const summary = running ? summarizeWave(wave, schedules, options) : null;
   return {
     terminal, won, running, paused, wave,
@@ -40,11 +41,40 @@ const previewEnemyNames = {
   splitter: 'splitters', flyer: 'sky gnats', boss: 'BRAMBLE BOSS', healer:'Moss Tenders', carrier:'Shield Carriers', burrower:'Burrowers'
 };
 
-export function buildWavePreviewView({ terminal, won, running, wave, mapLabel, bossName = 'Bramble boss', schedules = AUTHORED_WAVES, airRouteEnabled = false, difficulty, challengeRules, endless = false, endlessModifier = null }) {
+const counterHints = Object.freeze({
+  mite:'Sprout Slinger', zip:'Dew Bell', armored:'Puff Pod or Thorn Beacon · Piercing Point', shield:'Briar Patch',
+  splitter:'Puff Pod', flyer:'Kite Keeper or Thorn Beacon', healer:'Focus the Moss Tender or use area damage',
+  carrier:'Focus the Shield Carrier or use area damage', burrower:'Puff Pod when it surfaces',
+  boss:'Layered coverage; keep pressure on the boss'
+});
+
+function upcomingThreat(queue, waveNumber, schedules, names, scheduleVersion) {
+  if (!queue.length) return null;
+  const counts = queue.reduce((result, item) => {
+    const type = typeof item === 'string' ? item : item.type;
+    result[type] = (result[type] || 0) + 1;
+    return result;
+  }, {});
+  const introduction = firstEncounterIntel(waveNumber, schedules, scheduleVersion);
+  const priority = ['boss','flyer','healer','carrier','burrower','armored','shield','splitter','zip','mite'];
+  const type = introduction && counts[introduction.type]
+    ? introduction.type
+    : priority.find(candidate => counts[candidate]) || Object.keys(counts)[0];
+  const info = enemyIntelFor(type, scheduleVersion);
+  const group = schedules[(waveNumber - 1) % schedules.length]?.groups?.find(item => item.type === type);
+  const route = group?.lane === 'air' || type === 'flyer' ? 'Sky route' : 'Ground trail';
+  return {
+    wave:waveNumber, type, icon:info?.icon || '•', name:type === 'boss' ? (names[type] || info?.name || type) : (info?.name || names[type] || type),
+    route, counter:counterHints[type] || 'Match coverage to its role',
+    label:introduction?.type === type ? 'New threat' : 'Next up'
+  };
+}
+
+export function buildWavePreviewView({ terminal, won, running, wave, mapLabel, bossName = 'Bramble boss', schedules = AUTHORED_WAVES, airRouteEnabled = false, difficulty, challengeRules, endless = false, endlessModifier = null, rewardRulesVersion, scheduleVersion = WAVE_SCHEDULE_VERSION }) {
   if (terminal) return {
     terminal: true,
     won,
-    waveInfo: won ? 'All waves cleared! This garden is thriving.' : 'The seed pod was overrun. Try another layout or challenge rule.'
+    waveInfo: won ? 'All waves cleared! This garden is thriving.' : 'The seed pod was overrun. Try another layout or challenge rule.', upcomingThreat:null
   };
 
   const previewWave = running ? wave : wave + 1;
@@ -72,12 +102,13 @@ export function buildWavePreviewView({ terminal, won, running, wave, mapLabel, b
     ? `Wave ${preview.wave} is in progress. ${preview.total} enemies are in this encounter. ${preview.cue}`
     : wave === 0
       ? `Wave 1 brings ${incoming}. ${preview.cue} Encounter rating is ${preview.threat}; place a defender and launch when ready.`
-      : `Wave ${preview.wave}: ${preview.total} enemies expected. ${preview.cue} Review the encounter, then launch when ready.`;
-  return { terminal: false, preview, boss: Boolean(counts.boss), bossName, mapLabel, airRouteEnabled,seedRecovery, waveInfo };
+      : `Wave ${preview.wave}: ${preview.total} enemies expected. ${preview.cue} Launch whenever your garden is ready; launch timing does not change the reward.`;
+  return { terminal: false, preview, upcomingThreat:upcomingThreat(queue,previewWave,schedules,names,scheduleVersion), boss: Boolean(counts.boss), bossName, mapLabel, airRouteEnabled,seedRecovery, waveInfo };
 }
 
-export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote, waveInfo, view }) {
+export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote, waveInfo, upcomingThreat:threatStrip, view }) {
   if (view.terminal) {
+    if (threatStrip) { threatStrip.hidden = true; threatStrip.replaceChildren(); }
     enemyPreview.replaceChildren();
     waveThreat.className = 'wave-threat';
     waveThreat.textContent = 'Encounter complete';
@@ -88,6 +119,20 @@ export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote,
   }
 
   const { preview, boss } = view;
+  if (threatStrip) {
+    threatStrip.hidden = !view.upcomingThreat;
+    if (view.upcomingThreat) {
+      const threat = view.upcomingThreat;
+      const lead = document.createElement('span'); lead.className = 'threat-wave';
+      lead.textContent = `${threat.label} · Wave ${threat.wave}`;
+      const enemy = document.createElement('button'); enemy.type = 'button'; enemy.className = 'threat-enemy';
+      enemy.dataset.enemyIntel = threat.type; enemy.setAttribute('aria-label', `Inspect ${threat.name} in the enemy field guide`);
+      enemy.textContent = `${threat.icon} ${threat.name}`;
+      const route = document.createElement('span'); route.className = 'threat-route'; route.textContent = `Route · ${threat.route}`;
+      const counter = document.createElement('span'); counter.className = 'threat-counter'; counter.textContent = `Counter · ${threat.counter}`;
+      threatStrip.replaceChildren(lead, enemy, route, counter);
+    }
+  }
   const chips = Object.entries(preview.counts).map(([type, count]) => {
     const name = preview.names[type] || type;
     const button = document.createElement('button');
@@ -142,7 +187,7 @@ export function renderWaveTimeline(element, state) {
     if (forecasts.length) {
       const summary = forecasts[0];
       const abilityNote = 'Ivy Snare costs 45 petals; Golden Harvest adds 35 once per wave when used during combat.';
-      content += `<section class="economy-forecast" aria-label="Next wave economy"><b>Wave ${escapeHtml(summary.wave)} economy</b><span>On a cleared wave: +${escapeHtml(summary.clearBonus)} clear reward${sunflowerIncome ? ` + ${escapeHtml(sunflowerIncome)} Sunflower income` : ''} petals.</span><span>Enemy bounty: up to ${escapeHtml(summary.bounty)} petals, only for enemies defeated before they leak.</span><small>${abilityNote} Forecast excludes ability use; leaks cost seeds.</small></section>`;
+      content += `<section class="economy-forecast" aria-label="Next wave economy"><b>Wave ${escapeHtml(summary.wave)} economy</b><span>On a cleared wave: +${escapeHtml(summary.clearBonus)} clear bonus${sunflowerIncome ? ` + ${escapeHtml(sunflowerIncome)} Sunflower income` : ''} petals.</span><span>Enemy bounty: up to ${escapeHtml(summary.bounty)} petals, only for enemies defeated before they leak.</span><span>Launch timing does not change rewards. Petals come from enemy bounties, this fixed clear bonus, and Sunflower income.</span><small>${abilityNote} Forecast excludes ability use; leaks cost seeds.</small></section>`;
       content += forecasts.map((forecast, index) => renderWaveCard(forecast, index === 0 ? 'Next' : 'Then')).join('');
     } else {
       content += `<p class="timeline-terminal">${running ? 'Final wave in progress · no later waves.' : 'No upcoming waves.'}</p>`;

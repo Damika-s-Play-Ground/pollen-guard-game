@@ -41,7 +41,9 @@ export function renderResultsScreen(elements, model, document) {
   elements.title.textContent = model.won ? 'Garden saved' : 'The trail got through';
   elements.description.textContent = model.won
     ? 'Your defenders protected the meadow. Here is how the run finished.'
-    : 'Your seed pod was overrun. Try another trail or challenge rule.';
+    : model.report?.suggestion
+      ? `Run insight: ${model.report.suggestion}`
+      : 'Your seed pod was overrun. Try another trail or challenge rule.';
   elements.wave.textContent = String(model.wave);
   elements.popped.textContent = String(model.popped);
   elements.petals.textContent = String(model.petals);

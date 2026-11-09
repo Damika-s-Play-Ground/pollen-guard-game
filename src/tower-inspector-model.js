@@ -6,6 +6,7 @@ import { enemyCombatProfiles, towersDef } from './game-data.js';
 import { towerArtSvg } from './tower-art.js';
 import { assignPollenBeaconBuffs } from './support-structures.js';
 import { terrainBonusForTower } from './terrain.js';
+import { branchPreviewForStats } from './branch-preview.js';
 
 function applyBeaconInterval(stats, tower, towers, researchLoadout=[],relicLoadout=[]) {
   if (assignPollenBeaconBuffs(towers,researchLoadout,relicLoadout).has(tower.id)) stats.rate *= relicLoadout.includes('beacon-bell') ? .90 : researchLoadout.includes('beacon-network') ? 0.91 : towersDef.pollenBeacon.buffMultiplier;
@@ -58,22 +59,6 @@ export function buildTowerUpgradePreview({ tower, towers = [tower], challenge, c
   return `Next · ${changes.length ? changes.join(' · ') : 'No numeric stat change'} · Ability unchanged: ${def.ability} · Cost ${quote.cost} petals · Investment ${quote.investedAfter} · sell return ${quote.refundAfter}${shortfall ? ` · Need ${shortfall} more` : ''}`;
 }
 
-export function buildTowerUpgradeAction({ tower, cash = 0, tutorialActive = false, tutorialTask = 0, tutorialTowerId = null }) {
-  if (!tower) return { upgradeText: 'Upgrade', upgradeTitle: 'Select a defender to upgrade.', upgradeDisabled: true, upgradeFocusForShortfall: false };
-  const def = towersDef[tower.type];
-  if (def.supportStructure) return { upgradeText: 'NO UPGRADES', upgradeTitle: `${def.name} has a fixed support effect.`, upgradeDisabled: true, upgradeFocusForShortfall: false };
-  const level = tower.level, branch = level === 1 ? tower.branchChoice : tower.branch;
-  const hasBranchChoice = branch != null;
-  const cost = level === 3 || !hasBranchChoice ? 0 : towerUpgradeQuote(tower, def).cost;
-  const shortage = Math.max(0, cost - cash);
-  const tutorialBlocked = tutorialActive && (tutorialTask !== 3 || tower.id !== tutorialTowerId);
-  const upgradeDisabled = level >= 3 || (level === 1 && !hasBranchChoice) || shortage > 0 || tutorialBlocked;
-  const upgradeFocusForShortfall = level < 3 && hasBranchChoice && shortage > 0 && !tutorialBlocked;
-  const upgradeText = level === 3 ? 'MAX LEVEL' : !hasBranchChoice ? 'Choose branch' : `Upgrade · ${cost} ✿${shortage ? ` · Need ${shortage} more` : ''}`;
-  const upgradeTitle = level === 3 ? 'This defender is fully upgraded.' : !hasBranchChoice ? 'Choose a branch to preview its upgrade.' : `${def.branches[branch][0]}: ${def.branches[branch][1]}. Upgrade cost: ${cost} petals${shortage ? ` · Need ${shortage} more petals` : ''}.`;
-  return { upgradeText, upgradeTitle, upgradeDisabled, upgradeFocusForShortfall };
-}
-
 export function buildTowerTargetStatus({ tower, enemies = [], challenge, challengeRules = [], linked, enemyPosition, isRunning = false, terrain = 'ground', researchLoadout=[],relicLoadout=[] }) {
   if (!tower) return 'Select a defender to see its target.';
   const def = towersDef[tower.type];
@@ -98,7 +83,7 @@ export function buildTowerTargetStatus({ tower, enemies = [], challenge, challen
   return isRunning ? 'No target in range · waiting for an enemy.' : 'No current target · start a wave to preview targets.';
 }
 
-export function buildTowerInspectorModel({ selectedTower, towers = [], challenge, challengeRules = [], linked, cash, wave, gameTime, terrain = 'ground', researchLoadout=[],relicLoadout=[], tutorialActive = false, tutorialTask = 0, tutorialTowerId = null, onChooseBranch }) {
+export function buildTowerInspectorModel({ selectedTower, towers = [], challenge, challengeRules = [], linked, cash, wave, gameTime, terrain = 'ground', researchLoadout=[],relicLoadout=[], performance=null, animation='full', tutorialActive = false, tutorialTask = 0, tutorialTowerId = null, supportTargetingAvailable = false, onChooseBranch }) {
   if (!selectedTower) return { empty: true };
 
   const def = towersDef[selectedTower.type], level = selectedTower.level, branch = selectedTower.branch;
@@ -124,13 +109,16 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
       investment:`${selectedTower.invested || def.cost} invested · sell returns ${saleRefund(selectedTower.invested || def.cost, def.cost)}`,
       showBranches:false, branchOptions:null, selectedBranch:null, onChooseBranch,
       upgradeText:'NO UPGRADES', upgradeTitle:`${def.name} has a fixed support effect.`, upgradeDisabled:true,
-      targetMode:selectedTower.targetMode || 'First', targetModeDisabled:true,
-      abilityInfo:details, contextTitle:`INSPECT · ${def.name}`
+      contextUpgradeText:'No upgrades', targetMode:selectedTower.targetMode || 'First', targetModeDisabled:true,supportTargetingAvailable:selectedTower.targetMode==='Support',
+      abilityInfo:details, contextTitle:def.name
     };
   }
   const stats = applyBeaconInterval(getEffectiveTowerStats(selectedTower, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), selectedTower, towers,researchLoadout,relicLoadout);
   const chosenBranch = level === 1 ? selectedTower.branchChoice : branch;
+  const hasBranchChoice = chosenBranch != null;
   const quote = towerUpgradeQuote(selectedTower, def);
+  const cost = level === 3 || !hasBranchChoice ? 0 : quote.cost;
+  const shortage = Math.max(0, cost - cash);
   const investment = quote.investment;
   const remaining = Math.max(0, (selectedTower.abilityReadyAt || 0) - gameTime);
   const usedThisWave = selectedTower.type === 'sunflower' && selectedTower.abilityUsedWave === wave;
@@ -155,16 +143,21 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
       const next = applyBeaconInterval(getEffectiveTowerStats({ ...selectedTower, level: 2, branch: index }, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), selectedTower, towers,researchLoadout,relicLoadout);
       const changes = describeTowerStatChanges(base, next);
       return {
-        name, description, cost: branchCost,
+        name, description, portrait:towerArtSvg(selectedTower.type,2,index), cost: branchCost, shortfall:Math.max(0,branchCost-cash),
+        preview:branchPreviewForStats(base,next),
         changes: changes.join(' · ') || 'No numeric stat change',
         abilityText: `${def.ability} remains unchanged`,
-        title: `${description} · ${branchCost} petals`
+        title: `${description} · ${branchCost} petals${cash<branchCost?` · Need ${branchCost-cash} more`:''}`
       };
     });
   }
 
   const payback = def.income && stats.income > 0 ? Math.ceil(investment / stats.income) : 0;
   const pairing = combinationStatuses(selectedTower, towers,researchLoadout,relicLoadout);
+  const comboLabels={'frosted-seeds':'Frosted Seeds affected hits','steam-burst':'Steam Burst extra splash hits','sporecap':'Sporecap affected hits','windcarved-thorns':'Windcarved Thorns affected hits','cyclone-cap':'Cyclone Cap affected hits'};
+  const comboContribution=Object.entries(performance?.towers?.[String(selectedTower.id)]?.comboEffects||{})
+    .filter(([id,count])=>comboLabels[id]&&count>0)
+    .map(([id,count])=>`${comboLabels[id]} ${count}`).join(' · ');
   return {
     empty: false,
     portrait: towerArtSvg(selectedTower.type, level, branch ?? selectedTower.branchChoice),
@@ -175,16 +168,21 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
     impact: def.income ? `+${stats.income} petals / wave` : `${stats.damage} damage / hit`,
     interval: def.income ? 'Economy defender' : `Every ${stats.rate.toFixed(2)} seconds`,
     targets: `${def.income ? `Golden Seeds radius · ${stats.allyLinkRadius} map units` : def.antiAir ? 'Ground + air' : 'Ground only'}${pairing ? ` · ${pairing}` : ''}`,
-    effects: `${effect} · ${terrainBonusForTower(terrain,selectedTower.type)}`,
+    effects: `${effect} · ${terrainBonusForTower(terrain,selectedTower.type)}${comboContribution ? ` · This run: ${comboContribution}` : ''}`,
     investment: `${investment} invested · sell returns ${saleRefund(investment, def.cost)}${payback ? ` · simple payback ${payback} cleared ${payback === 1 ? 'wave' : 'waves'} at +${stats.income}/wave` : ''}`,
     showBranches: level === 1,
     branchOptions,
+    previewMotion:animation,
     selectedBranch: selectedTower.branchChoice,
     onChooseBranch,
-    ...buildTowerUpgradeAction({ tower: selectedTower, cash, tutorialActive, tutorialTask, tutorialTowerId }),
+    upgradeText: level === 3 ? 'MAX LEVEL' : level === 1 && !hasBranchChoice ? 'Choose branch' : `Upgrade · ${cost} ✿`,
+    upgradeTitle: level === 3 ? 'This defender is fully upgraded.' : !hasBranchChoice ? 'Choose a branch to preview its upgrade.' : `${def.branches[chosenBranch][0]}: ${def.branches[chosenBranch][1]}. Upgrade cost: ${cost} petals${shortage ? ` · Need ${shortage} more` : ''}.`,
+    upgradeDisabled: level >= 3 || (level === 1 && !hasBranchChoice) || cash < cost || (tutorialActive && (tutorialTask !== 3 || selectedTower.id !== tutorialTowerId)),
+    contextUpgradeText: level === 3 ? 'Max level' : !hasBranchChoice ? 'Choose branch' : shortage ? `Need ${shortage} more ✿` : `Upgrade · ${cost} ✿`,
     targetMode: selectedTower.targetMode || 'First',
     targetModeDisabled: Boolean(def.income) || (tutorialActive && (tutorialTask !== 2 || selectedTower.id !== tutorialTowerId)),
+    supportTargetingAvailable:supportTargetingAvailable||selectedTower.targetMode==='Support',
     abilityInfo: `${def.ability} · ${usedThisWave ? 'used this wave' : remaining > 0 ? `ready in ${Math.ceil(remaining)}s` : 'ready when combat allows'}`,
-    contextTitle: `INSPECT · ${def.name} · Lv ${level}`
+    contextTitle: `${def.name} · Lv ${level}`
   };
 }

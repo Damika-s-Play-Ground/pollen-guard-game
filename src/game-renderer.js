@@ -5,6 +5,8 @@ import { combinationForPair } from './tower-combinations.js';
 import { pathSegmentsWithinRadius } from './route-coverage.js';
 import { guardianDestinationIsSafe, GUARDIAN_PATH_CLEARANCE, GUARDIAN_PULSE_RADIUS } from './meadow-guardian.js';
 import { TERRAIN_TYPES, TERRAIN_ZONES } from './terrain.js';
+import { enemySilhouetteMetrics } from './enemy-silhouette.js';
+import { canHitTarget } from './combat-rules.js';
 
 const COMBINATION_LINK_STYLES = Object.freeze({
   'golden-seeds': Object.freeze({ color:'#ffd447', dash:[5, 7] }),
@@ -140,7 +142,7 @@ function drawTerrainLabels(ctx,map,displayScale=1) {
   }
 }
 
-function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, displayScale = 1 }) {
+function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath, displayScale = 1 }) {
   ctx.fillStyle = map.background;
   ctx.fillRect(0, 0, width, height);
   for (let i = 0; i < 34; i++) {
@@ -155,6 +157,7 @@ function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, display
   tracePath(ctx, path); ctx.strokeStyle = map.edge; ctx.lineWidth = 44; ctx.stroke();
   tracePath(ctx, path); ctx.strokeStyle = map.trail; ctx.lineWidth = 34; ctx.stroke();
   tracePath(ctx, path); ctx.setLineDash([4, 9]); ctx.strokeStyle = '#af9f6c'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+  drawAirRoute(ctx,airPath);
   drawBiomeAccents(ctx, map, path);
   drawRouteLandmarks(ctx, path, pathLength);
   drawTerrainLabels(ctx,map,displayScale);
@@ -165,8 +168,8 @@ export function createStaticMapCache(createCanvas) {
   let canvas = null, cacheKey = null;
   return {
     draw(ctx, state) {
-      const { width, height, map, path, pathLength, displayScale } = state;
-      const key = JSON.stringify([width, height, map.biome, map.background, map.patch, map.edge, map.trail, map.buildZones||null, path, pathLength, displayScale]);
+      const { width, height, map, path, pathLength, airPath, displayScale } = state;
+      const key = JSON.stringify([width, height, map.biome, map.background, map.patch, map.edge, map.trail, map.buildZones||null, path, pathLength, airPath, displayScale]);
       if (!canvas || cacheKey !== key) {
         canvas = createCanvas(width, height);
         canvas.width = width;
@@ -182,7 +185,7 @@ export function createStaticMapCache(createCanvas) {
   };
 }
 
-export function traceEnemyShape(ctx, enemy, x, y, radius) {
+function traceEnemyShape(ctx, enemy, x, y, radius) {
   ctx.beginPath();
   if (enemy.boss) {
     for (let i = 0; i < 10; i++) {
@@ -199,24 +202,9 @@ export function traceEnemyShape(ctx, enemy, x, y, radius) {
   } else if (enemy.type === 'burrower') {
     ctx.ellipse(x, y, radius, radius * .72, 0, 0, Math.PI * 2);
   } else if (enemy.flying) {
-    // Broad swept wings and a narrow body keep the air silhouette legible without its glyph.
-    ctx.moveTo(x, y - radius * .72);
-    ctx.quadraticCurveTo(x + radius * .22, y - radius * .42, x + radius * 1.35, y - radius * .85);
-    ctx.lineTo(x + radius * .78, y + radius * .08);
-    ctx.lineTo(x + radius * .24, y + radius * .34);
-    ctx.lineTo(x, y + radius * .8);
-    ctx.lineTo(x - radius * .24, y + radius * .34);
-    ctx.lineTo(x - radius * .78, y + radius * .08);
-    ctx.lineTo(x - radius * 1.35, y - radius * .85);
-    ctx.quadraticCurveTo(x - radius * .22, y - radius * .42, x, y - radius * .72);
-    ctx.closePath();
+    ctx.moveTo(x, y - radius); ctx.lineTo(x + radius * .8, y + radius * .7); ctx.lineTo(x, y + radius * .35); ctx.lineTo(x - radius * .8, y + radius * .7); ctx.closePath();
   } else if (enemy.type === 'armored') {
-    // Low, wide beetle carapace with a tapered head rather than a generic hexagon.
-    ctx.moveTo(x - radius * .96, y - radius * .05);
-    ctx.quadraticCurveTo(x - radius * .72, y - radius * .98, x, y - radius * .83);
-    ctx.quadraticCurveTo(x + radius * .82, y - radius * .72, x + radius, y + radius * .05);
-    ctx.lineTo(x + radius * .56, y + radius * .74);
-    ctx.lineTo(x - radius * .6, y + radius * .74);
+    for (let i = 0; i < 6; i++) { const angle = -Math.PI / 2 + i * Math.PI / 3, px = x + Math.cos(angle) * radius, py = y + Math.sin(angle) * radius; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
     ctx.closePath();
   } else if (enemy.type === 'splitter') {
     ctx.arc(x, y, radius * .52, 0, Math.PI * 2);
@@ -249,27 +237,18 @@ function drawStatusMarks(ctx, enemy, x, y) {
   });
 }
 
-export function drawEnemyDetails(ctx, enemy, x, y, time = 0) {
-  const gaitProfile = enemy.type === 'zip' ? { rate:14, amplitude:2.7 }
-    : enemy.type === 'armored' ? { rate:3.8, amplitude:.8 }
-      : enemy.type === 'healer' ? { rate:5.2, amplitude:1.15 }
-        : { rate:7, amplitude:2 };
-  const phase = time * gaitProfile.rate + enemy.id * .73;
-  ctx.lineWidth = enemy.boss ? 2 : 1.4; ctx.strokeStyle = '#24372b'; ctx.fillStyle = '#fff0c9';
+function drawEnemyDetails(ctx, enemy, x, y, time = 0, displayScale = 1) {
+  const {gait}=enemySilhouetteMetrics(enemy,time);
+  const scale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
+  ctx.lineWidth = Math.max(enemy.boss ? 2 : 1.4,1/scale); ctx.strokeStyle = '#24372b'; ctx.fillStyle = '#fff0c9';
   if (enemy.flying) {
-    const flap = time ? Math.sin(time * 12 + enemy.id) * 3 : 0;
+    const flap = gait;
     ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.lineTo(x - 12, y - 7 - flap); ctx.lineTo(x - 7, y + 2); ctx.moveTo(x + 3, y); ctx.lineTo(x + 12, y - 7 + flap); ctx.lineTo(x + 7, y + 2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x - 5, y + 3); ctx.lineTo(x - 7, y + 6); ctx.moveTo(x + 5, y + 3); ctx.lineTo(x + 7, y + 6); ctx.stroke();
   } else {
     const legY = y + enemy.radius * .55;
     ctx.beginPath();
-    for (const side of [-1, 1]) {
-      const stride = enemy.type === 'armored'
-        ? Math.sin(phase + (side > 0 ? Math.PI : 0)) * gaitProfile.amplitude
-        : Math.sin(phase + side * .42) * gaitProfile.amplitude;
-      ctx.moveTo(x + side * 4, legY); ctx.lineTo(x + side * 7, legY + 3 + stride * .35);
-      ctx.moveTo(x + side * 1, legY + 1); ctx.lineTo(x + side * 2, legY + 4 - stride * .35);
-    }
+    for (const side of [-1, 1]) { ctx.moveTo(x + side * 4, legY); ctx.lineTo(x + side * 7, legY + 3 + gait * .35); ctx.moveTo(x + side * 1, legY + 1); ctx.lineTo(x + side * 2, legY + 4 - gait * .35); }
     ctx.stroke();
   }
   if (enemy.type === 'mite') {
@@ -280,11 +259,6 @@ export function drawEnemyDetails(ctx, enemy, x, y, time = 0) {
     ctx.fillStyle = '#263b2c'; ctx.beginPath(); ctx.arc(x + 2, y - 1, 1, 0, Math.PI * 2); ctx.fill();
   } else if (enemy.type === 'armored' || enemy.boss) {
     ctx.beginPath(); ctx.moveTo(x - enemy.radius * .55, y - 2); ctx.lineTo(x - enemy.radius * .25, y - enemy.radius * .55); ctx.lineTo(x + enemy.radius * .1, y - 2); ctx.moveTo(x + enemy.radius * .1, y - 2); ctx.lineTo(x + enemy.radius * .4, y - enemy.radius * .55); ctx.lineTo(x + enemy.radius * .65, y - 2); ctx.stroke();
-    if (enemy.type === 'armored' && !enemy.boss) {
-      // A split elytra seam reads as a shell in grayscale and remains inside the body.
-      ctx.beginPath(); ctx.moveTo(x, y - enemy.radius * .55); ctx.quadraticCurveTo(x + 2, y, x, y + enemy.radius * .62); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x - enemy.radius * .62, y + enemy.radius * .12); ctx.quadraticCurveTo(x, y + enemy.radius * .42, x + enemy.radius * .62, y + enemy.radius * .12); ctx.stroke();
-    }
     if (enemy.boss) { ctx.beginPath(); ctx.moveTo(x - 10, y - enemy.radius + 3); ctx.lineTo(x - 15, y - enemy.radius - 8); ctx.lineTo(x - 5, y - enemy.radius + 1); ctx.moveTo(x + 10, y - enemy.radius + 3); ctx.lineTo(x + 15, y - enemy.radius - 8); ctx.lineTo(x + 5, y - enemy.radius + 1); ctx.stroke(); }
   } else if (enemy.type === 'shield') {
     ctx.beginPath(); ctx.moveTo(x - enemy.radius * .55, y - enemy.radius * .25); ctx.lineTo(x, y - enemy.radius * .65); ctx.lineTo(x + enemy.radius * .55, y - enemy.radius * .25); ctx.stroke();
@@ -383,6 +357,7 @@ export function drawImpactMark(ctx, kind, x, y, radius, alpha = 1) {
   if (kind === 'kill') {
     for(let i=0;i<8;i++){const a=-Math.PI/2+i*Math.PI/4,inner=radius*.32,outer=i%2?radius*.72:radius,ix=x+Math.cos(a)*inner,iy=y+Math.sin(a)*inner,ox=x+Math.cos(a)*outer,oy=y+Math.sin(a)*outer;ctx.moveTo(ix,iy);ctx.lineTo(ox,oy);}
   }
+  else if(kind==='armoredKill'){ctx.arc(x,y,radius*.7,0,Math.PI*2);ctx.moveTo(x-radius*.8,y);ctx.lineTo(x+radius*.8,y);ctx.moveTo(x,y-radius*.8);ctx.lineTo(x,y+radius*.8);ctx.moveTo(x-radius*.56,y-radius*.56);ctx.lineTo(x+radius*.56,y+radius*.56);ctx.moveTo(x+radius*.56,y-radius*.56);ctx.lineTo(x-radius*.56,y+radius*.56);}
   else if(kind === 'bossKill') { ctx.arc(x,y,radius,0,Math.PI*2);ctx.moveTo(x-radius*.7,y);ctx.lineTo(x+radius*.7,y);ctx.moveTo(x,y-radius*.7);ctx.lineTo(x,y+radius*.7); }
   else if (kind === 'ripple') ctx.arc(x, y, radius, 0, Math.PI * 2);
   else if (kind === 'burst') { ctx.arc(x, y, radius * .7, 0, Math.PI * 2); ctx.arc(x-radius, y+radius*.25, radius*.45, 0, Math.PI*2); ctx.arc(x+radius, y+radius*.25, radius*.45, 0, Math.PI*2); }
@@ -414,6 +389,21 @@ export function drawSplashBoundary(ctx, x, y, radius, alpha = 1) {
 export function shotRecoil(animation, now, launchedAt, duration = .075) {
   if (animation !== 'full' || !(duration > 0) || !Number.isFinite(launchedAt)) return 0;
   return Math.max(0, Math.min(1, 1 - Math.max(0, now - launchedAt) / duration));
+}
+
+export function plantingSettle(animation, now, plantedAt, duration = .22) {
+  if (!Number.isFinite(now) || !Number.isFinite(plantedAt) || !(duration > 0)) return null;
+  const age=now-plantedAt;
+  if(age<0||age>=duration||animation==='off')return null;
+  const progress=Math.max(0,Math.min(1,age/duration));
+  if(animation==='reduced')return {progress,scaleX:1,scaleY:1,offsetY:0,outlineAlpha:1};
+  if(animation!=='full')return null;
+  const mix=(a,b,t)=>a+(b-a)*t;
+  let scaleX,scaleY,offsetY;
+  if(progress<.22){const t=progress/.22;scaleX=mix(.86,1.1,t);scaleY=mix(.74,1.1,t);offsetY=mix(2.5,-1,t);}
+  else if(progress<.56){const t=(progress-.22)/.34;scaleX=mix(1.1,.97,t);scaleY=mix(1.1,.93,t);offsetY=mix(-1,1,t);}
+  else{const t=(progress-.56)/.44;scaleX=mix(.97,1,t);scaleY=mix(.93,1,t);offsetY=mix(1,0,t);}
+  return {progress,scaleX,scaleY,offsetY,outlineAlpha:0};
 }
 
 export function enemyCueStackRanks(centers) {
@@ -476,15 +466,15 @@ function countCueOverlaps(centers, ranks) {
 
 export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = null) {
   const {
-    width, height, displayScale = 1, map, path, pathLength, airPath, showAirRoute = true, towers, selectedTower, towersDef, towersLinked, selectedTowerRange,
+    width, height, displayScale = 1, map, path, pathLength, airPath, towers, selectedTower, towersDef, towersLinked, selectedTowerRange,
     enemies, enemyPosition, shots, shotPosition, shotAngle = () => 0, particles, selectedType, pointer, placementError,
-    placementPreviewRange, abilityPreview, palette, highContrastEnemyColors, selectedTargetId, visualTime = 0, enemyHitFlash = () => 0, recoilForTower = () => 0, recoilAngleForTower = () => null,
-    guardian = null, guardianMoveActive = false, guardianCursor = null, gateRoutePreviews = null, selectedGateRoute = null
+    placementPreviewRange, abilityPreview, palette, highContrastEnemyColors, selectedTargetId, visualTime = 0, enemyHitFlash = () => 0, impactCausalityForEnemy = () => null, recoilForTower = () => 0, recoilAngleForTower = () => null,
+    plantingForTower = () => null, attackCueForTower = () => null, armorFeedbackForEnemy = () => null, healerLinks = [], healerFeedbackForEnemy = () => null, burrowEmergenceForEnemy = () => null, bossChoreoForEnemy = () => null, guardian = null, guardianMoveActive = false, guardianCursor = null, gateRoutePreviews = null, selectedGateRoute = null, placementComboPreviews = () => []
   } = state;
+  const enemyStrokeScale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
   ctx.clearRect(0, 0, width, height);
   if (staticMapCache) staticMapCache.draw(ctx, state);
   else drawStaticMapLayer(ctx, state);
-  if (showAirRoute) drawAirRoute(ctx, airPath);
   drawGateRoutePreviews(ctx,gateRoutePreviews,selectedGateRoute,displayScale);
   drawSeedRecoveryPaths(ctx,path,pathLength,state.seedObjective,displayScale);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -511,8 +501,12 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const firingShot=firingByTower.get(tower.id);
     const recoil=Math.max(0,Math.min(1,recoilForTower(tower.id)));
     if(recoil>0){const dx=firingShot?firingShot.x-tower.x:0,dy=firingShot?firingShot.y-tower.y:0,angle=recoilAngleForTower(tower.id)??(firingShot?(Math.hypot(dx,dy)>.5?Math.atan2(dy,dx):shotAngle(firingShot,renderAlpha)):0);artX-=Math.cos(angle)*2.5*recoil;artY-=Math.sin(angle)*2.5*recoil;}
+    const planting=plantingForTower(tower.id);
+    const attackCue=attackCueForTower(tower);
+    if(attackCue&&Number.isFinite(attackCue.angle)&&attackCue.strength>0){ctx.save();ctx.globalAlpha=Math.min(1,.35+attackCue.strength*.65);ctx.strokeStyle=def.color||'#fff2b1';ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(tower.x+Math.cos(attackCue.angle)*13,tower.y+Math.sin(attackCue.angle)*13);ctx.lineTo(tower.x+Math.cos(attackCue.angle)*23,tower.y+Math.sin(attackCue.angle)*23);ctx.stroke();ctx.restore();}
+    if(planting?.outlineAlpha>0){ctx.beginPath();ctx.arc(tower.x,tower.y,22,0,Math.PI*2);ctx.strokeStyle=`rgba(230,255,187,${planting.outlineAlpha})`;ctx.lineWidth=2.4;ctx.stroke();}
     if (range) { ctx.beginPath(); ctx.arc(tower.x, tower.y, range, 0, Math.PI * 2); ctx.fillStyle = '#efffc31b'; ctx.fill(); ctx.strokeStyle = '#f1ffd588'; ctx.lineWidth = 1.3; ctx.stroke(); }
-    drawTowerArt(ctx, tower.type, artX, artY, { level: tower.level, branch: tower.branch ?? tower.branchChoice, color: def.color });
+    drawTowerArt(ctx, tower.type, artX, artY+(planting?.offsetY||0), { level: tower.level, branch: tower.branch ?? tower.branchChoice, color: def.color, scaleX:planting?.scaleX??1, scaleY:planting?.scaleY??1 });
     if (isSelected) { ctx.beginPath(); ctx.arc(tower.x, tower.y, 20, 0, Math.PI * 2); ctx.setLineDash([2, 3]); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]); }
     if (tower.level > 1) { ctx.fillStyle = '#ffe28b'; ctx.beginPath(); ctx.arc(tower.x + 11, tower.y - 11, 6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#493e20'; ctx.font = '8px DM Mono, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tower.level, tower.x + 11, tower.y - 10); }
   });
@@ -524,12 +518,16 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
       enemies.forEach(enemy => { if (abilityPreview.targetIds && !abilityPreview.targetIds.includes(enemy.id)) return; const point = enemyPosition(enemy, renderAlpha); ctx.beginPath(); ctx.arc(point.x, point.y, enemy.radius + 7, 0, Math.PI * 2); ctx.fillStyle = '#ffe18a44'; ctx.fill(); ctx.strokeStyle = '#fff7c9'; ctx.lineWidth = 2.5; ctx.stroke(); });
     }
   }
+  healerLinks.forEach(link=>{if(!link?.from||!link?.to)return;ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);ctx.setLineDash([6/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash([]);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();});
   enemies.forEach(enemy => {
     const point = enemyPosition(enemy, renderAlpha);
-    const altitude = enemy.flying ? enemy.radius * .85 : 0, bodyY = point.y - altitude;
-    ctx.fillStyle = '#35503d66'; ctx.beginPath(); ctx.ellipse(point.x, point.y + (enemy.flying ? 13 : 8), enemy.radius * 1.1, enemy.radius * .52, 0, 0, Math.PI * 2); ctx.fill();
-    if (enemy.flying) { ctx.beginPath(); ctx.setLineDash([2, 3]); ctx.moveTo(point.x, point.y + 5); ctx.lineTo(point.x, bodyY + enemy.radius * .65); ctx.strokeStyle = '#f9f6d0aa'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]); }
-    if (enemy.boss || enemy.shield > 0 || enemy.armor > 0) { ctx.strokeStyle = '#fff'; ctx.lineWidth = enemy.boss ? 2.5 : 1.8; ctx.beginPath(); ctx.arc(point.x, bodyY, enemy.radius + (enemy.boss ? 4 : 2), 0, Math.PI * 2); if (enemy.shield > 0) ctx.setLineDash([2, 2]); ctx.stroke(); ctx.setLineDash([]); }
+    const silhouette=enemySilhouetteMetrics(enemy,visualTime),shape={...enemy,radius:silhouette.radius};
+    const altitude=enemy.flying?silhouette.radius*.85:silhouette.float,bodyY=point.y-altitude;
+    const causality=impactCausalityForEnemy(enemy);
+    if(causality?.from&&causality.alpha>0){ctx.save();ctx.globalAlpha=Math.min(1,causality.alpha)*.55;ctx.strokeStyle=causality.color||'#fff0a8';ctx.lineWidth=Math.max(1.5,2/enemyStrokeScale);ctx.setLineDash([5/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(causality.from.x,causality.from.y);ctx.lineTo(point.x,bodyY);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=Math.min(1,causality.alpha);ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+7,0,Math.PI*2);ctx.stroke();ctx.restore();}
+    ctx.fillStyle = '#35503d66'; ctx.beginPath(); ctx.ellipse(point.x, point.y + (enemy.flying ? 13 : 8), silhouette.radius * 1.1, silhouette.radius * .52, 0, 0, Math.PI * 2); ctx.fill();
+    if (enemy.flying) { ctx.beginPath(); ctx.setLineDash([2, 3]); ctx.moveTo(point.x, point.y + 5); ctx.lineTo(point.x, bodyY + silhouette.radius * .65); ctx.strokeStyle = '#f9f6d0aa'; ctx.lineWidth = Math.max(1,1/enemyStrokeScale); ctx.stroke(); ctx.setLineDash([]); }
+    if (enemy.boss || enemy.shield > 0 || enemy.armor > 0) { ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(enemy.boss ? 2.5 : 1.8,1.05/enemyStrokeScale); ctx.beginPath(); ctx.arc(point.x, bodyY, silhouette.radius + (enemy.boss ? 4 : 2), 0, Math.PI * 2); if (enemy.shield > 0) ctx.setLineDash([2, 2]); ctx.stroke(); ctx.setLineDash([]); }
     if (enemy.carrierTelegraphTimer > 0 || enemy.wardFlash > 0) {
       ctx.beginPath(); ctx.arc(point.x, bodyY, enemy.radius + (enemy.carrierTelegraphTimer > 0 ? 9 : 6), 0, Math.PI * 2);
       ctx.strokeStyle = '#a9f4ef'; ctx.lineWidth = enemy.carrierTelegraphTimer > 0 ? 2.6 : 2; ctx.setLineDash(enemy.carrierTelegraphTimer > 0 ? [3, 2] : []); ctx.stroke(); ctx.setLineDash([]);
@@ -546,17 +544,20 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
       }
     }
     if (enemy.burrowTimer > 0) {
+      for(const offset of [12,25,38]){const soil=pointOnPath(path,Math.max(0,enemy.progress-offset));ctx.beginPath();ctx.ellipse(soil.x,soil.y,Math.min(10,Math.max(2.5,3.5/enemyStrokeScale)),Math.min(6,Math.max(1.8,2.4/enemyStrokeScale)),0,0,Math.PI*2);ctx.fillStyle='#b88b55cc';ctx.fill();}
       ctx.fillStyle = '#8a5b28'; ctx.strokeStyle = '#4b321c'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.ellipse(point.x, point.y, enemy.radius * 1.2, enemy.radius * .58, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(point.x, point.y - 1, enemy.radius * .5, Math.PI, Math.PI * 2); ctx.strokeStyle = '#d7b77b'; ctx.stroke();
     } else {
-      ctx.fillStyle = palette === 'high-contrast' ? (highContrastEnemyColors[enemy.type] || enemy.color) : enemy.color; traceEnemyShape(ctx, enemy, point.x, bodyY, enemy.radius); ctx.fill(); ctx.strokeStyle = '#172019'; ctx.lineWidth = 1.5; ctx.stroke();
-      drawEnemyDetails(ctx, enemy, point.x, bodyY, visualTime);
+      ctx.fillStyle = palette === 'high-contrast' ? (highContrastEnemyColors[enemy.type] || enemy.color) : enemy.color; traceEnemyShape(ctx, shape, point.x, bodyY, silhouette.radius); ctx.fill(); ctx.strokeStyle = '#172019'; ctx.lineWidth = Math.max(1.5,1.05/enemyStrokeScale); ctx.stroke();
+      drawEnemyDetails(ctx, shape, point.x, bodyY, visualTime,enemyStrokeScale);
     }
-    if (enemyHitFlash(enemy) > 0) { ctx.beginPath(); ctx.arc(point.x, bodyY, enemy.radius + 2, 0, Math.PI * 2); ctx.strokeStyle = '#fff8d9'; ctx.lineWidth = 2.5; ctx.stroke(); }
+    if (enemyHitFlash(enemy) > 0) { ctx.beginPath(); ctx.arc(point.x, bodyY, silhouette.radius + 2, 0, Math.PI * 2); ctx.strokeStyle = '#fff8d9'; ctx.lineWidth = 2.5; ctx.stroke(); }
     ctx.font = enemy.boss ? '17px sans-serif' : '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff8df';
     if (enemy.burrowTimer > 0) ctx.fillText('⌃', point.x, point.y - 2);
     else ctx.fillText(enemy.flying ? '✦' : enemy.type === 'armored' ? '⬟' : enemy.type === 'shield' ? '◇' : enemy.type === 'carrier' ? '⬡' : enemy.type === 'splitter' ? '●' : enemy.type === 'healer' ? '+' : enemy.boss ? '♛' : '•', point.x, bodyY);
+    const burrowEmergence=enemy.type==='burrower'&&enemy.burrowTimer<=0?burrowEmergenceForEnemy(enemy):null;
+    if(burrowEmergence){ctx.save();ctx.globalAlpha=burrowEmergence.alpha??1;ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+11,0,Math.PI*2);ctx.strokeStyle='#e9cf82';ctx.lineWidth=Math.max(2.2,2.4/enemyStrokeScale);ctx.stroke();ctx.fillStyle='#fff0ae';ctx.font=`bold ${Math.max(8,9/enemyStrokeScale)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('SURFACED',point.x,bodyY+silhouette.radius+13/enemyStrokeScale);ctx.restore();}
     if(enemy.carryingSeedId!==null&&enemy.carryingSeedId!==undefined){ctx.fillStyle='#fff1a0';ctx.font='bold 13px sans-serif';ctx.fillText('✦',point.x+enemy.radius*.75,bodyY-enemy.radius*.8);}
   });
   if (guardian) {
@@ -577,7 +578,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   particles.forEach(particle => {
     const alpha = Math.max(0, particle.life / particle.maxLife);
     if (particle.impactKind) {
-      const mark=['kill','bossKill'].includes(particle.impactKind)?particle.impactKind:projectileStyleForTower(particle.impactKind).mark;
+      const mark=['kill','armoredKill','bossKill'].includes(particle.impactKind)?particle.impactKind:projectileStyleForTower(particle.impactKind).mark;
       drawImpactMark(ctx, mark, particle.x, particle.y, particle.r * 1.5, alpha);
       if (particle.splashRadius) drawSplashBoundary(ctx, particle.x, particle.y, particle.splashRadius, alpha);
     }
@@ -587,26 +588,31 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   // Keep threat information readable even when volleys and impact particles cross the enemy.
   const bossWarningBoxes = [];
   const bossWarnings = [];
-  const enemyCueCenters = enemies.map(enemy => { const point = enemyPosition(enemy, renderAlpha); return { id:enemy.id, radius:enemy.radius, x:point.x, y:point.y-(enemy.flying?enemy.radius*.85:0), rawY:point.y }; });
+  const enemyCueCenters = enemies.map(enemy => { const point=enemyPosition(enemy,renderAlpha),silhouette=enemySilhouetteMetrics(enemy,visualTime);return {id:enemy.id,radius:silhouette.radius,x:point.x,y:point.y-(enemy.flying?silhouette.radius*.85:silhouette.float),rawY:point.y}; });
   const cueCentersById = new Map(enemyCueCenters.map(center=>[center.id,center]));
   const cueStackRanks = enemyCueStackRanks(enemyCueCenters);
   enemies.forEach(enemy => {
-    const cueCenter=cueCentersById.get(enemy.id), point={x:cueCenter.x,y:cueCenter.rawY}, bodyY=cueCenter.y;
-    const stackRank=cueStackRanks.get(enemy.id)||0, cueY=bodyY-stackRank*11;
-    const barWidth = enemy.boss ? 42 : 26, barTop = cueY - enemy.radius - 9;
+    const cueCenter=cueCentersById.get(enemy.id),point={x:cueCenter.x,y:cueCenter.rawY},bodyY=cueCenter.y,radius=cueCenter.radius;
+    const stackRank=cueStackRanks.get(enemy.id)||0,cueY=bodyY-stackRank*11;
+    const barWidth=enemy.boss?42:26,barTop=cueY-radius-9;
     ctx.fillStyle = '#263b2c'; ctx.fillRect(point.x - barWidth / 2 - 1, barTop - 1, barWidth + 2, 5);
     ctx.fillStyle = '#f2d77e'; ctx.fillRect(point.x - barWidth / 2, barTop, barWidth * Math.max(0, enemy.hp / enemy.maxHp), 3);
     if (enemy.shield > 0) { ctx.fillStyle = '#effcff'; ctx.fillRect(point.x - barWidth / 2 - 1, barTop - 5, barWidth + 2, 3); ctx.fillStyle = '#347c91'; ctx.fillRect(point.x - barWidth / 2, barTop - 4, barWidth * Math.min(1, enemy.shield / (enemy.maxHp * .5)), 1); }
-    if (enemy.armor > 0) { ctx.beginPath(); ctx.moveTo(point.x - enemy.radius * .5, bodyY - enemy.radius * .25); ctx.lineTo(point.x + enemy.radius * .5, bodyY - enemy.radius * .25); ctx.moveTo(point.x - enemy.radius * .5, bodyY + enemy.radius * .25); ctx.lineTo(point.x + enemy.radius * .5, bodyY + enemy.radius * .25); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke(); }
+    const healerFeedback=healerFeedbackForEnemy(enemy);if(healerFeedback?.amount>0){ctx.save();ctx.globalAlpha=healerFeedback.alpha??1;ctx.fillStyle='#c8f59a';ctx.font=`bold ${Math.max(8,9/enemyStrokeScale)}px sans-serif`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(`+${healerFeedback.amount} HP`,point.x+barWidth/2+4,barTop);ctx.restore();}
+    if (enemy.armor > 0) { ctx.beginPath(); ctx.moveTo(point.x-radius*.5,bodyY-radius*.25);ctx.lineTo(point.x+radius*.5,bodyY-radius*.25);ctx.moveTo(point.x-radius*.5,bodyY+radius*.25);ctx.lineTo(point.x+radius*.5,bodyY+radius*.25);ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke(); }
     drawStatusMarks(ctx, enemy, point.x, barTop - 5);
-    if (enemy.progress > .82) { ctx.beginPath(); ctx.arc(point.x, bodyY, enemy.radius + 7, 0, Math.PI * 2); ctx.setLineDash([2, 2]); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]); ctx.font = 'bold 8px sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('!', point.x + enemy.radius + 5, barTop - 8); }
-    if (enemy.id === selectedTargetId) { ctx.beginPath(); ctx.arc(point.x, bodyY, enemy.radius + 9, 0, Math.PI * 2); ctx.setLineDash([3, 2]); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); ctx.font = 'bold 8px sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('TARGET', point.x, bodyY + enemy.radius + 13 + stackRank*9); }
-    if (enemy.telegraph || enemy.bossTelegraphTimer > 0) { ctx.beginPath(); ctx.arc(point.x, bodyY, enemy.radius + 13, 0, Math.PI * 2); ctx.setLineDash([3, 3]); ctx.strokeStyle = enemy.boss ? '#ffe2a0' : '#fff'; ctx.lineWidth = enemy.boss ? 3 : 2; ctx.stroke(); ctx.setLineDash([]); }
+    const armorFeedback=armorFeedbackForEnemy(enemy);
+    if(armorFeedback?.label){const label=armorFeedback.label,labelScale=Math.max(.35,enemyStrokeScale),fontSize=9/labelScale,labelWidth=(label.length*5.2+12)/labelScale,labelY=barTop-13/labelScale;ctx.save();ctx.globalAlpha=armorFeedback.alpha??1;ctx.fillStyle='#17271eeF';ctx.fillRect(point.x-labelWidth/2,labelY-8/labelScale,labelWidth,11/labelScale);ctx.strokeStyle=armorFeedback.kind==='blocked'?'#ff9a82':armorFeedback.kind==='bypassed'?'#b8ef83':'#ffe18a';ctx.lineWidth=1.5/labelScale;ctx.strokeRect(point.x-labelWidth/2,labelY-8/labelScale,labelWidth,11/labelScale);ctx.fillStyle=ctx.strokeStyle;ctx.font=`bold ${fontSize}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,point.x,labelY-2.5/labelScale);ctx.restore();}
+    if (enemy.progress > .82) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+7,0,Math.PI*2);ctx.setLineDash([2,2]);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.font='bold 8px sans-serif';ctx.fillStyle='#fff';ctx.fillText('!',point.x+radius+5,barTop-8); }
+    if (enemy.id === selectedTargetId) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+9,0,Math.PI*2);ctx.setLineDash([3,2]);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);ctx.font='bold 8px sans-serif';ctx.fillStyle='#fff';ctx.fillText('TARGET',point.x,bodyY+radius+13+stackRank*9); }
+    if (enemy.telegraph || enemy.bossTelegraphTimer > 0) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+13,0,Math.PI*2);ctx.setLineDash([3,3]);ctx.strokeStyle=enemy.boss?'#ffe2a0':'#fff';ctx.lineWidth=enemy.boss?3:2;ctx.stroke();ctx.setLineDash([]); }
+    const choreography=enemy.boss?bossChoreoForEnemy(enemy):null;
+    if(choreography){ctx.save();ctx.globalAlpha=choreography.alpha??1;ctx.beginPath();ctx.arc(point.x,bodyY,radius+17,0,Math.PI*2);ctx.setLineDash(choreography.kind==='danger'?[2,3]:[]);ctx.strokeStyle=choreography.kind==='danger'?'#ff745f':'#b8f28a';ctx.lineWidth=3;ctx.stroke();ctx.setLineDash([]);ctx.font='bold 9px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle=choreography.kind==='danger'?'#ff9b82':'#c9f59c';ctx.fillText(choreography.kind==='danger'?'DANGER':'RECOVERY',point.x,bodyY+radius+19);ctx.restore();}
     if (enemy.bossTelegraphTimer > 0 && enemy.bossTelegraph) {
       ctx.font = 'bold 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       const name = enemy.bossName || 'Bramble boss', labelWidth = Math.min(240, Math.max(ctx.measureText(name).width, ctx.measureText(enemy.bossTelegraph).width) + 12);
       const labelX = Math.max(labelWidth / 2 + 4, Math.min(width - labelWidth / 2 - 4, point.x));
-      let labelTop = Math.max(4, bodyY - enemy.radius - 41);
+      let labelTop = Math.max(4, bodyY - radius - 41);
       const overlaps = top => bossWarningBoxes.some(box => Math.abs(box.x-labelX) < (box.width+labelWidth)/2+4 && Math.abs(box.top-top) < 38);
       if (overlaps(labelTop)) {
         for (let offset=38; offset<height; offset+=38) {
@@ -615,7 +621,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
         }
       }
       bossWarningBoxes.push({x:labelX,top:labelTop,width:labelWidth});
-      bossWarnings.push({ x:point.x, bodyY, radius:enemy.radius, labelX, labelTop, labelWidth, name, cue:enemy.bossTelegraph });
+      bossWarnings.push({ x:point.x, bodyY, radius, labelX, labelTop, labelWidth, name, cue:enemy.bossTelegraph });
     }
   });
   if (selectedType && pointer.inside) {
@@ -623,7 +629,18 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     ctx.globalAlpha = .68; ctx.fillStyle = valid ? def.color : '#dd6655'; ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 14, 0, Math.PI * 2); ctx.fill();
     const range=placementPreviewRange(selectedType,pointer);
     ctx.globalAlpha = .3; ctx.beginPath(); ctx.arc(pointer.x, pointer.y, range, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    const groundSegments=pathSegmentsWithinRadius(path,pointer,range);
+    if(groundSegments.length){ctx.beginPath();for(const segment of groundSegments){ctx.moveTo(segment.x1,segment.y1);ctx.lineTo(segment.x2,segment.y2);}ctx.strokeStyle='#f8ffe6';ctx.lineWidth=Math.max(3,5/(displayScale||1));ctx.setLineDash([]);ctx.stroke();}
     if(def.antiAir&&airPath)drawAirCoverage(ctx,airPath,pointer,range,displayScale);
+    ctx.save();ctx.strokeStyle='#fff3a6';ctx.lineWidth=2;ctx.setLineDash([3,2]);
+    enemies.filter(enemy=>canHitTarget({canHitAir:Boolean(def.antiAir)},enemy)&&Math.hypot(enemyPosition(enemy).x-pointer.x,enemyPosition(enemy).y-pointer.y)<=range).forEach(enemy=>{const target=enemyPosition(enemy);ctx.beginPath();ctx.arc(target.x,target.y,enemy.radius+4,0,Math.PI*2);ctx.stroke();});ctx.restore();
+    (valid?placementComboPreviews(selectedType,pointer):[]).forEach(({combination,counterpart})=>{
+      const style=COMBINATION_LINK_STYLES[combination.id];if(!style)return;
+      ctx.save();ctx.globalAlpha=.9;ctx.setLineDash(style.dash.map(length=>length/(displayScale||1)));ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2.5/(displayScale||1));ctx.beginPath();ctx.moveTo(counterpart.x,counterpart.y);ctx.lineTo(pointer.x,pointer.y);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(counterpart.x,counterpart.y,24,0,Math.PI*2);ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2/(displayScale||1));ctx.stroke();
+      drawTowerArt(ctx,selectedType,pointer.x,pointer.y,{level:1,branch:null,color:def.color,scaleX:.82,scaleY:.82});
+      const label=`${combination.name} link`;ctx.font=`bold ${Math.max(9,10/(displayScale||1))}px system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';const labelY=Math.max(12,pointer.y-31),labelWidth=ctx.measureText(label).width+10;ctx.fillStyle='#17241bec';ctx.fillRect(pointer.x-labelWidth/2,labelY-8,labelWidth,16);ctx.fillStyle=style.color;ctx.fillText(label,pointer.x,labelY);ctx.restore();
+    });
   }
   // Draw connectors first, then opaque cards last so later enemies and placement previews cannot cover threat text.
   bossWarnings.forEach(({x,bodyY,radius,labelX,labelTop})=>{

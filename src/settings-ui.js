@@ -17,6 +17,4 @@ export function renderUiSettings({ app, root, body, settings, controls }) {
   controls.compact.checked = Boolean(settings.compact);
   controls.palette.value = settings.palette;
   controls.textSize.value = settings.textSize;
-  controls.autoStartWaves.checked = Boolean(settings.autoStartWaves);
-  controls.alwaysShowAirRoute.checked = Boolean(settings.alwaysShowAirRoute);
 }

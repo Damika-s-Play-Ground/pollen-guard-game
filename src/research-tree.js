@@ -72,6 +72,14 @@ export function selectResearchNode(state,nodeId,pointLimit) {
   return {ok:true,state:next,changed:true};
 }
 
+export function deselectResearchNode(state,nodeId,pointLimit) {
+  const next=normalizeResearchState(state,pointLimit),node=NODES_BY_ID.get(nodeId);
+  if(!node||!next.unlocked.includes(nodeId))return {ok:false,reason:'Research this node before unequipping it.',state:next};
+  if(next.loadout[node.path]!==nodeId)return {ok:true,changed:false,state:next};
+  delete next.loadout[node.path];
+  return {ok:true,changed:true,state:next};
+}
+
 export function clearResearchLoadout(state,pointLimit) {
   return { unlocked:[], loadout:{} };
 }

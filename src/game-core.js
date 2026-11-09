@@ -2,8 +2,8 @@ import { BOSS_VARIANTS, validBossEncounter } from './boss-encounters.js';
 import { combinationForPair } from './tower-combinations.js';
 import { ACTION_LOG_VERSION, isValidActionLog, migrateActionLogV1 } from './action-log.js';
 import { normalizeCombatPerformance } from './combat-performance.js';
-import { DEFAULT_GAME_SPEED, GAME_SPEEDS, normalizeGameSpeed } from './simulation-speed.js';
-import { LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_SHIELD_CARRIER_SCHEDULE_VERSION, PRE_BURROWER_SCHEDULE_VERSION, PRE_MIXED_TACTICAL_SCHEDULE_VERSION, PRE_AIR_ROUTE_SCHEDULE_VERSION, PRE_RIDGE_BALANCE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION } from './waves.js';
+import { DEFAULT_GAME_SPEED, GAME_SPEEDS, LEGACY_GAME_SPEED, normalizeGameSpeed } from './simulation-speed.js';
+import { LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_SHIELD_CARRIER_SCHEDULE_VERSION, PRE_BURROWER_SCHEDULE_VERSION, PRE_MIXED_TACTICAL_SCHEDULE_VERSION, PRE_AIR_ROUTE_SCHEDULE_VERSION, PRE_RIDGE_BALANCE_SCHEDULE_VERSION, RIDGE_BALANCE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION } from './waves.js';
 import { validateGuardian } from './meadow-guardian.js';
 import { DEFAULT_SPELL_LOADOUT, normalizeSpellLoadout, validSpellLoadout } from './spells.js';
 import { DEFAULT_DIFFICULTY, difficultyFor, normalizeChallengeRules } from './challenge-rules.js';
@@ -361,7 +361,7 @@ export function normalizeRunSave(value, maps, modes) {
   const challengeBoardId=sourceVersion>=17?value.challengeBoardId:null;
   const endlessModifier=sourceVersion>=18?value.endlessModifier:null;
   const endlessChoiceWave=sourceVersion>=18?value.endlessChoiceWave:0;
-  const economyRulesVersion=sourceVersion>=19?value.economyRulesVersion:0;
+  const rewardRulesVersion=sourceVersion>=19?(value.rewardRulesVersion??2):1;
   const seedObjective=value.seedObjective;
   const seedObjectiveFieldsValid=sourceVersion>=14
     ? Object.hasOwn(value,'seedObjective')&&(seedRecoveryEnabled?validSeedObjective(seedObjective):seedObjective===null)
@@ -390,13 +390,12 @@ export function normalizeRunSave(value, maps, modes) {
       (sourceVersion>=16?(!Object.hasOwn(value,'relicLoadout')||!validRelicLoadout(relicLoadout)||relicLoadout.length>0&&(challenge!=='classic'||difficulty!=='standard'||normalizedRules.length>0)):Object.hasOwn(value,'relicLoadout')) ||
       (sourceVersion>=17?(!Object.hasOwn(value,'challengeBoardId')||challengeBoardId!==null&&(!validChallengeId(challengeBoardId)||!boardChallengeForRun({id:challengeBoardId,mode:challenge,difficulty,rules:normalizedRules,mapId:selectedMap,spellLoadout,guardianMode,researchLoadout,relicLoadout}))):Object.hasOwn(value,'challengeBoardId')) ||
       (sourceVersion>=18?(!Object.hasOwn(value,'endlessModifier')||!Object.hasOwn(value,'endlessChoiceWave')||!Number.isSafeInteger(endlessChoiceWave)||endlessChoiceWave<0||endlessChoiceWave>(Number.isSafeInteger(value.wave)?value.wave:-1)||endlessChoiceWave>0&&!endlessChoiceDue(endlessChoiceWave)||endlessModifier!==null&&!isEndlessChoice(endlessModifier)||endlessModifier!==null&&endlessChoiceWave===0||endlessModifier===null&&endlessChoiceWave>0||challenge!=='endless'&&(endlessModifier!==null||endlessChoiceWave!==0)):Object.hasOwn(value,'endlessModifier')||Object.hasOwn(value,'endlessChoiceWave')) ||
-      (sourceVersion>=19?(!Object.hasOwn(value,'economyRulesVersion')||![0,1].includes(economyRulesVersion)):Object.hasOwn(value,'economyRulesVersion')) ||
       !optionalFinite('bloomCharge', 0, 100) || !optionalFinite('spawnClock', 0, 60) ||
       !optionalFinite('intermission', 0, 3600) || !optionalFinite('gameTime', 0, 1e9) ||
-      (value.speed !== undefined && !GAME_SPEEDS.includes(value.speed)) ||
+      (value.speed !== undefined && !GAME_SPEEDS.includes(value.speed) && value.speed !== LEGACY_GAME_SPEED) ||
       (sourceVersion>=11 && (!Object.hasOwn(value,'terrainRulesVersion') || ![0,1].includes(terrainRulesVersion))) ||
       (sourceVersion<11 && terrainRulesVersion!==undefined && ![0,1].includes(terrainRulesVersion)) ||
-      ![LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_SHIELD_CARRIER_SCHEDULE_VERSION, PRE_BURROWER_SCHEDULE_VERSION, PRE_MIXED_TACTICAL_SCHEDULE_VERSION, PRE_AIR_ROUTE_SCHEDULE_VERSION, PRE_RIDGE_BALANCE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION].includes(waveScheduleVersion) ||
+      ![LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_SHIELD_CARRIER_SCHEDULE_VERSION, PRE_BURROWER_SCHEDULE_VERSION, PRE_MIXED_TACTICAL_SCHEDULE_VERSION, PRE_AIR_ROUTE_SCHEDULE_VERSION, PRE_RIDGE_BALANCE_SCHEDULE_VERSION, RIDGE_BALANCE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION].includes(waveScheduleVersion) ||
       ['running', 'paused'].some(key => value[key] !== undefined && typeof value[key] !== 'boolean')) return null;
   if (!finite(value.cash, 0, 1_000_000) || !finite(value.lives, 0, 100_000) ||
       !finite(value.wave, 0, 100_000) || !finite(value.popped, 0, 10_000_000)) return null;
@@ -437,6 +436,7 @@ export function normalizeRunSave(value, maps, modes) {
       sourceVersion < SUPPORT_STRUCTURE_SAVE_VERSION && Object.values(combatPerformance.towers).some(tower => SUPPORT_TOWER_TYPES.has(tower.type)) ||
       (value.runSeed !== undefined && (!Number.isSafeInteger(value.runSeed) || value.runSeed < 0 || value.runSeed > 0xffff_ffff)) ||
       (value.seedVersion !== undefined && value.seedVersion !== 1) ||
+      ![1, 2].includes(rewardRulesVersion) ||
       (value.actionLogComplete !== undefined && typeof value.actionLogComplete !== 'boolean') ||
       !Number.isSafeInteger(simulationTick) || simulationTick < 0 || simulationTick > 1e9 ||
       (actionLog.length && actionLog.at(-1).tick > simulationTick)) return null;
@@ -473,7 +473,7 @@ export function normalizeRunSave(value, maps, modes) {
     challengeBoardId:sourceVersion>=17?challengeBoardId:null,
     endlessModifier:sourceVersion>=18?endlessModifier:null,
     endlessChoiceWave:sourceVersion>=18?endlessChoiceWave:0,
-    economyRulesVersion,
+    rewardRulesVersion,
     cash: Math.floor(value.cash),
     lives: Math.floor(value.lives),
     wave: Math.floor(value.wave),

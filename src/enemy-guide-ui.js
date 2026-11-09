@@ -1,72 +1,23 @@
-import { ENDLESS_CHOICES } from './endless-mode.js';
-
-
-const ENCOUNTER_COUNTERS = Object.freeze({
-  armored: Object.freeze({ towerType: 'briar', label: 'Briar Patch', reason: 'neutral toxin damage against armor' }),
-  splitter: Object.freeze({ towerType: 'puff', label: 'Puff Pod', reason: 'area bursts catch clustered pests' }),
-  flyer: Object.freeze({ towerType: 'gust', label: 'Kite Keeper', reason: 'fast anti-air gusts' }),
-  burrower: Object.freeze({ towerType: 'compostTrap', label: 'Compost Trap', reason: 'slows ground pests entering its ring' })
-});
-
-// Derive the compact roster from this run, including its upcoming wave. No profile unlocks.
-export function encounterDefenderTypes({ schedules, throughWave, endlessModifier = null, actions = [] }) {
-  const types = new Set(['sprout', 'dew', 'puff']);
-  const reveal = enemy => { const counter = ENCOUNTER_COUNTERS[enemy]; if (counter) types.add(counter.towerType); };
-  for (const schedule of schedules.slice(0, Math.max(0, throughWave))) {
-    for (const group of schedule.groups) reveal(group.type);
-  }
-  reveal(ENDLESS_CHOICES[endlessModifier]?.type);
-  for (const action of actions) {
-    if (action.type === 'chooseEndlessModifier') reveal(ENDLESS_CHOICES[action.payload.modifierId]?.type);
-  }
-  return [...types];
-}
 
 export function buildEnemyBriefingView({ targetWave, intro, running = false, terminal = false }) {
   if (running || terminal || !intro) return { hidden: true, enemyType: null };
-  const counter = ENCOUNTER_COUNTERS[intro.type] || null;
   return {
     hidden: false,
     enemyType: intro.type,
-    heading: `Wave ${targetWave} · New threat`,
-    icon: intro.icon,
-    name: intro.name,
-    route: intro.type === 'flyer' ? 'Air · sky route' : 'Ground · garden trail',
-    guideLabel: `Inspect ${intro.name} in the enemy field guide`,
-    counter
+    heading: `New threat · Wave ${targetWave} · ${intro.icon} ${intro.name}. `,
+    rule: intro.rule,
+    guideLabel: `Inspect ${intro.name} in the enemy field guide`
   };
 }
 
-export function renderEnemyBriefing({ panel, text, guideButton, counterButton, view, document }) {
+export function renderEnemyBriefing({ panel, text, guideButton, view, document }) {
   panel.hidden = view.hidden;
-  if (counterButton) counterButton.hidden = view.hidden || !view.counter;
   if (view.hidden) return;
   panel.dataset.enemyIntel = view.enemyType;
-  panel.dataset.hasCounter = String(Boolean(view.counter));
   const heading = document.createElement('strong');
   heading.textContent = view.heading;
-  const identity = document.createElement('span');
-  identity.className = 'enemy-briefing-identity';
-  const icon = document.createElement('span');
-  icon.className = 'enemy-briefing-icon';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = view.icon;
-  const name = document.createElement('span');
-  name.className = 'enemy-briefing-name';
-  name.textContent = view.name;
-  identity.append(icon, name);
-  const route = document.createElement('small');
-  route.className = 'enemy-briefing-route';
-  route.textContent = view.route;
-  text.replaceChildren(heading, identity, route);
-  text.setAttribute('aria-label', `${view.heading}: ${view.icon} ${view.name}. ${view.route}.`);
+  text.replaceChildren(heading, document.createTextNode(view.rule));
   guideButton.setAttribute('aria-label', view.guideLabel);
-  if (counterButton && view.counter) {
-    counterButton.dataset.towerType = view.counter.towerType;
-    counterButton.textContent = `Try ${view.counter.label}`;
-    counterButton.setAttribute('aria-label', `Reveal and select ${view.counter.label}: ${view.counter.reason}`);
-    counterButton.title = view.counter.reason;
-  }
 }
 
 export function filterEnemyGuide({ list, empty, query }) {

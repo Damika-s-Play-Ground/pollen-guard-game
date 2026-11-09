@@ -10,7 +10,7 @@ import { distanceToPath } from './path-geometry.js';
 import { createCombatPerformance, recordCombatDamage, recordTowerIncome, registerCombatTower } from './combat-performance.js';
 import { activateGuardianPulse, advanceMeadowGuardian, guardianDestinationIsSafe } from './meadow-guardian.js';
 import { createMissionKitState } from './mission-kit.js';
-import { applyAimedSpell, isSpellTargetValid, normalizeSpellLoadout, SPELLS } from './spells.js';
+import { applyAimedSpell, isSpellTargetValid, normalizeSpellLoadout, rejuvenationTargets, SPELLS } from './spells.js';
 import { difficultyFor, normalizeChallengeRules } from './challenge-rules.js';
 import { defaultGateRoute, gateSwitchesForMap, pathForGateRoute } from './gate-routes.js';
 import { createRoutePathLengthResolver } from './air-routes.js';
@@ -18,12 +18,13 @@ import { createEnemyRouteGeometry } from './air-routes.js';
 import { createSeedObjective, SEED_RECOVERY_RULE } from './seed-objective.js';
 import { researchStartingAdjustment } from './research-tree.js';
 import { endlessChoiceRequired, isEndlessChoice } from './endless-mode.js';
+import { LEGACY_WAVE_REWARD_RULES_VERSION, waveLaunchBonus } from './wave-rewards.js';
 
-export function validateTowerPlacement(state, type, point, { path, width = 900, height = 540, map } = {}) {
+export function validateTowerPlacement(state, type, point, { path, width = 900, height = 500, map } = {}) {
   if (!towersDef[type]) return 'Choose a defender from the catalog first.';
   const def = towersDef[type];
   if ((state.challenge === 'thrifty' || state.challengeRules?.includes('noSunflowers')) && type === 'sunflower') return 'Sunflowers are disabled by the selected rules.';
-  if (state.cash < def.cost) return `You need ${def.cost} petals for ${def.name}.`;
+  if (state.cash < def.cost) return `Need ${def.cost - state.cash} more petals for ${def.name} (cost ${def.cost}).`;
   if(map?.customMap && !map.buildZones.some(zone=>point.x>=zone.x+(def.footprint||19)&&point.x<=zone.x+zone.width-(def.footprint||19)&&point.y>=zone.y+(def.footprint||19)&&point.y<=zone.y+zone.height-(def.footprint||19)))return 'Place defenders inside a marked build zone on this authored map.';
   const footprint = def.footprint || 19, edgeClearance = def.supportStructure ? footprint : 16;
   if (!path?.length || distanceToPath(point.x, point.y, path) < (def.supportStructure ? 25 + footprint : 44) || point.x < edgeClearance || point.x > width - edgeClearance || point.y < edgeClearance || point.y > height - edgeClearance) return 'That spot overlaps the trail or map edge.';
@@ -54,9 +55,7 @@ export function applyPlayerAction(state, action, context = {}) {
     case 'startWave': {
       if (state.running || state.gameOver || state.wave >= (context.waveLimit ?? Infinity)) return rejected('A wave cannot start in the current state.');
       if(endlessChoiceRequired({challenge:state.challenge,wave:state.wave,endlessChoiceWave:state.endlessChoiceWave}))return rejected('Choose an Endless modifier before the next wave.');
-      const legacyEconomy = (state.economyRulesVersion ?? 0) < 1;
-      const bonus = legacyEconomy && payload.early && state.intermission > 0 ? Math.max(1, Math.ceil(state.intermission)) : 0;
-      if (!legacyEconomy && (payload.early || payload.bonus !== 0)) return rejected('New runs use a single wave launch and fixed launch reward.');
+      const bonus = waveLaunchBonus({ rewardRulesVersion: context.rewardRulesVersion ?? state.rewardRulesVersion ?? LEGACY_WAVE_REWARD_RULES_VERSION, early: payload.early, intermission: state.intermission });
       if (payload.wave !== state.wave + 1 || payload.bonus !== bonus) return rejected('Wave command does not match the current wave state.');
       state.cash += bonus;
       state.wave++;
@@ -161,7 +160,7 @@ export function applyPlayerAction(state, action, context = {}) {
       const target={x:payload.x,y:payload.y,endX:payload.endX,endY:payload.endY};
       if (!isSpellTargetValid(spellId,target,context.width??900,context.height??540)) return rejected('Choose a valid spell target.');
       const effect=spellId==='rejuvenation'
-        ? {affected:state.towers.filter(tower=>!towersDef[tower.type]?.supportStructure&&Math.hypot(tower.x-target.x,tower.y-target.y)<=spell.radius),defeated:[],results:[]}
+        ? {affected:rejuvenationTargets(target,state.towers,tower=>towersDef[tower.type]?.supportStructure,context.width??900,context.height??540),defeated:[],results:[]}
         : applyAimedSpell(spellId,target,state.enemies,context.positionOf);
       if (spellId!=='rejuvenation'&&!effect.affected.length) return rejected(`No eligible pests are inside ${spell.name}.`);
       if (spellId==='rejuvenation'&&!effect.affected.length) return rejected('Place an attacking defender inside Rejuvenation Field.');
@@ -187,7 +186,7 @@ export function applyPlayerAction(state, action, context = {}) {
   }
 }
 
-function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width = 900, height = 540, guardianWidth = 900, guardianHeight = 540 } = {}) {
+function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width = 900, height = 500, guardianWidth = 900, guardianHeight = 540 } = {}) {
   if (!run || run.actionLogComplete !== true || run.actionLogVersion !== ACTION_LOG_VERSION || !isValidActionLog(run.actionLog) || !Number.isSafeInteger(run.simulationTick) ||
       (run.actionLog.length > 0 && run.actionLog.at(-1).tick > run.simulationTick) ||
       typeof positionOf !== 'function' || !(Number.isFinite(pathLength) || typeof pathLength === 'function')) throw new TypeError('Run is not replayable or its map geometry is missing.');
@@ -209,7 +208,7 @@ function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width
   const researchStart=researchStartingAdjustment(researchLoadout);
   const trackContributions = run.combatPerformance?.complete === true;
   const state = {
-    selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,challengeBoardId:run.challengeBoardId??null,endlessModifier:null,endlessChoiceWave:0,economyRulesVersion:run.economyRulesVersion??0,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
+    selectedMap: run.selectedMap, ...(run.version>=13?{gateRoute:activeGateRoute,gateSwitchesRemaining:gateSwitchesForMap(replayMap)}:{ }), terrainRulesVersion:run.terrainRulesVersion??0, waveScheduleVersion, rewardRulesVersion:run.rewardRulesVersion??LEGACY_WAVE_REWARD_RULES_VERSION, challenge: run.challenge, difficulty:run.difficulty??'standard', challengeRules,challengeBoardId:run.challengeBoardId??null,endlessModifier:null,endlessChoiceWave:0,seedObjective:challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null, seedVersion: run.seedVersion, runSeed: run.runSeed,
     researchLoadout,relicLoadout, simulationTick: 0, gameTime: 0, cash: configuration.cash+difficulty.cashDelta+researchStart.cash, lives: Math.max(1,loadout.lives+difficulty.livesDelta+researchStart.lives), popped: 0, wave: 0, bloomCharge: 0,
     combatPerformance: trackContributions ? createCombatPerformance(true) : null,
     towers: [], enemies: [], shots: [], spawnQueue: [], spawnClock: 0, running: false, gameOver: false, paused: false,
@@ -219,7 +218,7 @@ function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width
   };
   state.performance = trackContributions ? state.combatPerformance : null;
   const cursor = new TickActionCursor(run.actionLog), context = { path:activePath, width, height, guardianWidth, guardianHeight, pathLength:lengthForRoute, positionOf:positionForRoute, map:replayMap,
-    waveLimit: configuration.limit, trackAttribution: trackContributions };
+    waveLimit: configuration.limit, trackAttribution: trackContributions, rewardRulesVersion:run.rewardRulesVersion??LEGACY_WAVE_REWARD_RULES_VERSION };
   for (let tick = 0; tick <= run.simulationTick; tick++) {
     cursor.apply(tick, action => {
       const result = applyPlayerAction(state, action, context);
@@ -247,7 +246,7 @@ function* replayRecordedRunSteps(run, { pathLength, positionOf, path, map, width
   state.paused = Boolean(run.paused);
   state.speed = normalizeGameSpeed(run.speed);
   const replayedRun = {
-    version: run.version, ...(run.terrainRulesVersion===undefined?{}:{terrainRulesVersion:state.terrainRulesVersion}), ...(run.waveScheduleVersion === undefined ? {} : { waveScheduleVersion:state.waveScheduleVersion}), ...(run.version>=19?{economyRulesVersion:state.economyRulesVersion}:{}),
+    version: run.version, ...(run.terrainRulesVersion===undefined?{}:{terrainRulesVersion:state.terrainRulesVersion}), ...(run.waveScheduleVersion === undefined ? {} : { waveScheduleVersion:state.waveScheduleVersion }), ...(run.rewardRulesVersion===undefined?{}:{rewardRulesVersion:state.rewardRulesVersion}),
     seedVersion: state.seedVersion, runSeed: state.runSeed, simulationTick: state.simulationTick,
     actionLogVersion: run.actionLogVersion, actionLog: run.actionLog, actionLogComplete: run.actionLogComplete,
     combatPerformance:trackContributions ? state.combatPerformance : (run.combatPerformance || createCombatPerformance(false)),

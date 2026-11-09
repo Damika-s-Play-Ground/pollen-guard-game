@@ -44,17 +44,28 @@ export function isSpellTargetValid(spellId, payload, width=900, height=540) {
   return length>0 && length<=SPELLS.lineGust.length;
 }
 
-export function applyAimedSpell(spellId, payload, enemies, positionOf=enemy=>enemy) {
+export function aimedSpellTargets(spellId, payload, enemies, positionOf=enemy=>enemy, width=900, height=540) {
   const spell=SPELLS[spellId];
-  if (!spell || !['rootTrap','lineGust'].includes(spellId)) return { affected:[], defeated:[], results:[] };
-  const start={x:payload.x,y:payload.y}, end={x:payload.endX,y:payload.endY};
-  const eligible=enemies.filter(enemy=>canHitTarget({canHitAir:spellId==='lineGust'},enemy));
-  const affected=eligible.filter(enemy=>{
+  if(!spell||!['rootTrap','lineGust'].includes(spellId)||!isSpellTargetValid(spellId,payload,width,height))return [];
+  const start={x:payload.x,y:payload.y},end={x:payload.endX,y:payload.endY};
+  return enemies.filter(enemy=>canHitTarget({canHitAir:spellId==='lineGust'},enemy)).filter(enemy=>{
     const point=positionOf(enemy);
     return spellId==='rootTrap'
       ? Math.hypot(point.x-start.x,point.y-start.y)<=spell.radius
       : pointToSegmentDistance(point,start,end)<=spell.width/2;
   });
+}
+
+export function rejuvenationTargets(payload, towers, isSupportTower=()=>false, width=900, height=540) {
+  const spell=SPELLS.rejuvenation;
+  if(!isSpellTargetValid('rejuvenation',payload,width,height))return [];
+  return towers.filter(tower=>!isSupportTower(tower)&&Math.hypot(tower.x-payload.x,tower.y-payload.y)<=spell.radius);
+}
+
+export function applyAimedSpell(spellId, payload, enemies, positionOf=enemy=>enemy) {
+  const spell=SPELLS[spellId];
+  if (!spell || !['rootTrap','lineGust'].includes(spellId)) return { affected:[], defeated:[], results:[] };
+  const affected=aimedSpellTargets(spellId,payload,enemies,positionOf);
   const attack=spellId==='rootTrap'?{stun:2.4}:{push:70,stun:.7};
   const results=affected.map(enemy=>({enemy,...applyCombatHit(enemy,0,attack)}));
   return { affected, results, defeated:[] };

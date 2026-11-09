@@ -1,9 +1,9 @@
-import { AUTHORED_WAVES, WAVE_SCHEDULE_VERSION } from './waves.js';
+import { AUTHORED_WAVES, PRE_OPENING_DECISION_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION } from './waves.js';
 
 export const ENEMY_INTEL = [
   { type:'mite', name:'Moss mite', icon:'🐛', firstWave:1, role:'A fragile ground unit that tests basic coverage.', rule:'Low health makes steady damage effective; watch how many arrive together.' },
   { type:'zip', name:'Zip mite', icon:'💨', firstWave:2, role:'A fast ground runner that pressures long gaps in coverage.', rule:'Moves quickly and has little health; slowing effects can buy more attack time.' },
-  { type:'armored', name:'Armored beetle', icon:'🪲', firstWave:4, role:'A durable ground unit that challenges single-target damage.', rule:'Armor reduces physical damage; armor cracking helps. Heat bypasses armor but is resisted (0.75×), while toxin is neutral (1×).' },
+  { type:'armored', name:'Armored beetle', icon:'🪲', firstWave:3, role:'A durable ground unit that challenges single-target damage.', rule:'Armor reduces physical damage; armor cracking helps. Heat bypasses armor but is resisted (0.75×), while toxin is neutral (1×).' },
   { type:'boss', name:'Biome bosses', icon:'🌳', firstWave:5, role:'A slow, heavily armored boss with a distinct identity and two phases in each biome.', rule:'Bramble Matriarch summons mites then rushes in Meadow; Tideglass Warden restores shield then summons sky gnats in Creek; Cragthorn Colossus gains armor then summons an armored escort in Ridge. Each phase has a clear 1.5 second telegraph.' },
   { type:'flyer', name:'Sky gnat', icon:'🪰', firstWave:6, role:'An airborne unit that follows the sky lane.', rule:'Ground-only defenders cannot hit it, and it is immune to slow.' },
   { type:'shield', name:'Shield bug', icon:'🛡️', firstWave:7, role:'A ground unit protected by an extra shield layer.', rule:'Damage must clear its shield before health; toxin damage is especially effective.' },
@@ -22,7 +22,7 @@ export function enemyIntelFor(type, revision = WAVE_SCHEDULE_VERSION) {
   if (type === 'burrower' && revision < 5) return null;
   if (type === 'boss' && revision < 2) return { ...byType.get(type), name:'Bramble boss',
     role:'A slow, heavily armored ground boss.', rule:'High health and armor demand sustained damage. Bosses resist slow, stun, and push.' };
-  if (type === 'flyer' && revision >= WAVE_SCHEDULE_VERSION) return { ...byType.get(type),
+  if (type === 'flyer' && revision >= PRE_OPENING_DECISION_SCHEDULE_VERSION) return { ...byType.get(type),
     role:'An airborne unit that follows a separate sky route across the map.',
     rule:'The cyan dashed sky route is separate from the ground trail. Kite Keepers and Thorn Beacons can hit it; ground-only defenders cannot, and it is immune to slow.' };
   return byType.get(type) || null;

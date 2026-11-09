@@ -16,3 +16,11 @@ export function pathSegmentsWithinRadius(path, center, radius) {
   }
   return segments;
 }
+
+export function pathCoveragePercent(path, center, radius) {
+  if (!Array.isArray(path) || path.length < 2) return 0;
+  const total = path.slice(1).reduce((sum, point, index) => sum + Math.hypot(point[0] - path[index][0], point[1] - path[index][1]), 0);
+  if (!total) return 0;
+  const covered = pathSegmentsWithinRadius(path, center, radius).reduce((sum, segment) => sum + Math.hypot(segment.x2 - segment.x1, segment.y2 - segment.y1), 0);
+  return Math.round(Math.min(1, covered / total) * 100);
+}

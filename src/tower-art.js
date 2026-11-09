@@ -2,51 +2,18 @@ const polygon = (points, fill, stroke = '#263b2c', width = 1.3) => ({ kind: 'pol
 const circle = (x, y, r, fill, stroke = '#263b2c', width = 1) => ({ kind: 'circle', x, y, r, fill, stroke, width });
 const line = (points, stroke = '#263b2c', width = 1.4) => ({ kind: 'line', points, stroke, width });
 
+export const CORE_TOWER_TYPES=Object.freeze(['sprout','dew','puff','thorn']);
+// Core defenders need a stronger silhouette at phone canvas scale. This is a
+// presentation-only transform; placement, collision and combat radii stay put.
+export function towerArtScale(type) { return CORE_TOWER_TYPES.includes(type)?1.3:1; }
+
 // Original, small-scale meadow forms. Coordinates share one 32px viewBox so the
 // catalog, inspector and battlefield all render the same authored shapes.
 export const TOWER_ART_MANIFEST = Object.freeze({
-  // The first four battlefield roles need a strong outer shape at the current
-  // 32px play scale. Keep highlights inside each silhouette so growth layers,
-  // placement rings and neighboring defenders remain legible.
-  sprout: { base: [
-    line([[16,26],[16,15]], '#315538', 3.2),
-    polygon([[16,21],[5,14],[7,22],[13,25]], '#668f4d'),
-    polygon([[16,19],[7,14],[9,22]], '#91c866'),
-    polygon([[16,19],[25,10],[26,19],[20,24]], '#67994f'),
-    polygon([[16,17],[24,11],[24,19]], '#a7dc78'),
-    circle(16,11.5,6,'#e9c36d','#765b35',1.1),
-    circle(14.3,9.8,1.4,'#fff0a8','none',0),
-    line([[15.5,15.5],[16,23]], '#d7e6a0', .8)
-  ] },
-  dew: { base: [
-    polygon([[6,9],[26,9],[24,19],[21,24],[16,27],[11,24],[8,19]], '#397f86'),
-    polygon([[7,8],[25,8],[23,18],[20,22],[16,25],[12,22],[9,18]], '#70c5c7'),
-    line([[9,10],[11,7],[21,7],[23,10]], '#e3fff1', 2.4),
-    line([[11,19],[13,22],[16,23],[19,22],[21,19]], '#b6f1e6', 1.5),
-    polygon([[15,10],[19,12],[18,17],[14,15]], '#b8f1e7'),
-    circle(16,16,2.1,'#f1ffff','#4a8992',.7)
-  ] },
-  puff: { base: [
-    polygon([[11,15],[21,15],[23,27],[9,27]], '#a47d57'),
-    polygon([[12,15],[20,15],[21,25],[11,25]], '#f3dfbd'),
-    polygon([[3,16],[5,10],[11,6],[21,6],[27,10],[29,16],[26,20],[6,20]], '#9a554e'),
-    polygon([[4,15],[6,10],[12,7],[20,7],[26,10],[28,15],[25,18],[7,18]], '#df8a6e'),
-    polygon([[7,11],[12,8],[20,8],[25,11],[23,13],[9,13]], '#efb092'),
-    circle(9,13,2,'#fff2d4','none',0), circle(16,10,2.2,'#fff2d4','none',0), circle(23,13,2,'#fff2d4','none',0),
-    line([[13,17],[13,23]], '#fff1d3', 1), line([[19,17],[19,23]], '#d8b98f', .8)
-  ] },
-  thorn: { base: [
-    polygon([[12,28],[12,13],[14,10],[18,10],[20,13],[20,28]], '#547447'),
-    polygon([[14,27],[14,13],[16,10],[18,13],[18,27]], '#a2c576'),
-    polygon([[12,17],[3,13],[7,21],[12,23]], '#6c9251'),
-    polygon([[20,15],[29,10],[26,20],[20,23]], '#587d48'),
-    polygon([[12,17],[4,14],[8,21],[12,22]], '#a1c777'),
-    polygon([[20,16],[27,12],[24,21],[20,23]], '#82a95f'),
-    polygon([[13,12],[16,3],[19,12]], '#dcebad'),
-    polygon([[12,20],[8,17],[11,24]], '#dcebad'),
-    polygon([[20,19],[24,15],[22,23]], '#dcebad'),
-    line([[15,13],[15,25]], '#d8e9b1', .9)
-  ] },
+  sprout: { base: [line([[16,27],[16,16]], '#315538', 2.8), polygon([[15,21],[5,14],[8,24]], '#507f49'), polygon([[15,19],[7,14],[9,22]], '#79b85b'), line([[9,17],[15,20]], '#c4e99a', 1), polygon([[17,19],[27,10],[25,22]], '#5e8e4b'), polygon([[17,17],[24,11],[24,19]], '#9ad36d'), line([[18,17],[23,13]], '#d0f0a4', 1), ...Array.from({length:6},(_,i)=>{const a=i*Math.PI/3;return circle(16+Math.cos(a)*4.2,11+Math.sin(a)*4.2,2.5,i%2?'#efb95d':'#ffdc78','#8c693d',.6);}), circle(16,11,3.2,'#7a5139','#4d372c',.8), circle(14.9,9.9,.8,'#fff2c0','none',0)] },
+  dew: { base: [polygon([[16,2],[24,10],[22,19],[19,24],[16,30],[13,24],[10,19],[8,10]], '#397f88','#28525b',1.5), polygon([[16,4],[22,10],[20,18],[17,23],[16,15]], '#4c9ca3','none',0), polygon([[16,4],[10,10],[12,18],[15,23],[16,15]], '#85d4d0','none',0), line([[11,10],[13,7],[16,5]], '#e5fff1', 2.2), circle(12.3,13,1.2,'#effff5','none',0), line([[13,24],[16,27],[19,24]], '#28636d',1.3)] },
+  puff: { base: [polygon([[9,17],[23,17],[24,25],[20,28],[11,27]], '#a85d50','#593e3a',1.3), polygon([[5,17],[6,12],[10,10],[12,6],[17,7],[20,9],[24,8],[27,12],[27,17],[23,20],[8,20]], '#d98067','#593e3a',1.3), polygon([[8,17],[11,19],[22,18],[23,22],[18,24],[10,22]], '#b76054','none',0), polygon([[7,12],[10,10],[12,7],[16,8],[13,11],[11,14]], '#f0a18a','none',0), circle(11,13,1.5,'#fff0c8','none',0), circle(21,12,1.5,'#fff0c8','none',0)] },
+  thorn: { base: [polygon([[10,27],[10,15],[13,12],[19,12],[22,15],[22,27]], '#547b49','#334e37',1.5), polygon([[9,18],[3,14],[6,21],[11,23]], '#527949','#334e37',1), polygon([[22,19],[29,14],[26,22],[21,24]], '#527949','#334e37',1), polygon([[11,15],[8,8],[14,12],[16,4],[18,12],[24,7],[21,16]], '#a4c77a','#465f3d',1.1), line([[16,6],[16,24]], '#d9efaa',1.5), line([[16,17],[11,13]], '#d9efaa',1), line([[16,20],[21,15]], '#d9efaa',1), polygon([[14,12],[16,4],[18,12]], '#e6edb7','#465f3d',.8)] },
   sunflower: { base: [line([[16,27],[16,18]], '#417747', 2.2), polygon([[16,19],[10,16],[12,22]], '#72b75d'), ...Array.from({length:8}, (_,i)=>{const a=i*Math.PI/4,cx=16+Math.cos(a)*6.3,cy=12+Math.sin(a)*6.3;return polygon([[cx,cy-3],[cx+2.2,cy],[cx,cy+3],[cx-2.2,cy]], '#f1c85e','#8e693b',.7);}), circle(16,12,3.5,'#704d35')] },
   gust: { base: [polygon([[16,4],[26,11],[16,19],[7,14]], '#83cbd0'), line([[16,19],[16,25],[12,28],[18,29],[14,31]], '#e5e5b0', 1.5), circle(16,13,1.5,'#e8ffff','none',0)] },
   ember: { base: [polygon([[15,12],[6,7],[9,17],[14,19]], '#dc8d59'), polygon([[17,12],[26,7],[23,17],[18,19]], '#f0b451'), polygon([[14,10],[18,10],[20,22],[16,27],[12,22]], '#503e3e'), circle(16,11,3,'#f4d17b','#704339')] },
@@ -97,10 +64,10 @@ export function towerArtSvg(type, level = 1, branch = null) {
   return `<svg class="tower-art" viewBox="0 0 32 32" role="img" aria-label="${type} defender, level ${level}${branch == null ? '' : `, branch ${branch + 1}`}" xmlns="http://www.w3.org/2000/svg"><ellipse cx="16" cy="27.5" rx="11" ry="2.5" fill="#16261d" opacity=".45"/>${layers.map(layerSvg).join('')}</svg>`;
 }
 
-export function drawTowerArt(ctx, type, x, y, { level = 1, branch = null, color = '#79b85b', scale = 1 } = {}) {
+export function drawTowerArt(ctx, type, x, y, { level = 1, branch = null, color = '#79b85b', scale = 1, scaleX = 1, scaleY = 1 } = {}) {
   const layers = towerArtLayers(type, level, branch);
   if (!layers.length) return false;
-  ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+  ctx.save(); ctx.translate(x, y); ctx.scale(scale*towerArtScale(type)*scaleX, scale*towerArtScale(type)*scaleY);
   ctx.fillStyle = '#375541'; ctx.beginPath(); ctx.ellipse(0, 9, 17, 7, 0, 0, Math.PI * 2); ctx.fill();
   ctx.translate(-16, -16);
   for (const layer of layers) {

@@ -76,3 +76,20 @@ export function combinationForPair(a, b) {
   if (!a || !b || a === b || a.type === b.type || (a.id !== undefined && a.id === b.id)) return null;
   return combinationsByTowerType.get(a.type)?.get(b.type) || null;
 }
+
+export function previewTowerCombinations(candidate, towers, isLinked=()=>false) {
+  if(!candidate||!Array.isArray(towers)||typeof isLinked!=='function')return [];
+  const previews=[];
+  for(const counterpart of towers){
+    const combination=combinationForPair(candidate,counterpart);
+    if(!combination||!isLinked(candidate,counterpart))continue;
+    const targetIsCandidate=candidate.type===combination.towerTypes[1];
+    const target=targetIsCandidate?candidate:counterpart;
+    const source=targetIsCandidate?counterpart:candidate;
+    if(targetIsCandidate){
+      if(previews.some(preview=>preview.combination.id===combination.id))continue;
+    }else if(towers.some(other=>other!==target&&other.type===combination.towerTypes[0]&&isLinked(target,other)))continue;
+    previews.push({combination,counterpart,source,target});
+  }
+  return previews;
+}

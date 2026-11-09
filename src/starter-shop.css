@@ -1,0 +1,123 @@
+.starter-tower-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  overflow: visible;
+}
+
+.starter-tower-list .tower-option {
+  min-height: 56px;
+  padding: 7px 9px;
+}
+
+.starter-tower-list .tower-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.starter-tower-list .tower-copy small.tower-role-label {
+  display: inline-flex;
+  margin-top: 3px;
+  padding: 2px 7px;
+  border: 1px solid #657c4f;
+  border-radius: 99px;
+  color: #d6efad;
+  font-size: calc(10px * var(--ui-text-scale));
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.specialist-roster {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.specialist-roster > summary {
+  display: block;
+  min-height: 38px;
+  padding: 8px 0 7px 19px;
+  cursor: pointer;
+  color: var(--mint);
+  font-weight: 700;
+}
+
+.specialist-roster > summary > span { display: block; }
+
+.specialist-roster > summary small {
+  display: block;
+  color: #e4d39a;
+  font-size: calc(10px * var(--ui-text-scale));
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.specialist-roster > summary small[hidden] { display: none !important; }
+
+.specialist-roster-note {
+  margin: 4px 0 9px;
+  color: var(--muted);
+  font-size: calc(10px * var(--ui-text-scale));
+  line-height: 1.4;
+}
+
+.specialist-tower-list {
+  display: grid;
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .starter-tower-list .tower-option { min-height: 56px; padding: 6px; }
+  .specialist-roster { margin-top: 7px; }
+}
+
+@media (max-width: 700px) {
+  .defender-sheet .starter-tower-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .defender-sheet .starter-tower-list .tower-option {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 120px;
+    padding: 5px 3px;
+    text-align: center;
+  }
+
+  .defender-sheet .starter-tower-list .tower-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .defender-sheet .starter-tower-list .tower-copy {
+    min-width: 0;
+  }
+
+  .defender-sheet .starter-tower-list .tower-copy b {
+    font-size: calc(12px * var(--ui-text-scale));
+    line-height: 1.15;
+  }
+
+  .defender-sheet .starter-tower-list .tower-copy small.tower-role-label {
+    margin-top: 2px;
+    padding: 2px 5px;
+    font-size: calc(10px * var(--ui-text-scale));
+  }
+
+  .defender-sheet .starter-tower-list .cost {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: calc(10px * var(--ui-text-scale));
+    line-height: 1.15;
+  }
+
+  .defender-sheet .starter-tower-list .affordability-shortfall {
+    font-size: calc(9px * var(--ui-text-scale));
+    overflow-wrap: anywhere;
+  }
+}
