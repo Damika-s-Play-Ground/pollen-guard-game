@@ -403,7 +403,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     selectedType=next.selectedType;selectedTower=next.selectedTower;placementCandidate=next.placementCandidate;abilityPreview=next.abilityPreview;aimedSpellId=next.aimedSpellId;spellTargetStart=next.spellTargetStart;
   }
   function cancelCurrentInteraction(){
-    if(!byId('selectionChooser').hidden){hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});syncInteractionPresentation();draw();return;}
+    if(!byId('selectionChooser').hidden){hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});canvas.focus({preventScroll:true});syncInteractionPresentation();draw();return;}
     if(guardianMoveActive){endGuardianMove();return;}
     if(aimedSpellId){cancelAimedSpell();return;}
     if(abilityPreview){cancelTowerAbilityPreview();return;}
@@ -446,11 +446,13 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     syncGuidanceVisibility(criticalWarningActive,currentPlacementError);
   }
   function selectPlacedTower(tower) {
-    measureActionFeedback('selection',()=>{applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});syncTowerCatalogSelection(document.querySelectorAll('.tower-option'));byId('prospectiveLabel').textContent='No build pick · choose a defender to place';byId('cancelPlacementBtn').style.display='none';byId('towerDetail').textContent='';if(maps[selectedMap]?.customMap)byId('specialistRoster').open=true;renderSelected();updateHud();updatePreview();revealSelectedTower();updatePlacementHint();draw();announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});});
+    measureActionFeedback('selection',()=>{applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});syncTowerCatalogSelection(document.querySelectorAll('.tower-option'));byId('prospectiveLabel').textContent='No build pick · choose a defender to place';byId('cancelPlacementBtn').style.display='none';byId('towerDetail').textContent='';if(maps[selectedMap]?.customMap)byId('specialistRoster').open=true;renderSelected();updateHud();updatePreview();revealSelectedTower();updatePlacementHint();draw();canvas.focus({preventScroll:true});announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});});
   }
   function showSelectionChooser(candidates) {
+    applyInteractionTransition('inspect-chooser');
+    renderTowerOptions();renderSelected();updatePlacementHint();
     showTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement,candidates,towerDefinitions:towersDef,onSelect:selectPlacedTower,document});
-    syncInteractionPresentation();
+    syncInteractionPresentation();draw();
   }
   function shakeBoard() {
     if(!uiSettings.shake||uiSettings.animation==='off')return;

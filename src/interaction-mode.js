@@ -13,6 +13,7 @@ export function transitionBattleInteraction(state={}, action, value=null) {
   const next={...state};
   if(action==='build')return {...next,selectedType:value,selectedTower:null,placementCandidate:null,abilityPreview:null,aimedSpellId:null,spellTargetStart:null};
   if(action==='inspect')return {...next,selectedType:null,selectedTower:value,placementCandidate:null,abilityPreview:null,aimedSpellId:null,spellTargetStart:null};
+  if(action==='inspect-chooser')return {...next,selectedType:null,selectedTower:null,placementCandidate:null,abilityPreview:null,aimedSpellId:null,spellTargetStart:null};
   if(action==='cancel')return {...next,selectedType:null,selectedTower:null,placementCandidate:null,abilityPreview:null,aimedSpellId:null,spellTargetStart:null};
   if(action==='preview')return {...next,placementCandidate:value};
   return next;

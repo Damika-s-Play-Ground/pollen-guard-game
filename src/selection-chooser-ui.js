@@ -10,6 +10,7 @@ export function showTowerSelectionChooser({ chooser, board, candidates, towerDef
   }
   chooser.hidden = false;
   board.classList.add('has-selection-chooser');
+  chooser.children[0]?.focus?.({ preventScroll: true });
 }
 
 export function hideTowerSelectionChooser({ chooser, board }) {
