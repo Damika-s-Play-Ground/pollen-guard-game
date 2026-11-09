@@ -16,6 +16,9 @@
 .branch-demo[data-kind="income"] .branch-demo-source{border-color:#f5d985;background:#d3a847}
 .branch-demo[data-kind="range"]::after{left:14px;width:40px;border-color:#b8ed8e}
 .branch-demo[data-kind="range"] .branch-demo-target{right:3px}
+.branch-demo[data-kind="push"]::after{left:18px;width:32px;border-color:#8ee4d2;border-style:solid}
+.branch-demo-push{right:6px;top:14px;width:16px;border-top:2px solid #8ee4d2;transform-origin:right center}
+.branch-demo-push::after{content:"";position:absolute;right:0;top:-4px;width:6px;height:6px;border-top:2px solid #8ee4d2;border-right:2px solid #8ee4d2;transform:rotate(45deg)}
 .branch-demo[data-motion="full"]:not([data-kind="income"]) .branch-demo-source::after{content:"";position:absolute;left:10px;top:1px;width:5px;height:5px;border-radius:50%;background:#fff0a8;animation:branch-shot .9s linear infinite}
 .branch-demo[data-motion="static"] *,.branch-demo[data-motion="static"]::after{animation:none!important}
 .branch-preview-caption{font-size:calc(var(--type-secondary) * var(--ui-text-scale));line-height:1.25;color:#dbe7d0}
