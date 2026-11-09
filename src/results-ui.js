@@ -48,5 +48,14 @@ export function renderResultsScreen(elements, model, document) {
   elements.popped.textContent = String(model.popped);
   elements.petals.textContent = String(model.petals);
   elements.record.textContent = model.record;
-  renderRunDebrief(elements.debrief, model.report, document);
+  const details = document.createElement('details');
+  details.className = 'results-report-details';
+  const summary = document.createElement('summary');
+  summary.textContent = 'View combat report';
+  const report = document.createElement('section');
+  report.className = 'run-debrief';
+  report.setAttribute('aria-label', 'Combat report');
+  renderRunDebrief(report, model.report, document);
+  details.append(summary, report);
+  elements.debrief.replaceChildren(details);
 }
