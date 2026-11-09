@@ -532,7 +532,9 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     }
   }
   healerLinks.forEach(link=>{if(!link?.from||!link?.to)return;ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);ctx.setLineDash([6/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash([]);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();});
-  particles.filter(particle=>particle.depth==='under-enemies').forEach(particle=>drawCosmeticParticle(ctx,particle));
+  // Threat silhouettes follow projectiles and particles; health and warning overlays follow the bodies.
+  shots.forEach(shot=>drawProjectile(ctx,shot,shotPosition(shot,renderAlpha),shotAngle(shot,renderAlpha),displayScale));
+  particles.forEach(particle=>drawCosmeticParticle(ctx,particle));
   enemies.forEach(enemy => {
     const point = enemyPosition(enemy, renderAlpha);
     const silhouette=enemySilhouetteMetrics(enemy,visualTime),shape={...enemy,radius:silhouette.radius};
@@ -588,8 +590,6 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     ctx.fillStyle='#593f2c';ctx.beginPath();ctx.arc(guardian.x,guardian.y,3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
     if(guardian.downTimer>0){ctx.strokeStyle='#fff0d9';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(guardian.x-5,guardian.y-5);ctx.lineTo(guardian.x+5,guardian.y+5);ctx.moveTo(guardian.x+5,guardian.y-5);ctx.lineTo(guardian.x-5,guardian.y+5);ctx.stroke();}
   }
-  shots.forEach(shot => drawProjectile(ctx, shot, shotPosition(shot, renderAlpha), shotAngle(shot, renderAlpha), displayScale));
-  particles.filter(particle=>particle.depth!=='under-enemies').forEach(particle=>drawCosmeticParticle(ctx,particle));
   ctx.globalAlpha = 1;
   // Keep threat information readable even when volleys and impact particles cross the enemy.
   const bossWarningBoxes = [];

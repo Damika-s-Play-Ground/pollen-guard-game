@@ -7,10 +7,10 @@ const RESPONSE = Object.freeze({
 export function defeatResponseParticles(enemy,x,y) {
   if(!enemy||!Number.isFinite(x)||!Number.isFinite(y))return [];
   const response=enemy.boss?RESPONSE.boss:enemy.type==='armored'?RESPONSE.armored:RESPONSE.standard;
-  const particles=[{x,y,vx:0,vy:0,life:.16,maxLife:.16,r:response.markRadius,color:enemy.color,impactKind:response.mark,depth:'under-enemies'}];
+  const particles=[{x,y,vx:0,vy:0,life:.16,maxLife:.16,r:response.markRadius,color:enemy.color,impactKind:response.mark}];
   for(let index=0;index<response.motes;index++){
     const angle=-Math.PI/2+index*Math.PI*2/response.motes,speed=response.speed*(.82+(index%3)*.09);
-    particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-8,life:response.life,maxLife:response.life,r:response.moteRadius+(index%2)*.45,color:enemy.color,depth:'under-enemies'});
+    particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-8,life:response.life,maxLife:response.life,r:response.moteRadius+(index%2)*.45,color:enemy.color});
   }
   return particles;
 }
