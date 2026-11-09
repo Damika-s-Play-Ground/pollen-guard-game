@@ -68,6 +68,7 @@ import { renderTowerCatalog, SPECIALIST_TOWER_TYPES, specialistEncounterHint, ST
 import { renderTowerInspector, renderTowerUpgradePreview, renderTowerTargetStatus } from './src/tower-inspector-ui.js';
 import { renderTowerAbilityDock } from './src/tower-ability-dock-ui.js';
 import { buildHudView, renderHud } from './src/hud-ui.js';
+import { createHudScreenController } from './src/hud-screen-controller.js';
 import { createHudResourceAnnouncements } from './src/hud-announcements.js';
 import { buildRunDebrief, createCombatPerformance, registerCombatTower } from './src/combat-performance.js';
 import { renderResultsScreen } from './src/results-ui.js';
@@ -841,6 +842,29 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       side.scrollTop=Math.max(0,side.scrollTop+panel.getBoundingClientRect().top-side.getBoundingClientRect().top-8);
     });
   }
+  function renderSeedObjectiveControls(objective) {
+    if(!seedObjectiveControls){
+      const legend=document.querySelector('#mapFooter .legend'),outbound=document.createElement('span'),returnPath=document.createElement('span'),status=document.createElement('span');
+      outbound.textContent='→ seed cache';returnPath.textContent='← escape route';status.className='seed-objective-status';status.id='seedObjectiveStatus';status.setAttribute('aria-live','off');
+      legend.append(outbound,returnPath);legend.after(status);seedObjectiveControls={outbound,returnPath,status};
+    }
+    for(const control of Object.values(seedObjectiveControls))control.hidden=!objective;
+    if(objective){const tally=seedObjectiveTally(objective);seedObjectiveControls.status.textContent=`Cache · ${tally.safe}/${tally.total} safe · ${tally.carried} carried · ${tally.dropped} dropped · ${tally.escaped} escaped`;}
+  }
+  function refreshUpgradeAndAbilityDock() {
+    updateUpgradePreview();
+    if(abilityPreview&&!towers.some(tower=>tower.id===abilityPreview.towerId)){abilityPreview=null;renderSelected();}
+    else updateSelectedAbilityDock();
+  }
+  const presentHud=createHudScreenController({
+    document,renderHud,
+    announceResources:resources=>hudResourceAnnouncements.update(resources),
+    refreshAffordability:refreshPurchaseAffordability,
+    renderSeedObjective:renderSeedObjectiveControls,
+    refreshSpellControls,updateGuardianControls,refreshUpgradeAndAbilityDock,
+    updateWaveTimeline,updateEnemyGuide,updateEnemyBriefing,updateEndlessChoices,
+    renderAutoStartControls
+  });
   function updateHud() {
     const running=runIsRunning(),gameOver=runIsOver(),paused=runIsPaused();
     const upgradeDisabled=selectedTower?selectedTower.level>=3||(selectedTower.level===1&&selectedTower.branchChoice==null)||cash<selectedUpgradeCost(selectedTower)||(tutorialPractice.active&&(tutorialPractice.task!==3||selectedTower.id!==tutorialPractice.towerId)):undefined;
@@ -855,22 +879,10 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       bloomCharge,hasEnemies:enemies.length>0,speed,
       resumeDisabled:!hasSavedRun(),upgradeDisabled
     });
-    hudResourceAnnouncements.update({cash,lives});
-    renderHud(document,view);
-    refreshPurchaseAffordability({document,cash,selectedUpgrade:selectedTower?{name:towersDef[selectedTower.type].name,cost:selectedUpgradeCost(selectedTower),level:selectedTower.level,branchChoice:selectedTower.branchChoice}:null});
-    if(!seedObjectiveControls){
-      const legend=document.querySelector('#mapFooter .legend'),outbound=document.createElement('span'),returnPath=document.createElement('span'),status=document.createElement('span');
-      outbound.textContent='→ seed cache';returnPath.textContent='← escape route';status.className='seed-objective-status';status.id='seedObjectiveStatus';status.setAttribute('aria-live','off');
-      legend.append(outbound,returnPath);legend.after(status);seedObjectiveControls={outbound,returnPath,status};
-    }
-    for(const control of Object.values(seedObjectiveControls))control.hidden=!seedObjective;
-    if(seedObjective){const tally=seedObjectiveTally(seedObjective);seedObjectiveControls.status.textContent=`Cache · ${tally.safe}/${tally.total} safe · ${tally.carried} carried · ${tally.dropped} dropped · ${tally.escaped} escaped`;}
-    refreshSpellControls();
-    updateGuardianControls();
-    updateUpgradePreview();if(abilityPreview&&!towers.some(tower=>tower.id===abilityPreview.towerId)){abilityPreview=null;renderSelected();}else updateSelectedAbilityDock();
-    updateWaveTimeline();
-    updateEnemyGuide();updateEnemyBriefing();updateEndlessChoices();
-    renderAutoStartControls();
+    presentHud({
+      view,cash,lives,seedObjective,
+      selectedUpgrade:selectedTower?{name:towersDef[selectedTower.type].name,cost:selectedUpgradeCost(selectedTower),level:selectedTower.level,branchChoice:selectedTower.branchChoice}:null
+    });
   }
   function autoStartContext(){return {enabled:uiSettings.autoStart,wave,running:runIsRunning(),paused:runIsPaused()||runStateStopsClock(runState),hidden:document.hidden,
     gameOver:runIsOver(),intermission,mandatoryChoice:endlessChoiceRequired({challenge,wave,endlessChoiceWave}),held:uiSettings.autoStartHold,

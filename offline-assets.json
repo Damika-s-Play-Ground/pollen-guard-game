@@ -47,6 +47,7 @@
   "./src/gate-routes.js",
   "./src/guidance-arbitration.js",
   "./src/hud-announcements.js",
+  "./src/hud-screen-controller.js",
   "./src/hud-ui.js",
   "./src/interaction-mode.js",
   "./src/journal-navigation.js",
