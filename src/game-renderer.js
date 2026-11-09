@@ -202,7 +202,8 @@ export function traceEnemyShape(ctx, enemy, x, y, radius) {
   } else if (enemy.type === 'burrower') {
     ctx.ellipse(x, y, radius, radius * .72, 0, 0, Math.PI * 2);
   } else if (enemy.flying) {
-    ctx.moveTo(x, y - radius); ctx.lineTo(x + radius * .8, y + radius * .7); ctx.lineTo(x, y + radius * .35); ctx.lineTo(x - radius * .8, y + radius * .7); ctx.closePath();
+    ctx.moveTo(x, y - radius); ctx.lineTo(x + radius * 1.45, y - radius * .25); ctx.lineTo(x + radius * .55, y + radius * .15);
+    ctx.lineTo(x, y + radius * .95); ctx.lineTo(x - radius * .55, y + radius * .15); ctx.lineTo(x - radius * 1.45, y - radius * .25); ctx.closePath();
   } else if (enemy.type === 'armored') {
     for (let i = 0; i < 6; i++) { const angle = -Math.PI / 2 + i * Math.PI / 3, px = x + Math.cos(angle) * radius, py = y + Math.sin(angle) * radius; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
     ctx.closePath();
