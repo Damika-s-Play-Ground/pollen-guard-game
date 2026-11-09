@@ -13,3 +13,41 @@ export function packRewardGains(gains, limit = MAX_REWARD_SPRITES_PER_BATCH) {
   }
   return packets;
 }
+
+export function createRewardFeedbackQueue({ onPresent, maxActive = MAX_ACTIVE_REWARD_SPRITES, maxPending = 32 } = {}) {
+  if (typeof onPresent !== 'function' || !Number.isInteger(maxActive) || maxActive < 1 || !Number.isInteger(maxPending) || maxPending < 1)
+    throw new TypeError('Reward queue requires a presenter and positive integer limits.');
+  const pending = [];
+  let active = 0;
+
+  function drain() {
+    while (active < maxActive && pending.length) {
+      const packet = pending.shift();
+      active++;
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        active = Math.max(0, active - 1);
+        drain();
+      };
+      try { onPresent(packet, finish); }
+      catch { finish(); }
+    }
+  }
+
+  function enqueue(gains) {
+    pending.push(...packRewardGains(gains));
+    drain();
+    if (pending.length > maxPending) {
+      const total = pending.reduce((sum, packet) => sum + packet.amount, 0);
+      const x = pending.reduce((sum, packet) => sum + packet.x * packet.amount, 0) / total;
+      const y = pending.reduce((sum, packet) => sum + packet.y * packet.amount, 0) / total;
+      pending.splice(0, pending.length, { amount: total, x, y });
+    }
+    drain();
+  }
+
+  return { enqueue, activeCount: () => active, pendingCount: () => pending.length,
+    pendingAmount: () => pending.reduce((sum, packet) => sum + packet.amount, 0) };
+}

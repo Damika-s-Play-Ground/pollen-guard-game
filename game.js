@@ -59,7 +59,7 @@ import { keyboardActionLabels as buildKeyboardActionLabels, renderKeyboardBindin
 import { shouldEmitParticles } from './src/visual-preferences.js';
 import { createGameAudio } from './src/game-audio.js';
 import { appendCosmeticParticles } from './src/effect-budget.js';
-import { MAX_ACTIVE_REWARD_SPRITES, packRewardGains } from './src/reward-feedback.js';
+import { createRewardFeedbackQueue } from './src/reward-feedback.js';
 import { plantingSettleExpired, plantingDustParticles } from './src/planting-effects.js';
 import { ATTACK_ANTICIPATION_SECONDS, attackAnticipation } from './src/attack-anticipation.js';
 import { defeatResponseParticles } from './src/defeat-effects.js';
@@ -228,29 +228,22 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   });
   let magnifierEnabled=false;
   const hudResourceAnnouncements=createHudResourceAnnouncements({announce:message=>{byId('resourceAnnouncement').textContent=message;}});
-  const rewardSpriteLayer=byId('rewardFxLayer'),rewardSpriteQueue=[];
-  let activeRewardSprites=0;
-  function queueRewardFeedback(gains) {
-    if(!rewardSpriteLayer||!Array.isArray(gains))return;
-    rewardSpriteQueue.push(...packRewardGains(gains));
-    if(rewardSpriteQueue.length>32){const total=rewardSpriteQueue.reduce((sum,packet)=>sum+packet.amount,0),x=rewardSpriteQueue.reduce((sum,packet)=>sum+packet.x*packet.amount,0)/total,y=rewardSpriteQueue.reduce((sum,packet)=>sum+packet.y*packet.amount,0)/total;rewardSpriteQueue.splice(0,rewardSpriteQueue.length,...packRewardGains([{amount:total,x,y}]));}
-    pumpRewardFeedback();
-  }
-  function pumpRewardFeedback() {
-    while(activeRewardSprites<MAX_ACTIVE_REWARD_SPRITES&&rewardSpriteQueue.length){
-      const packet=rewardSpriteQueue.shift(),node=document.createElement('span'),canvasRect=canvas.getBoundingClientRect(),cashRect=byId('cash').getBoundingClientRect();
-      const fromX=canvasRect.left+packet.x*canvasRect.width/canvas.width,fromY=canvasRect.top+packet.y*canvasRect.height/canvas.height,toX=cashRect.left+cashRect.width/2,toY=cashRect.top+cashRect.height/2;
-      node.className='reward-flyout';node.textContent=`+${packet.amount} ✿`;node.setAttribute('aria-hidden','true');rewardSpriteLayer.append(node);activeRewardSprites++;
-      const done=()=>{node.remove();activeRewardSprites=Math.max(0,activeRewardSprites-1);pumpRewardFeedback();};
-      if(uiSettings.animation!=='full'||typeof node.animate!=='function'){
-        node.style.left=`${toX}px`;node.style.top=`${toY}px`;node.classList.add('reward-flyout-static','reward-flyout-reduced');window.setTimeout(done,650);
-      }else{
-        node.style.left=`${fromX}px`;node.style.top=`${fromY}px`;
-        const animation=node.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:`translate(-50%,-50%) translate(${toX-fromX}px,${toY-fromY}px) scale(.7)`,opacity:.1}],{duration:650,easing:'cubic-bezier(.2,.65,.35,1)'});
-        animation.onfinish=done;animation.oncancel=done;
-      }
+  const rewardSpriteLayer=byId('rewardFxLayer');
+  const rewardFeedbackQueue=createRewardFeedbackQueue({onPresent(packet,done){
+    if(!rewardSpriteLayer){done();return;}
+    const node=document.createElement('span'),canvasRect=canvas.getBoundingClientRect(),cashRect=byId('cash').getBoundingClientRect();
+    const fromX=canvasRect.left+packet.x*canvasRect.width/canvas.width,fromY=canvasRect.top+packet.y*canvasRect.height/canvas.height,toX=cashRect.left+cashRect.width/2,toY=cashRect.top+cashRect.height/2;
+    node.className='reward-flyout';node.textContent=`+${packet.amount} ✿`;node.setAttribute('aria-hidden','true');rewardSpriteLayer.append(node);
+    const remove=()=>node.remove();
+    if(uiSettings.animation!=='full'||typeof node.animate!=='function'){
+      node.style.left=`${toX}px`;node.style.top=`${toY}px`;node.classList.add('reward-flyout-static','reward-flyout-reduced');window.setTimeout(()=>{remove();done();},650);
+    }else{
+      node.style.left=`${fromX}px`;node.style.top=`${fromY}px`;
+      try{const animation=node.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:`translate(-50%,-50%) translate(${toX-fromX}px,${toY-fromY}px) scale(.7)`,opacity:.1}],{duration:650,easing:'cubic-bezier(.2,.65,.35,1)'});animation.onfinish=()=>{remove();done();};animation.oncancel=()=>{remove();done();};}
+      catch{remove();done();}
     }
-  }
+  }});
+  function queueRewardFeedback(gains){rewardFeedbackQueue.enqueue(gains);}
   const simulationClock=new FixedStepClock();
   let nextEntityId=1, storageErrorShown=false, futureSaveProtected=false;
   let runSeed=createRunSeed(), simulationTick=0, actionLog=[], actionLogComplete=true, actionLogLimitShown=false;
