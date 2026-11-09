@@ -110,7 +110,7 @@ body{padding:8px 12px}.app{max-width:none}.top{margin-bottom:7px}.top-actions #r
 @media(max-width:700px){.map-footer>.tutorial-coach{width:100%;max-width:none;margin:4px 0}}
 :root{--leaf-muted:#83b95c;--water-accent:#73cad4;--magic-violet:#ad96d7}
 body{background:radial-gradient(ellipse at 42% -10%,#263d2d 0%,var(--surface-deep) 58%);color:var(--text-cream)}
-.board-card,.side-card,.confirm-dialog,.tutorial-dialog,.results-dialog{border-color:var(--control-border);background:linear-gradient(145deg,var(--surface-panel),var(--surface-deep));box-shadow:var(--card-shadow)}
+.board-card,.side-card,.confirm-dialog,.tutorial-dialog,.results-dialog,.guide-dialog{border-color:var(--control-border);background:linear-gradient(145deg,var(--surface-panel),var(--surface-deep));box-shadow:var(--card-shadow)}
 button,.settings-row select,.design-settings select{border-color:var(--control-border);color:var(--text-cream)}
 button:not(.primary){background:var(--surface-soil)}
 .primary{color:var(--surface-deep);background:var(--action-lime);border-color:var(--action-lime)}
@@ -126,6 +126,11 @@ button:not(.primary){background:var(--surface-soil)}
 .research-path>p,.research-node p,.relic-card p,.run-history-card p,.run-history-status,.offline-tools p,.dialog-content p{color:var(--text-muted)}
 .tower-option.active{box-shadow:inset 0 0 0 1px var(--action-lime)}
 body[data-palette="high-contrast"]{--text-cream:#fff;--text-muted:#e4eadf;--resource-amber:#ffe567;--danger-coral:#ffb29e;--action-lime:#fff37a;--focus-lime:#fff37a;--control-border:#9dbc9f;--ink:var(--text-cream);--muted:var(--text-muted);--line:var(--control-border);--gold:var(--resource-amber);--mint:var(--action-lime);--state-danger:var(--danger-coral);--focus-ring:var(--focus-lime)}
+/* Semantic roles: lime marks action/selection/focus, amber marks spendable resources, coral marks danger/shortfall, cream carries primary text, and soil/panel/deep separate surface hierarchy. */
+.settings-panel summary,.play-options>summary,.mission-preparation>summary{border-color:var(--control-border);background:var(--surface-raised);color:var(--text-cream)}
+.design-settings,.mission-preparation-content,.campaign-map-panel,.route-gate-panel{border-color:var(--control-border);background:var(--surface-panel);color:var(--text-cream)}
+.design-settings select,.settings-row select{border-color:var(--control-border);background:var(--surface-soil);color:var(--text-cream)}
+.route-gate-option[aria-pressed="true"],.research-node.equipped{border-color:var(--action-lime);background:var(--surface-soil);color:var(--text-cream)}
 .map-camera-controls{position:absolute;z-index:6;top:8px;right:8px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:calc(100% - 16px)}
 .camera-control{display:grid;place-items:center;min-width:44px;min-height:44px;padding:5px 8px;background:var(--surface-panel);border-color:var(--control-border);font-weight:800}
 .camera-control[aria-pressed="true"]{border-color:var(--action-lime);color:var(--action-lime)}
