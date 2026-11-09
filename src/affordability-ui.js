@@ -16,6 +16,6 @@ export function refreshPurchaseAffordability({ document, cash, selectedUpgrade =
     document.getElementById('upgradeBtn').title=title;
     const quickButton=document.getElementById('contextUpgradeBtn');
     quickButton.title=title;
-    quickButton.textContent=shortfall?`Need ${shortfall} more ✿`:`Upgrade · ${selectedUpgrade.cost} ✿`;
+    quickButton.textContent=shortfall?`Upgrade · ${selectedUpgrade.cost} ✿ · Need ${shortfall} more`:`Upgrade · ${selectedUpgrade.cost} ✿`;
   }
 }
