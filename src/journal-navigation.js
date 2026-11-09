@@ -1,5 +1,11 @@
 export const JOURNAL_DESTINATIONS=Object.freeze(['play','collection','workshop','help']);
 
+export function handoffJournal(dialog,clearReturnFocus,openDestination){
+  clearReturnFocus();
+  dialog.close();
+  openDestination();
+}
+
 export function setJournalDestination(root,destination){
   if(!JOURNAL_DESTINATIONS.includes(destination))return false;
   const buttons=[...root.querySelectorAll('[data-journal-view]')],sections=[...root.querySelectorAll('[data-journal-section]')];

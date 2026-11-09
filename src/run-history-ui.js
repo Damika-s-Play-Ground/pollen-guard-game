@@ -38,7 +38,7 @@ export function renderRunHistory(container, entries, document, { onVerifyReplay 
     const playbackAnnouncement=document.createElement('p');playbackAnnouncement.className='run-history-status';playbackAnnouncement.setAttribute('role','status');playbackAnnouncement.setAttribute('aria-live','polite');
     playback.append(battlefield,controls,progress,playbackStatus,playbackAnnouncement);card.append(actions,resultStatus,playback);container.append(card);
     let player=null,timer=null;
-    const stop=()=>{const wasPlaying=timer!==null;if(wasPlaying){scheduler.clearInterval(timer);timer=null;}play.textContent='Play';if(wasPlaying)playbackAnnouncement.textContent='Playback paused because the Guide was closed.';};
+    const stop=()=>{const wasPlaying=timer!==null;if(wasPlaying){scheduler.clearInterval(timer);timer=null;}play.textContent='Play';if(wasPlaying)playbackAnnouncement.textContent='Playback paused because the journal was closed.';};
     pauseCallbacks.add(stop);
     const showFrame=frame=>{
       const state=frame.state;

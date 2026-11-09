@@ -28,7 +28,7 @@ import { renderTowerTestRange } from './src/tower-test-range-ui.js';
 import { addCustomMapToCollection, customMapToRuntimeMap, customMapWaveSchedules, normalizeCustomMapCollection, CUSTOM_MAP_STORAGE_KEY } from './src/map-editor.js';
 import { renderMapEditor } from './src/map-editor-ui.js';
 import { deriveInteractionMode, transitionBattleInteraction } from './src/interaction-mode.js';
-import { handleJournalNavigationKey, setJournalDestination } from './src/journal-navigation.js';
+import { handleJournalNavigationKey, handoffJournal, setJournalDestination } from './src/journal-navigation.js';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, CHALLENGE_RULES, difficultyFor, normalizeChallengeRules } from './src/challenge-rules.js';
 import { createRunState, transitionRunState, runStateSaveFlags, runStateStopsClock } from './src/run-state.js';
 import { clearResearchLoadout, deselectResearchNode, earnedResearchPoints, normalizeResearchState, purchaseResearchNode, researchLoadoutIds, researchStartingAdjustment, selectResearchNode } from './src/research-tree.js';
@@ -1278,7 +1278,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function openJournal(destination,trigger){journalReturnFocus=trigger;setJournalDestination(byId('journalDestinations').parentElement,destination);renderChallenges();renderResearch();renderLocalRunHistory();renderPracticeRange();renderLocalMapEditor();byId('guideDialog').showModal();transitionRun({type:'DIALOG_OPEN'});updateHud();}
   byId('guideOpenBtn').onclick=event=>openJournal('play',event.currentTarget);
   byId('helpOpenBtn').onclick=event=>openJournal('help',event.currentTarget);
-  byId('journalEnemyGuideBtn').onclick=()=>{byId('guideDialog').close();openEnemyGuide();};
+  byId('journalEnemyGuideBtn').onclick=()=>handoffJournal(byId('guideDialog'),()=>{journalReturnFocus=null;},()=>openEnemyGuide());
   byId('challengeBoard').addEventListener('click',async event=>{
     const copy=event.target.closest('[data-copy-challenge-code]');
     if(copy){const input=copy.closest('.challenge-board-card')?.querySelector('input');if(!input)return;input.select();input.setSelectionRange(0,input.value.length);try{await navigator.clipboard.writeText(input.value);byId('challengeImportStatus').textContent='Challenge code copied. It contains rules only, not a score.';}catch{byId('challengeImportStatus').textContent='Challenge code selected. Copy it with your device’s copy command.';}return;}
