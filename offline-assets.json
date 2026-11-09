@@ -49,6 +49,7 @@
   "./src/hud-announcements.js",
   "./src/hud-screen-controller.js",
   "./src/hud-ui.js",
+  "./src/impact-causality.js",
   "./src/interaction-mode.js",
   "./src/journal-navigation.js",
   "./src/keyboard-bindings-ui.js",
