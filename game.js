@@ -2,7 +2,7 @@ import { renderBossWarnings } from './src/boss-warning-ui.js';
 import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, towerUpgradeQuote, getEffectiveTowerStats, towersAreLinked, isUnsupportedRunVersion, RUN_SAVE_VERSION, assignRunEntityIds } from './src/game-core.js';
 import { DEFAULT_GAME_SPEED, toggleGameSpeed } from './src/simulation-speed.js';
 import { createGameLoop } from './src/game-loop.js';
-import { createInspectorDisplaySignature, createRenderGate, createRenderSignature, shouldRenderInspector } from './src/render-gate.js';
+import { createRenderGate, createRenderSignature } from './src/render-gate.js';
 import { refreshPurchaseAffordability } from './src/affordability-ui.js';
 import { modes, maps, towersDef, towerRoles, enemyCombatProfiles } from './src/game-data.js';
 import { CAMPAIGN_WAVES, registerCustomWaveSchedules, validateWaveSchedules, waveSchedulesForMap, WAVE_SCHEDULE_VERSION } from './src/waves.js';
@@ -156,7 +156,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const stopCameraDrag=event=>{if(!cameraDrag||cameraDrag.id!==event.pointerId)return;event.preventDefault();event.stopImmediatePropagation();cameraDrag=null;canvas.parentElement.classList.remove('camera-dragging');};
   canvas.addEventListener('pointerup',stopCameraDrag,true);canvas.addEventListener('pointercancel',stopCameraDrag,true);
   const staticMapCache = createStaticMapCache((width,height)=>{const layer=document.createElement('canvas');layer.width=width;layer.height=height;return layer;});
-  const selectedInspectorRenderGate=createRenderGate(),upgradePreviewRenderGate=createRenderGate(),targetStatusRenderGate=createRenderGate(),abilityDockRenderGate=createRenderGate();
+  const upgradePreviewRenderGate=createRenderGate(),targetStatusRenderGate=createRenderGate(),abilityDockRenderGate=createRenderGate();
   const magnifierCanvas=byId('mapMagnifier'),magnifierCtx=magnifierCanvas.getContext('2d');
   const defenderSheet=byId('defenderSheet');
   const defenderSheetToggle=byId('defenderSheetToggle');
@@ -440,7 +440,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     syncGuidanceVisibility(criticalWarningActive,currentPlacementError);
   }
   function selectPlacedTower(tower) {
-    applyInteractionTransition('inspect',tower);selectedInspectorRenderGate.invalidate();hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updateHud();revealSelectedTower();updatePlacementHint();draw();announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});
+    applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updateHud();revealSelectedTower();updatePlacementHint();draw();announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});
   }
   function showSelectionChooser(candidates) {
     showTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement,candidates,towerDefinitions:towersDef,onSelect:selectPlacedTower,document});
@@ -819,11 +819,10 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(abilityPreview&&abilityPreview.towerId!==selectedTower?.id)abilityPreview=null;
     if(!selectedTower)abilityPreview=null;
     const linked=isTowerLinkedToAnother(selectedTower,towers,towersLinked);
-    const view=selectedTower?buildTowerInspectorModel({selectedTower,towers,challenge,challengeRules,linked,cash,wave,gameTime,terrain:terrainAt(selectedTower),researchLoadout,relicLoadout,performance:state.combatPerformance,animation:uiSettings.animation,tutorialActive:tutorialPractice.active,tutorialTask:tutorialPractice.task,tutorialTowerId:tutorialPractice.towerId,supportTargetingAvailable:healerInterventionObserved,
+    const view=selectedTower?buildTowerInspectorModel({selectedTower,towers,challenge,challengeRules,linked,cash,wave,gameTime,terrain:terrainAt(selectedTower),researchLoadout,relicLoadout,performance:combatPerformance,animation:uiSettings.animation,tutorialActive:tutorialPractice.active,tutorialTask:tutorialPractice.task,tutorialTowerId:tutorialPractice.towerId,supportTargetingAvailable:healerInterventionObserved,
       onChooseBranch:index=>{const result=performPlayerAction('chooseBranch',{towerId:selectedTower.id,branch:index});if(result.ok){renderSelected();saveRun();}}
     }):{empty:true};
-    const signature=createInspectorDisplaySignature({towerId:selectedTower?.id??null,view});
-    if(shouldRenderInspector({gate:selectedInspectorRenderGate,signature,empty:view.empty,contextHidden:byId('selectedContext').hidden}))renderTowerInspector({document,canvasHost:canvas.parentElement,view});
+    renderTowerInspector({document,canvasHost:canvas.parentElement,view});
     updateUpgradePreview();updateTargetIndicator();updateSelectedAbilityDock();
   }
   function revealSelectedTower() {

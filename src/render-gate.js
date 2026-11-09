@@ -1,8 +1,3 @@
-export function createInspectorDisplaySignature({ towerId, view }) {
-  const { onChooseBranch, ...displayView } = view;
-  return JSON.stringify({ towerId, view: displayView });
-}
-
 export function createRenderSignature(view) { return JSON.stringify(view); }
 
 export function createRenderGate() {
@@ -19,8 +14,4 @@ export function createRenderGate() {
       initialized = false;
     }
   };
-}
-
-export function shouldRenderInspector({ gate, signature, empty, contextHidden }) {
-  return gate.shouldRender(signature) || Boolean(empty) === !Boolean(contextHidden);
 }
