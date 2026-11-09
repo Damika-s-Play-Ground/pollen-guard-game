@@ -20,3 +20,7 @@ export function createRenderGate() {
     }
   };
 }
+
+export function shouldRenderInspector({ gate, signature, empty, contextHidden }) {
+  return gate.shouldRender(signature) || Boolean(empty) === !Boolean(contextHidden);
+}
