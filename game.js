@@ -59,7 +59,7 @@ import { shouldEmitParticles } from './src/visual-preferences.js';
 import { createGameAudio } from './src/game-audio.js';
 import { appendCosmeticParticles } from './src/effect-budget.js';
 import { MAX_ACTIVE_REWARD_SPRITES, packRewardGains } from './src/reward-feedback.js';
-import { plantingDustParticles } from './src/planting-effects.js';
+import { plantingSettleExpired, plantingDustParticles } from './src/planting-effects.js';
 import { attackAnticipation } from './src/attack-anticipation.js';
 import { defeatResponseParticles } from './src/defeat-effects.js';
 import { activeArmorFeedback, armorImpactFeedback } from './src/armor-feedback.js';
@@ -1121,7 +1121,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     criticalWarningActive=renderBossWarnings(byId('bossWarnings'),enemies,bossChoreoCues,gameTime);
     syncGuidanceVisibility(criticalWarningActive);
     for(const [id,launch] of towerRecoilAt)if(gameTime-launch.time>.1)towerRecoilAt.delete(id);
-    for(const [id,plantedAt] of towerPlantingAt)if(gameTime-plantedAt>=.22)towerPlantingAt.delete(id);
+    for(const [id,plantedAt] of towerPlantingAt)if(plantingSettleExpired(gameTime,plantedAt))towerPlantingAt.delete(id);
     for(const [id,cue] of armorImpactCues)if(gameTime-cue.time>=.8)armorImpactCues.delete(id);
     for(const [id,cue] of impactCausalityCues)if(gameTime-cue.time>=.32||!enemies.some(enemy=>enemy.id===id))impactCausalityCues.delete(id);
     const liveEnemyIds=new Set(enemies.map(enemy=>enemy.id));for(const id of armorFeedbackSeen.keys())if(!liveEnemyIds.has(id))armorFeedbackSeen.delete(id);

@@ -2,6 +2,7 @@ import { distanceToPath, pointOnPath } from './path-geometry.js';
 import { drawTowerArt } from './tower-art.js';
 import { projectileStyleForTower } from './projectile-visuals.js';
 import { combinationForPair } from './tower-combinations.js';
+import { PLANTING_SETTLE_SECONDS } from './planting-effects.js';
 import { pathSegmentsWithinRadius } from './route-coverage.js';
 import { guardianDestinationIsSafe, GUARDIAN_PATH_CLEARANCE, GUARDIAN_PULSE_RADIUS } from './meadow-guardian.js';
 import { TERRAIN_TYPES, TERRAIN_ZONES } from './terrain.js';
@@ -392,7 +393,7 @@ export function shotRecoil(animation, now, launchedAt, duration = .075) {
   return Math.max(0, Math.min(1, 1 - Math.max(0, now - launchedAt) / duration));
 }
 
-export function plantingSettle(animation, now, plantedAt, duration = .22) {
+export function plantingSettle(animation, now, plantedAt, duration = PLANTING_SETTLE_SECONDS) {
   if (!Number.isFinite(now) || !Number.isFinite(plantedAt) || !(duration > 0)) return null;
   const age=now-plantedAt;
   if(age<0||age>=duration||animation==='off')return null;
@@ -657,4 +658,3 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
 }
 
 export { projectileStyleForTower };
-
