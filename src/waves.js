@@ -260,7 +260,7 @@ export const GENTLE_OPENING_CAMPAIGN_WAVES=Object.freeze({
   meadow:gentleOpeningMeadow
 });
 const airIntroductionMeadow=replaceAuthoredWave(GENTLE_OPENING_CAMPAIGN_WAVES.meadow,6,
-  'One sky gnat follows the ground pests on the cyan sky route. Kite Keeper or Thorn Beacon; set Air First to focus it.',[
+  'One sky gnat joins the ground pests on a separate cyan sky route. Ground-only defenders cannot hit air; use a Kite Keeper or Thorn Beacon, then set Air First to focus it.',[
     {type:'mite',count:10,interval:.62},{type:'flyer',count:1,interval:.62,lane:'air'}
   ]);
 export const AIR_INTRODUCTION_CAMPAIGN_WAVES=Object.freeze({
