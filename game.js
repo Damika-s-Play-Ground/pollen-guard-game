@@ -48,7 +48,7 @@ import { buildMissionMasteryProgress, missionMasteryResultText } from './src/mis
 import { ENEMY_INTEL, enemyIntelFor, firstEncounterIntel } from './src/enemy-intel.js';
 import { buildEnemyBriefingView, filterEnemyGuide as filterEnemyGuideCards, renderEnemyBriefing, renderEnemyGuide } from './src/enemy-guide-ui.js';
 import { buildPlacementHintView, renderPlacementHint } from './src/placement-ui.js';
-import { resolveGuidanceOwner } from './src/guidance-arbitration.js';
+import { resolveGuidanceOwner, guidanceVisibility } from './src/guidance-arbitration.js';
 import { pathCoveragePercent } from './src/route-coverage.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
 import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutorialPracticeState, finishTutorialPracticeState, resetTutorialPracticeState } from './src/tutorial-progress.js';
@@ -368,11 +368,13 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     syncGuidanceVisibility();
   }
   function syncGuidanceVisibility(criticalWarning=criticalWarningActive,placementError=currentPlacementError){
+    const mapNoteGuidance=byId('mapNote').querySelector('.map-note-guidance');
     const owner=resolveGuidanceOwner({criticalWarning,placementFeedback:Boolean(placementCandidate||placementError),tutorialActive:tutorialPractice.active,firstAction:firstActionCoachVisible,
-      placementAvailable:Boolean(selectedType),placementCancelled:!selectedType&&!selectedTower&&!firstActionCoachVisible});
+      placementAvailable:Boolean(selectedType),placementCancelled:!selectedType&&!selectedTower&&!firstActionCoachVisible,mapNoteAvailable:Boolean(mapNoteGuidance?.textContent.trim())});
+    const visibility=guidanceVisibility(owner);
     const changed=guidanceOwner!==owner;guidanceOwner=owner;
     const coach=byId('tutorialCoach'),hint=byId('placementHint');
-    if(owner==='tutorial'){
+    if(visibility.tutorialCoach){
       const viewKey=JSON.stringify(tutorialCoachView);
       if(changed||coach.hidden||guidanceViewKey!==viewKey){
         const exit=byId('tutorialExitBtn'),active=tutorialPractice.active;
@@ -386,8 +388,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       document.querySelectorAll('.tutorial-focus').forEach(element=>element.classList.remove('tutorial-focus'));
       canvas.parentElement.classList.remove('tutorial-focus-map');
     }
-    hint.hidden=owner!=='placement';
-    byId('placementConfirm').hidden=owner==='warning'||!placementCandidate;
+    hint.hidden=!visibility.placementHint;
+    if(mapNoteGuidance)mapNoteGuidance.hidden=!visibility.mapNote;
+    byId('placementConfirm').hidden=visibility.criticalWarning||!placementCandidate;
   }
   function syncInteractionPresentation(){
     const mode=deriveInteractionMode({selectedType,selectedTower,placementCandidate,aimedSpellId,guardianMoveActive,abilityPreview,selectionChooserOpen:!byId('selectionChooser').hidden});
@@ -991,6 +994,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(maps[selectedMap]?.customMap){const objective=maps[selectedMap].customObjective;byId('mapNote').textContent=`${maps[selectedMap].name} · ${objective.brief} Minimum ${objective.minLives} seeds must remain. Ground and sky routes share this custom trail.`;}
     if(!wave&&!runIsRunning())byId('waveInfo').textContent+=guardianMode==='guardian'?' Optional kit: move your Meadow Guardian across safe grass; Pollen Pulse slows nearby ground pests, but a pest can knock it down briefly.':guardianMode==='ward'?' Optional kit: Pollen Ward grants two extra starting seeds instead of an active unit.':' Optional kit: choose a Meadow Guardian or Pollen Ward in mission settings; neither is required.';
     updateWaveTimeline();
+    syncGuidanceVisibility();
   }
   function startWave(automatic=false) {
     if(tutorialPractice.active&&tutorialPractice.task!==4){setToast('Complete the practice steps before starting the wave.');return;}

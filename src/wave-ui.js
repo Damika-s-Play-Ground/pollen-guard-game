@@ -156,7 +156,9 @@ export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote,
 function setMapNote(document, mapNote, headingText, bodyText) {
   const heading = document.createElement('strong');
   heading.textContent = headingText;
-  mapNote.replaceChildren(heading, document.createElement('br'), document.createTextNode(bodyText));
+  const guidance=document.createElement('span');guidance.className='map-note-guidance';
+  guidance.append(document.createElement('br'),document.createTextNode(bodyText));
+  mapNote.replaceChildren(heading,guidance);
 }
 
 export function renderWaveCard(summary, label = 'Upcoming') {

@@ -6,11 +6,22 @@ export function resolveGuidanceOwner({
   tutorialActive = false,
   firstAction = false,
   placementAvailable = false,
-  placementCancelled = false
+  placementCancelled = false,
+  mapNoteAvailable = false
 } = {}) {
   if (criticalWarning) return 'warning';
   if (placementFeedback) return 'placement';
   if (tutorialActive || firstAction) return 'tutorial';
   if (placementAvailable || placementCancelled) return 'placement';
+  if (mapNoteAvailable) return 'map-note';
   return null;
+}
+
+export function guidanceVisibility(owner) {
+  return {
+    tutorialCoach:owner==='tutorial',
+    placementHint:owner==='placement',
+    mapNote:owner==='map-note',
+    criticalWarning:owner==='warning'
+  };
 }
