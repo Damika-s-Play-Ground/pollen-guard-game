@@ -22,8 +22,12 @@ export const COMBAT_INTERACTION_MATRIX = Object.freeze([
   Object.freeze({ rule:'Statuses', shield:'Can apply through shields', armor:'—', resistance:'Refresh to longer duration; immunity blocks; flying ignores slow; bosses get 35% slow/stun duration and push distance' })
 ]);
 
+export function isBurrowed(target = {}) {
+  return Boolean(target.burrowTimer);
+}
+
 export function canHitTarget(attack = {}, target = {}) {
-  return !target.burrowTimer && (!target.flying || Boolean(attack.canHitAir));
+  return !isBurrowed(target) && (!target.flying || Boolean(attack.canHitAir));
 }
 
 export function filterEligibleTargets(targets, attack = {}) {
