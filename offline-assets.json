@@ -5,6 +5,7 @@
   "./index.html",
   "./manifest.webmanifest",
   "./src/action-log.js",
+  "./src/affordability-ui.js",
   "./src/air-routes.js",
   "./src/armor-feedback.js",
   "./src/attack-anticipation.js",

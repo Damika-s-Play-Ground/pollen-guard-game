@@ -3,6 +3,7 @@ import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, towerU
 import { DEFAULT_GAME_SPEED, toggleGameSpeed } from './src/simulation-speed.js';
 import { createGameLoop } from './src/game-loop.js';
 import { createInspectorDisplaySignature, createRenderGate, createRenderSignature, shouldRenderInspector } from './src/render-gate.js';
+import { refreshPurchaseAffordability } from './src/affordability-ui.js';
 import { modes, maps, towersDef, towerRoles, enemyCombatProfiles } from './src/game-data.js';
 import { CAMPAIGN_WAVES, registerCustomWaveSchedules, validateWaveSchedules, waveSchedulesForMap, WAVE_SCHEDULE_VERSION } from './src/waves.js';
 import { COMBAT_RULES, COMBAT_INTERACTION_MATRIX, canHitTarget } from './src/combat-rules.js';
@@ -849,24 +850,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     });
     hudResourceAnnouncements.update({cash,lives});
     renderHud(document,view);
-    document.querySelectorAll('.tower-option').forEach(button=>{
-      const cost=Number(button.dataset.purchaseCost),shortfall=Math.max(0,cost-cash),label=button.querySelector('.affordability-shortfall');
-      if(label){label.hidden=!shortfall;label.textContent=shortfall?`Need ${shortfall} more`:'';}
-      const base=button.getAttribute('title')||'';button.setAttribute('title',base.replace(/ Need \d+ more petals\./,'')+(shortfall?` Need ${shortfall} more petals.`:''));
-    });
-    document.querySelectorAll('.branch-choice,.context-branch').forEach(button=>{
-      const label=button.querySelector('.affordability-shortfall');if(!label)return;
-      const shortfall=Math.max(0,Number(label.dataset.cost)-cash);label.hidden=!shortfall;label.textContent=shortfall?`Need ${shortfall} more`:'';
-      const base=button.title.replace(/ · Need \d+ more$/,'');button.title=base+(shortfall?` · Need ${shortfall} more`:'' );
-    });
-    if(selectedTower){
-      const def=towersDef[selectedTower.type],cost=selectedUpgradeCost(selectedTower),shortfall=Math.max(0,cost-cash);
-      if(selectedTower.level<3&&selectedTower.branchChoice!=null){
-        const title=`Upgrade ${def.name} · Cost ${cost} petals${shortfall?` · Need ${shortfall} more`:''}.`;
-        byId('upgradeBtn').title=title;byId('contextUpgradeBtn').title=title;
-        byId('contextUpgradeBtn').textContent=shortfall?`Need ${shortfall} more ✿`:`Upgrade · ${cost} ✿`;
-      }
-    }
+    refreshPurchaseAffordability({document,cash,selectedUpgrade:selectedTower?{name:towersDef[selectedTower.type].name,cost:selectedUpgradeCost(selectedTower),level:selectedTower.level,branchChoice:selectedTower.branchChoice}:null});
     if(!seedObjectiveControls){
       const legend=document.querySelector('#mapFooter .legend'),outbound=document.createElement('span'),returnPath=document.createElement('span'),status=document.createElement('span');
       outbound.textContent='→ seed cache';returnPath.textContent='← escape route';status.className='seed-objective-status';status.id='seedObjectiveStatus';status.setAttribute('aria-live','off');
