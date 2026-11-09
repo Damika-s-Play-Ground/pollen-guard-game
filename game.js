@@ -97,6 +97,7 @@ import { boardChallengeForRun, CHALLENGE_SPELL_LOADOUT, importChallengeCode, rec
 import { renderChallengeBoard } from './src/challenge-board-ui.js';
 import { ENDLESS_CHOICES, endlessChoiceDue, endlessChoiceRequired } from './src/endless-mode.js';
 import { renderEndlessChoices } from './src/endless-mode-ui.js';
+import { createPlaytestRecorder } from './src/playtest-recorder.js';
 
 let savedCustomMaps=normalizeCustomMapCollection(null);
 try{savedCustomMaps=normalizeCustomMapCollection(JSON.parse(localStorage.getItem(CUSTOM_MAP_STORAGE_KEY)||'null'));}catch{}
@@ -115,6 +116,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const ctx = canvas.getContext('2d');
   const feedbackTimingEnabled=new URLSearchParams(window.location.search).get('feedbackTiming')==='1';
   const actionFeedbackMetrics=feedbackTimingEnabled?createActionFeedbackMetrics():null;
+  const playtestRecorder=createPlaytestRecorder(localStorage);
   if(actionFeedbackMetrics)window.__pollenGuardActionFeedback=()=>actionFeedbackMetrics.summary();
   function measureActionFeedback(action,callback){
     const finish=actionFeedbackMetrics?.begin(action);
@@ -605,6 +607,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(type==='switchGate')calcPath();
     if(type==='startWave'&&state.running)transitionRun({type:'START_WAVE'});
     if(type==='placeTower')transitionRun({type:'BEGIN_PLANNING'});
+    if(type==='placeTower'||type==='upgradeTower'||type==='startWave')playtestRecorder.record(type);
     recordPlayerAction(type,payload);updateGatePanel();syncAutoStart();
     return result;
   }
@@ -1251,6 +1254,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function toggleGardenPause(){
     measureActionFeedback('pause',()=>{
       transitionRun({type:'TOGGLE_USER_PAUSE'});
+      playtestRecorder.record(runIsPaused()?'pause':'resume');
       byId('pauseMenu').hidden=!runIsPaused();
       updateHud();updateGatePanel();saveRun();
     });
@@ -1258,13 +1262,14 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('pauseBtn').onclick=toggleGardenPause;
   byId('pauseResumeBtn').onclick=toggleGardenPause;
   byId('pauseRestartBtn').onclick=()=>requestConfirmation('Restart this garden?',`Restart the ${config().label} run on ${maps[selectedMap].name}? Current towers and wave progress will be lost.`,()=>{
-    byId('pauseMenu').hidden=true;resetRun();explainFreshGarden('Fresh garden. Choose your trail and defenders.');
+    playtestRecorder.record('reset');byId('pauseMenu').hidden=true;resetRun();explainFreshGarden('Fresh garden. Choose your trail and defenders.');
   },'Restart run');
   byId('pauseSettingsBtn').onclick=()=>{
     byId('pauseMenu').hidden=true;
     const settings=byId('settingsPanel');settings.open=true;settings.querySelector('summary').focus();
   };
   byId('pauseLeaveBtn').onclick=()=>{
+    playtestRecorder.record('quit');
     byId('pauseMenu').hidden=true;byId('missionPreparation').open=true;
     byId('missionPreparation').scrollIntoView({block:'start',behavior:'smooth'});
     byId('missionPreparation').querySelector('summary').focus({preventScroll:true});
@@ -1455,6 +1460,16 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
 
   // Start-wave preview and saved progression are available immediately.
+  const playtestToggle=byId('playtestRecordingToggle');
+  const playtestStatus=byId('playtestRecordingStatus');
+  function refreshPlaytestStatus(){const events=playtestRecorder.inspect();playtestToggle.checked=playtestRecorder.enabled();playtestStatus.textContent=playtestRecorder.enabled()?`Recording on this device · ${events.length} events. No data is sent.`:'Recording off. Existing records stay on this device until deleted or exported.';}
+  playtestToggle.checked=playtestRecorder.enabled();
+  playtestToggle.addEventListener('change',()=>{if(!playtestRecorder.setEnabled(playtestToggle.checked)){playtestToggle.checked=false;playtestStatus.textContent='This device could not save the recording setting.';}else refreshPlaytestStatus();});
+  byId('playtestInspectBtn').onclick=()=>{const events=playtestRecorder.inspect();playtestStatus.textContent=events.length?`${events.length} events: ${events.map(event=>`${event.type} at ${event.at}`).join('; ')}`:'No recorded events.';};
+  byId('playtestDeleteBtn').onclick=()=>{playtestRecorder.clear();refreshPlaytestStatus();};
+  byId('playtestExportBtn').onclick=()=>{const blob=new Blob([JSON.stringify(playtestRecorder.export(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='pollen-guard-playtest.json';link.click();URL.revokeObjectURL(url);playtestStatus.textContent='Playtest file exported after your request.';};
+  window.addEventListener('pagehide',()=>playtestRecorder.record('quit'),{once:true});
+  refreshPlaytestStatus();
   applyUiSettings();renderKeyboardBindings();byId('soundBtn').textContent=soundOn?'♫ Sound on':'♫ Sound muted';byId('soundBtn').setAttribute('aria-pressed',String(soundOn));
   createSpellControls();syncSpellLoadoutChecks();renderMapOptions();updatePlayOptionsLabel();renderAchievements();calcPath();renderTowerOptions();renderSelected();updateHud();updatePreview();
   let startupPrimaryRaw=null,startupBackupRaw=null,startupStorageUnavailable=false;

@@ -64,6 +64,7 @@
   "./src/path-geometry.js",
   "./src/placement-ui.js",
   "./src/planting-effects.js",
+  "./src/playtest-recorder.js",
   "./src/preparation.css",
   "./src/profile-progression.js",
   "./src/profile-storage.js",
