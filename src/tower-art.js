@@ -64,14 +64,17 @@ export function towerArtSvg(type, level = 1, branch = null) {
   return `<svg class="tower-art" viewBox="0 0 32 32" role="img" aria-label="${type} defender, level ${level}${branch == null ? '' : `, branch ${branch + 1}`}" xmlns="http://www.w3.org/2000/svg"><ellipse cx="16" cy="27.5" rx="11" ry="2.5" fill="#16261d" opacity=".45"/>${layers.map(layerSvg).join('')}</svg>`;
 }
 
-export function drawTowerArt(ctx, type, x, y, { level = 1, branch = null, color = '#79b85b', scale = 1, scaleX = 1, scaleY = 1 } = {}) {
+export function drawTowerArt(ctx, type, x, y, { level = 1, branch = null, color = '#79b85b', scale = 1, scaleX = 1, scaleY = 1, displayScale = 1 } = {}) {
   const layers = towerArtLayers(type, level, branch);
   if (!layers.length) return false;
-  ctx.save(); ctx.translate(x, y); ctx.scale(scale*towerArtScale(type)*scaleX, scale*towerArtScale(type)*scaleY);
+  const artScale=towerArtScale(type),scaledX=scale*artScale*scaleX,scaledY=scale*artScale*scaleY;
+  const cssScale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
+  const minimumStroke=CORE_TOWER_TYPES.includes(type)?1.05/(cssScale*Math.min(Math.abs(scaledX),Math.abs(scaledY))):0;
+  ctx.save(); ctx.translate(x, y); ctx.scale(scaledX, scaledY);
   ctx.fillStyle = '#375541'; ctx.beginPath(); ctx.ellipse(0, 9, 17, 7, 0, 0, Math.PI * 2); ctx.fill();
   ctx.translate(-16, -16);
   for (const layer of layers) {
-    ctx.beginPath(); ctx.fillStyle = layer.fill || 'transparent'; ctx.strokeStyle = layer.stroke || 'transparent'; ctx.lineWidth = layer.width || 0; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.fillStyle = layer.fill || 'transparent'; ctx.strokeStyle = layer.stroke || 'transparent'; ctx.lineWidth = Math.max(layer.width || 0,minimumStroke); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (layer.kind === 'circle') ctx.arc(layer.x, layer.y, layer.r, 0, Math.PI * 2);
     else { layer.points.forEach(([px, py], index) => index ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); if (layer.kind === 'polygon') ctx.closePath(); }
     if (layer.fill && layer.fill !== 'none') ctx.fill();

@@ -506,7 +506,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if(attackCue&&Number.isFinite(attackCue.angle)&&attackCue.strength>0){ctx.save();ctx.globalAlpha=Math.min(1,.35+attackCue.strength*.65);ctx.strokeStyle=def.color||'#fff2b1';ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(tower.x+Math.cos(attackCue.angle)*13,tower.y+Math.sin(attackCue.angle)*13);ctx.lineTo(tower.x+Math.cos(attackCue.angle)*23,tower.y+Math.sin(attackCue.angle)*23);ctx.stroke();ctx.restore();}
     if(planting?.outlineAlpha>0){ctx.beginPath();ctx.arc(tower.x,tower.y,22,0,Math.PI*2);ctx.strokeStyle=`rgba(230,255,187,${planting.outlineAlpha})`;ctx.lineWidth=2.4;ctx.stroke();}
     if (range) { ctx.beginPath(); ctx.arc(tower.x, tower.y, range, 0, Math.PI * 2); ctx.fillStyle = '#efffc31b'; ctx.fill(); ctx.strokeStyle = '#f1ffd588'; ctx.lineWidth = 1.3; ctx.stroke(); }
-    drawTowerArt(ctx, tower.type, artX, artY+(planting?.offsetY||0), { level: tower.level, branch: tower.branch ?? tower.branchChoice, color: def.color, scaleX:planting?.scaleX??1, scaleY:planting?.scaleY??1 });
+    drawTowerArt(ctx, tower.type, artX, artY+(planting?.offsetY||0), { level: tower.level, branch: tower.branch ?? tower.branchChoice, color: def.color, scaleX:planting?.scaleX??1, scaleY:planting?.scaleY??1, displayScale });
     if (isSelected) { ctx.beginPath(); ctx.arc(tower.x, tower.y, 20, 0, Math.PI * 2); ctx.setLineDash([2, 3]); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]); }
     if (tower.level > 1) { ctx.fillStyle = '#ffe28b'; ctx.beginPath(); ctx.arc(tower.x + 11, tower.y - 11, 6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#493e20'; ctx.font = '8px DM Mono, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tower.level, tower.x + 11, tower.y - 10); }
   });
@@ -638,7 +638,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
       const style=COMBINATION_LINK_STYLES[combination.id];if(!style)return;
       ctx.save();ctx.globalAlpha=.9;ctx.setLineDash(style.dash.map(length=>length/(displayScale||1)));ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2.5/(displayScale||1));ctx.beginPath();ctx.moveTo(counterpart.x,counterpart.y);ctx.lineTo(pointer.x,pointer.y);ctx.stroke();ctx.setLineDash([]);
       ctx.beginPath();ctx.arc(counterpart.x,counterpart.y,24,0,Math.PI*2);ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2/(displayScale||1));ctx.stroke();
-      drawTowerArt(ctx,selectedType,pointer.x,pointer.y,{level:1,branch:null,color:def.color,scaleX:.82,scaleY:.82});
+      drawTowerArt(ctx,selectedType,pointer.x,pointer.y,{level:1,branch:null,color:def.color,scaleX:.82,scaleY:.82,displayScale});
       const label=`${combination.name} link`;ctx.font=`bold ${Math.max(9,10/(displayScale||1))}px system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';const labelY=Math.max(12,pointer.y-31),labelWidth=ctx.measureText(label).width+10;ctx.fillStyle='#17241bec';ctx.fillRect(pointer.x-labelWidth/2,labelY-8,labelWidth,16);ctx.fillStyle=style.color;ctx.fillText(label,pointer.x,labelY);ctx.restore();
     });
   }
