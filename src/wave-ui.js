@@ -18,6 +18,11 @@ export function waveRating(budget) {
   return budget >= 45 ? 'extreme' : budget >= 30 ? 'high' : budget >= 18 ? 'medium' : 'low';
 }
 
+export function wavePreviewNeedsSelectionRefresh(previousTower,nextTower,towerDefinitions){
+  return Boolean(previousTower&&towerDefinitions[previousTower.type]?.antiAir)
+    !==Boolean(nextTower&&towerDefinitions[nextTower.type]?.antiAir);
+}
+
 function bossCue(cue, name) {
   return name ? cue.replace(/Bramble bosses/g, `${name} bosses`).replace(/Bramble boss|Bramble beetle/g, name) : cue;
 }

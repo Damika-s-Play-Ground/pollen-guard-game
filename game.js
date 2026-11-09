@@ -64,7 +64,7 @@ import { plantingSettleExpired, plantingDustParticles } from './src/planting-eff
 import { ATTACK_ANTICIPATION_SECONDS, attackAnticipation } from './src/attack-anticipation.js';
 import { defeatResponseParticles } from './src/defeat-effects.js';
 import { activeArmorFeedback, armorImpactFeedback } from './src/armor-feedback.js';
-import { buildWavePreviewView, buildWaveTimelineView, renderWavePreview, renderWaveTimeline } from './src/wave-ui.js';
+import { buildWavePreviewView, buildWaveTimelineView, renderWavePreview, renderWaveTimeline, wavePreviewNeedsSelectionRefresh } from './src/wave-ui.js';
 import { renderTowerCatalog, syncTowerCatalogSelection, SPECIALIST_TOWER_TYPES, specialistEncounterHint, STARTER_TOWER_TYPES } from './src/tower-catalog-ui.js';
 import { renderTowerInspector, renderTowerUpgradePreview, renderTowerTargetStatus } from './src/tower-inspector-ui.js';
 import { renderTowerAbilityDock } from './src/tower-ability-dock-ui.js';
@@ -448,7 +448,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     syncGuidanceVisibility(criticalWarningActive,currentPlacementError);
   }
   function selectPlacedTower(tower) {
-    measureActionFeedback('selection',()=>{applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});syncTowerCatalogSelection(document.querySelectorAll('.tower-option'));byId('prospectiveLabel').textContent='No build pick · choose a defender to place';byId('cancelPlacementBtn').style.display='none';byId('towerDetail').textContent='';if(maps[selectedMap]?.customMap)byId('specialistRoster').open=true;renderSelected();updateHud();updatePreview();revealSelectedTower();updatePlacementHint();draw();canvas.focus({preventScroll:true});announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});});
+    measureActionFeedback('selection',()=>{const previewNeedsRefresh=wavePreviewNeedsSelectionRefresh(selectedTower,tower,towersDef);applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});syncTowerCatalogSelection(document.querySelectorAll('.tower-option'));byId('prospectiveLabel').textContent='No build pick · choose a defender to place';byId('cancelPlacementBtn').style.display='none';byId('towerDetail').textContent='';if(maps[selectedMap]?.customMap)byId('specialistRoster').open=true;renderSelected();updateHud();if(previewNeedsRefresh)updatePreview();revealSelectedTower();updatePlacementHint();draw();canvas.focus({preventScroll:true});announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});});
   }
   function showSelectionChooser(candidates) {
     applyInteractionTransition('inspect-chooser');
