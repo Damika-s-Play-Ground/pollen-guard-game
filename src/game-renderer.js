@@ -185,7 +185,7 @@ export function createStaticMapCache(createCanvas) {
   };
 }
 
-function traceEnemyShape(ctx, enemy, x, y, radius) {
+export function traceEnemyShape(ctx, enemy, x, y, radius) {
   ctx.beginPath();
   if (enemy.boss) {
     for (let i = 0; i < 10; i++) {
