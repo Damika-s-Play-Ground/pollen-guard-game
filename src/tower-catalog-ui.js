@@ -13,6 +13,14 @@ export function specialistEncounterHint(groups=[]) {
   return '';
 }
 
+export function syncTowerCatalogSelection(buttons, selectedType=null) {
+  for(const button of buttons){
+    const selected=button.dataset.type===selectedType;
+    button.className=`tower-option ${selected?'active':''}`.trim();
+    button.setAttribute('aria-pressed',String(selected));
+  }
+}
+
 export function renderTowerCatalog({ document, root, towersDef, towerRoles, selectedType, filter, challenge, challengeRules = [], researchLoadout=[],relicLoadout=[], cash=Infinity,keyBindings, keyCodeLabel, getEffectiveTowerStats, towerArtSvg, types }) {
   const allowed=new Set(types||Object.keys(towersDef));
   const entries = Object.entries(towersDef).filter(([id]) => allowed.has(id)&&(filter === 'all' || towerRoles[id] === filter));

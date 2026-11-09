@@ -64,7 +64,7 @@ import { attackAnticipation } from './src/attack-anticipation.js';
 import { defeatResponseParticles } from './src/defeat-effects.js';
 import { activeArmorFeedback, armorImpactFeedback } from './src/armor-feedback.js';
 import { buildWavePreviewView, buildWaveTimelineView, renderWavePreview, renderWaveTimeline } from './src/wave-ui.js';
-import { renderTowerCatalog, SPECIALIST_TOWER_TYPES, specialistEncounterHint, STARTER_TOWER_TYPES } from './src/tower-catalog-ui.js';
+import { renderTowerCatalog, syncTowerCatalogSelection, SPECIALIST_TOWER_TYPES, specialistEncounterHint, STARTER_TOWER_TYPES } from './src/tower-catalog-ui.js';
 import { renderTowerInspector, renderTowerUpgradePreview, renderTowerTargetStatus } from './src/tower-inspector-ui.js';
 import { renderTowerAbilityDock } from './src/tower-ability-dock-ui.js';
 import { buildHudView, renderHud } from './src/hud-ui.js';
@@ -449,7 +449,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     syncGuidanceVisibility(criticalWarningActive,currentPlacementError);
   }
   function selectPlacedTower(tower) {
-    measureActionFeedback('selection',()=>{applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updateHud();updatePreview();revealSelectedTower();updatePlacementHint();draw();announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});});
+    measureActionFeedback('selection',()=>{applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});syncTowerCatalogSelection(document.querySelectorAll('.tower-option'));byId('prospectiveLabel').textContent='No build pick · choose a defender to place';byId('cancelPlacementBtn').style.display='none';byId('towerDetail').textContent='';if(maps[selectedMap]?.customMap)byId('specialistRoster').open=true;renderSelected();updateHud();updatePreview();revealSelectedTower();updatePlacementHint();draw();announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});});
   }
   function showSelectionChooser(candidates) {
     showTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement,candidates,towerDefinitions:towersDef,onSelect:selectPlacedTower,document});
