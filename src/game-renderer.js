@@ -393,6 +393,17 @@ export function shotRecoil(animation, now, launchedAt, duration = .075) {
   return Math.max(0, Math.min(1, 1 - Math.max(0, now - launchedAt) / duration));
 }
 
+function drawCosmeticParticle(ctx, particle) {
+  const alpha=Math.max(0,particle.life/particle.maxLife);
+  if(particle.impactKind){
+    const mark=['kill','armoredKill','bossKill'].includes(particle.impactKind)?particle.impactKind:projectileStyleForTower(particle.impactKind).mark;
+    drawImpactMark(ctx,mark,particle.x,particle.y,particle.r*1.5,alpha);
+    if(particle.splashRadius)drawSplashBoundary(ctx,particle.x,particle.y,particle.splashRadius,alpha);
+  }else{
+    ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=particle.color;ctx.beginPath();ctx.arc(particle.x,particle.y,particle.r,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+}
+
 export function plantingSettle(animation, now, plantedAt, duration = PLANTING_SETTLE_SECONDS) {
   if (!Number.isFinite(now) || !Number.isFinite(plantedAt) || !(duration > 0)) return null;
   const age=now-plantedAt;
@@ -521,6 +532,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     }
   }
   healerLinks.forEach(link=>{if(!link?.from||!link?.to)return;ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);ctx.setLineDash([6/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash([]);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();});
+  particles.filter(particle=>particle.depth==='under-enemies').forEach(particle=>drawCosmeticParticle(ctx,particle));
   enemies.forEach(enemy => {
     const point = enemyPosition(enemy, renderAlpha);
     const silhouette=enemySilhouetteMetrics(enemy,visualTime),shape={...enemy,radius:silhouette.radius};
@@ -577,15 +589,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if(guardian.downTimer>0){ctx.strokeStyle='#fff0d9';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(guardian.x-5,guardian.y-5);ctx.lineTo(guardian.x+5,guardian.y+5);ctx.moveTo(guardian.x+5,guardian.y-5);ctx.lineTo(guardian.x-5,guardian.y+5);ctx.stroke();}
   }
   shots.forEach(shot => drawProjectile(ctx, shot, shotPosition(shot, renderAlpha), shotAngle(shot, renderAlpha), displayScale));
-  particles.forEach(particle => {
-    const alpha = Math.max(0, particle.life / particle.maxLife);
-    if (particle.impactKind) {
-      const mark=['kill','armoredKill','bossKill'].includes(particle.impactKind)?particle.impactKind:projectileStyleForTower(particle.impactKind).mark;
-      drawImpactMark(ctx, mark, particle.x, particle.y, particle.r * 1.5, alpha);
-      if (particle.splashRadius) drawSplashBoundary(ctx, particle.x, particle.y, particle.splashRadius, alpha);
-    }
-    else { ctx.globalAlpha = alpha; ctx.fillStyle = particle.color; ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2); ctx.fill(); }
-  });
+  particles.filter(particle=>particle.depth!=='under-enemies').forEach(particle=>drawCosmeticParticle(ctx,particle));
   ctx.globalAlpha = 1;
   // Keep threat information readable even when volleys and impact particles cross the enemy.
   const bossWarningBoxes = [];
