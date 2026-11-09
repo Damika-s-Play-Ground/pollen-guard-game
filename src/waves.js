@@ -35,7 +35,11 @@ export const RIDGE_BALANCE_SCHEDULE_VERSION = PRE_RIDGE_BALANCE_SCHEDULE_VERSION
 export const PRE_OPENING_DECISION_SCHEDULE_VERSION = RIDGE_BALANCE_SCHEDULE_VERSION;
 export const OPENING_DECISION_SCHEDULE_VERSION = PRE_OPENING_DECISION_SCHEDULE_VERSION + 1;
 export const PRE_ARMOR_DEMONSTRATION_SCHEDULE_VERSION = OPENING_DECISION_SCHEDULE_VERSION;
-export const WAVE_SCHEDULE_VERSION = PRE_ARMOR_DEMONSTRATION_SCHEDULE_VERSION + 1;
+export const ARMOR_DEMONSTRATION_SCHEDULE_VERSION = PRE_ARMOR_DEMONSTRATION_SCHEDULE_VERSION + 1;
+export const PRE_GENTLE_OPENING_SCHEDULE_VERSION = ARMOR_DEMONSTRATION_SCHEDULE_VERSION;
+export const GENTLE_OPENING_SCHEDULE_VERSION = PRE_GENTLE_OPENING_SCHEDULE_VERSION + 1;
+export const WAVE_SCHEDULE_VERSION = GENTLE_OPENING_SCHEDULE_VERSION;
+export const SUPPORTED_WAVE_SCHEDULE_VERSIONS = Object.freeze(Array.from({length:WAVE_SCHEDULE_VERSION+1},(_,version)=>version));
 
 const threatWeights = { mite: 1, zip: 1.3, armored: 3, shield: 2.5, splitter: 2.4, flyer: 2.2, boss: 18, healer:3, carrier:4, burrower:2.3 };
 const enemyBounties = { mite: 2, zip: 3, armored: 6, shield: 5, splitter: 5, flyer: 6, crumb: 1, boss: 35, healer:5, carrier:6, burrower:5 };
@@ -245,6 +249,14 @@ export const ARMOR_DEMONSTRATION_CAMPAIGN_WAVES=Object.freeze({
   ...OPENING_DECISION_CAMPAIGN_WAVES,
   meadow:armoredDemonstrationMeadow
 });
+const gentleOpeningMeadow=replaceAuthoredWave(ARMOR_DEMONSTRATION_CAMPAIGN_WAVES.meadow,1,
+  'A slower line of fragile mites gives your first defender time to work.',[
+    {type:'mite',count:10,interval:.78}
+  ]);
+export const GENTLE_OPENING_CAMPAIGN_WAVES=Object.freeze({
+  ...ARMOR_DEMONSTRATION_CAMPAIGN_WAVES,
+  meadow:gentleOpeningMeadow
+});
 
 const customWaveSchedules=new Map();
 export function registerCustomWaveSchedules(mapId,schedules){
@@ -255,7 +267,8 @@ export function registerCustomWaveSchedules(mapId,schedules){
 export function waveSchedulesForMap(mapId = 'meadow', version = WAVE_SCHEDULE_VERSION) {
   if(customWaveSchedules.has(mapId))return customWaveSchedules.get(mapId);
   if (version === LEGACY_WAVE_SCHEDULE_VERSION) return AUTHORED_WAVES;
-  const schedules = version >= WAVE_SCHEDULE_VERSION ? ARMOR_DEMONSTRATION_CAMPAIGN_WAVES :
+  const schedules = version >= GENTLE_OPENING_SCHEDULE_VERSION ? GENTLE_OPENING_CAMPAIGN_WAVES :
+    version >= ARMOR_DEMONSTRATION_SCHEDULE_VERSION ? ARMOR_DEMONSTRATION_CAMPAIGN_WAVES :
     version >= OPENING_DECISION_SCHEDULE_VERSION ? OPENING_DECISION_CAMPAIGN_WAVES :
     version >= PRE_OPENING_DECISION_SCHEDULE_VERSION ? BALANCED_CAMPAIGN_WAVES :
       version >= AIR_ROUTE_SCHEDULE_VERSION ? AIR_ROUTE_CAMPAIGN_WAVES :
