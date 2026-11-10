@@ -1,5 +1,12 @@
 [
   "./",
+  "./assets/fonts/dm-mono-medium.ttf",
+  "./assets/fonts/dm-mono-regular.ttf",
+  "./assets/fonts/dm-sans-bold.ttf",
+  "./assets/fonts/dm-sans-extrabold.ttf",
+  "./assets/fonts/dm-sans-medium.ttf",
+  "./assets/fonts/dm-sans-regular.ttf",
+  "./assets/fonts/dm-sans-semibold.ttf",
   "./favicon.svg",
   "./game.js",
   "./index.html",
