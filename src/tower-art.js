@@ -5,7 +5,7 @@ const line = (points, stroke = '#263b2c', width = 1.4) => ({ kind: 'line', point
 export const CORE_TOWER_TYPES=Object.freeze(['sprout','dew','puff','thorn']);
 // Core defenders need a stronger silhouette at phone canvas scale. This is a
 // presentation-only transform; placement, collision and combat radii stay put.
-export function towerArtScale(type) { return CORE_TOWER_TYPES.includes(type)?1.3:1; }
+export function towerArtScale(type) { return CORE_TOWER_TYPES.includes(type)?1.5:1; }
 
 // Original, small-scale meadow forms. Coordinates share one 32px viewBox so the
 // catalog, inspector and battlefield all render the same authored shapes.
