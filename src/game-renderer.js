@@ -101,15 +101,25 @@ function drawBiomeAccents(ctx, map, path) {
 function drawRouteLandmarks(ctx, path, pathLength) {
   const start = path[0], next = path[1], dx = next[0] - start[0], dy = next[1] - start[1], length = Math.hypot(dx, dy) || 1;
   const gateX = start[0] - dy / length * 24, gateY = start[1] + dx / length * 24;
-  ctx.fillStyle = '#354e35'; ctx.beginPath(); ctx.arc(gateX, gateY, 13, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#f3e7bf'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gateX - 6, gateY + 5); ctx.lineTo(gateX - 6, gateY - 6); ctx.lineTo(gateX + 6, gateY - 6); ctx.lineTo(gateX + 6, gateY + 5); ctx.moveTo(gateX - 8, gateY - 6); ctx.lineTo(gateX, gateY - 10); ctx.lineTo(gateX + 8, gateY - 6); ctx.stroke();
-  ctx.fillStyle = '#fff4d5'; ctx.font = 'bold 7px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('IN', gateX, gateY + 1);
+  ctx.fillStyle = '#765b3dcc'; ctx.beginPath(); ctx.ellipse(gateX, gateY + 2, 15, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#273522'; ctx.beginPath(); ctx.ellipse(gateX, gateY + 1, 7, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#d5bf86'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(gateX, gateY + 1, 7, Math.PI, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#c2a16a';
+  for(const [dxStone,dyStone,radius] of [[-10,-2,2.5],[9,-3,2.2],[-7,7,2],[8,7,2.4]]){
+    ctx.beginPath();ctx.arc(gateX+dxStone,gateY+dyStone,radius,0,Math.PI*2);ctx.fill();
+  }
+  ctx.fillStyle = '#fff4d5'; ctx.font = 'bold 7px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('IN', gateX, gateY + 14);
 
   const goal = pointOnPath(path, pathLength);
   ctx.fillStyle = '#557e48'; ctx.beginPath(); ctx.arc(goal.x, goal.y, 28, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#eff2be'; ctx.beginPath(); ctx.arc(goal.x, goal.y, 20, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#876c3f'; ctx.beginPath(); ctx.ellipse(goal.x, goal.y - 1, 6, 9, -.25, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#486b3b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(goal.x, goal.y - 8); ctx.lineTo(goal.x + 1, goal.y - 13); ctx.lineTo(goal.x + 8, goal.y - 16); ctx.moveTo(goal.x + 2, goal.y - 12); ctx.lineTo(goal.x - 5, goal.y - 16); ctx.stroke();
+  const seedY=goal.y-4;
+  ctx.fillStyle = '#a67745'; ctx.strokeStyle = '#755434'; ctx.lineWidth = 1.2; ctx.beginPath();
+  ctx.moveTo(goal.x,seedY+8);ctx.bezierCurveTo(goal.x-4,seedY+5,goal.x-11,seedY-1,goal.x-9,seedY-6);
+  ctx.bezierCurveTo(goal.x-7,seedY-11,goal.x-2,seedY-9,goal.x,seedY-5);
+  ctx.bezierCurveTo(goal.x+3,seedY-11,goal.x+9,seedY-9,goal.x+10,seedY-4);
+  ctx.bezierCurveTo(goal.x+11,seedY+1,goal.x+4,seedY+7,goal.x,seedY+8);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.strokeStyle = '#486b3b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(goal.x, goal.y - 7); ctx.lineTo(goal.x + 1, goal.y - 13); ctx.lineTo(goal.x + 8, goal.y - 16); ctx.moveTo(goal.x + 2, goal.y - 12); ctx.lineTo(goal.x - 5, goal.y - 16); ctx.stroke();
   ctx.fillStyle = '#334d31'; ctx.font = 'bold 7px sans-serif'; ctx.fillText('GOAL', goal.x, goal.y + 14);
 }
 
