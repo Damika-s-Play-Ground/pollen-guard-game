@@ -19,6 +19,9 @@ const COMBINATION_LINK_STYLES = Object.freeze({
 });
 
 const enemyRoleGlyphSprites = new WeakMap();
+// drawBattlefield is synchronous; reuse these per-enemy wrappers between frames
+// instead of allocating one short-lived object per enemy on every render.
+const enemyVisualScratch = [];
 
 function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize) {
   const document = ctx.canvas?.ownerDocument;
@@ -586,7 +589,15 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   // Threat silhouettes follow projectiles and particles; health and warning overlays follow the bodies.
   shots.forEach(shot=>drawProjectile(ctx,shot,shotPosition(shot,renderAlpha),shotAngle(shot,renderAlpha),displayScale));
   particles.forEach(particle=>drawCosmeticParticle(ctx,particle));
-  const enemyVisuals = enemies.map(enemy => ({enemy,point:enemyPosition(enemy,renderAlpha),silhouette:enemySilhouetteMetrics(enemy,visualTime)}));
+  const enemyVisuals = enemyVisualScratch;
+  enemyVisuals.length = enemies.length;
+  for (let index = 0; index < enemies.length; index++) {
+    const enemy = enemies[index];
+    const visual = enemyVisuals[index] || (enemyVisuals[index] = { enemy:null, point:null, silhouette:null });
+    visual.enemy = enemy;
+    visual.point = enemyPosition(enemy,renderAlpha);
+    visual.silhouette = enemySilhouetteMetrics(enemy,visualTime);
+  }
   enemyVisuals.forEach(({enemy,point,silhouette}) => {
     const altitude=enemy.flying?silhouette.radius*.85:silhouette.float,bodyY=point.y-altitude;
     const causality=impactCausalityForEnemy(enemy);
