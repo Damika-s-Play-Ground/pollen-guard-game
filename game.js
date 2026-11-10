@@ -71,6 +71,7 @@ import { renderTowerAbilityDock } from './src/tower-ability-dock-ui.js';
 import { buildHudView, renderHud } from './src/hud-ui.js';
 import { createHudScreenController } from './src/hud-screen-controller.js';
 import { createHudResourceAnnouncements } from './src/hud-announcements.js';
+import { createPauseFocusController } from './src/pause-focus.js';
 import { buildRunDebrief, createCombatPerformance, registerCombatTower } from './src/combat-performance.js';
 import { renderResultsScreen } from './src/results-ui.js';
 import { createConfirmationFlow } from './src/confirmation-flow.js';
@@ -253,6 +254,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const runIsRunning=()=>runState.basePhase==='running'||(runState.basePhase==='user-paused'&&runState.resumePhase==='running');
   const runIsActivelyRunning=()=>runState.phase==='running';
   const runIsPaused=()=>runState.basePhase==='user-paused';
+  const pauseFocus=createPauseFocusController({resumeButton:byId('pauseResumeBtn'),fallbackFocus:canvas,document});
   const runIsOver=()=>runState.basePhase==='won'||runState.basePhase==='lost';
   function transitionRun(event) { runState=transitionRunState(runState,event); if(waveTransitionController)syncAutoStart(); }
   const confirmationFlow=createConfirmationFlow({
@@ -1253,9 +1255,13 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
 
   function toggleGardenPause(){
     measureActionFeedback('pause',()=>{
+      const wasPaused=runIsPaused();
       transitionRun({type:'TOGGLE_USER_PAUSE'});
+      const isPaused=runIsPaused();
       playtestRecorder.record(runIsPaused()?'pause':'resume');
-      byId('pauseMenu').hidden=!runIsPaused();
+      byId('pauseMenu').hidden=!isPaused;
+      if(!wasPaused&&isPaused)pauseFocus.enter(document.activeElement);
+      else if(wasPaused&&!isPaused)pauseFocus.exit();
       updateHud();updateGatePanel();saveRun();
     });
   }

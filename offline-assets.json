@@ -62,6 +62,7 @@
   "./src/mission-preparation.js",
   "./src/offline-support.js",
   "./src/path-geometry.js",
+  "./src/pause-focus.js",
   "./src/placement-ui.js",
   "./src/planting-effects.js",
   "./src/playtest-recorder.js",
