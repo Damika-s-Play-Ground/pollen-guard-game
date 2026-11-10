@@ -48,9 +48,9 @@ const previewEnemyNames = {
 
 const counterHints = Object.freeze({
   mite:'Sprout Slinger', zip:'Dew Bell', armored:'Puff Pod or Thorn Beacon · Piercing Point', shield:'Briar Patch',
-  splitter:'Puff Pod', flyer:'Kite Keeper or Thorn Beacon', healer:'Focus the Moss Tender or use area damage',
-  carrier:'Focus the Shield Carrier or use area damage', burrower:'Puff Pod when it surfaces',
-  boss:'Layered coverage; keep pressure on the boss'
+  splitter:'Puff Pod', flyer:'Kite Keeper or Thorn Beacon', healer:'Briar Patch for groups; set Support priority on the Moss Tender',
+  carrier:'Briar Patch for groups; set Support priority on the Carrier', burrower:'Puff Pod when it surfaces',
+  boss:'Thorn Beacon + Puff Pod; keep pressure on the boss'
 });
 
 function upcomingThreat(queue, waveNumber, schedules, names, scheduleVersion) {
