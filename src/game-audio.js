@@ -43,7 +43,7 @@ export const ATTACK_CUE_PROFILES = Object.freeze({
 });
 
 export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX_AUDIO_VOICES }) {
-  let context = null, masterGain = null, ambient = null;
+  let context = null, masterGain = null, effectsBus = null, ambient = null;
   const activeVoices = new Set();
   const voiceMeta = new Map();
   const voiceLimit=Number.isFinite(maxVoices)?Math.max(1,Math.floor(maxVoices)):MAX_AUDIO_VOICES;
@@ -56,6 +56,9 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
       context = new AudioContextCtor();
       masterGain = context.createGain();
       masterGain.connect(context.destination);
+      effectsBus = context.createGain();
+      effectsBus.gain.value = Math.max(0,Math.min(100,Number(getSettings().effectsVolume)||0))/100;
+      effectsBus.connect(masterGain);
     }
     if (context.state === 'suspended') context.resume()?.catch?.(() => {});
     return context;
@@ -65,6 +68,13 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
     if (!context || !masterGain) return;
     const settings = getSettings();
     masterGain.gain.setTargetAtTime(masterOutputLevel(settings), context.currentTime, .01);
+  }
+
+  function updateEffects() {
+    if(!context||!effectsBus)return;
+    const settings=getSettings();
+    const level=Number.isFinite(settings.effectsVolume)?Math.max(0,Math.min(100,settings.effectsVolume))/100:0;
+    effectsBus.gain.setTargetAtTime(level,context.currentTime,.01);
   }
 
   function stealVoice(priority) {
@@ -108,6 +118,7 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
     const audio = ensureContext();
     if (!audio) return 0;
     updateMaster();
+    updateEffects();
     let started = 0;
     for (const note of notes) {
       const ordinaryLimit=voiceLimit-reservedVoices;
@@ -123,7 +134,7 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
       gain.gain.setValueAtTime(.001, startAt);
       gain.gain.exponentialRampToValueAtTime(volume * (note.level ?? 1), startAt + attack);
       gain.gain.exponentialRampToValueAtTime(.001, startAt + duration);
-      oscillator.connect(gain); gain.connect(masterGain);
+      oscillator.connect(gain); gain.connect(effectsBus);
       oscillator.onended = () => { activeVoices.delete(oscillator);voiceMeta.delete(oscillator);sync(); };
       activeVoices.add(oscillator);
       voiceMeta.set(oscillator,{gain,priority,category:'effect',startedAt:audio.currentTime});
@@ -138,6 +149,7 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
       const settings = getSettings();
       if (settings.soundEnabled && settings.masterVolume > 0 && settings.musicVolume > 0) ensureContext();
       updateMaster();
+      updateEffects();
       if (!context) return;
       if (!settings.soundEnabled || !settings.masterVolume || !settings.musicVolume) {
         if (ambient) {
@@ -187,7 +199,7 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
       if(!context)ensureContext();
       duckAmbient(duration);
     }
-    try { return startNotes(notes, MAX_EFFECT_VOICE_GAIN * (settings.effectsVolume / 100),priority); }
+    try { return startNotes(notes, MAX_EFFECT_VOICE_GAIN,priority); }
     catch { return 0; }
   }
 
