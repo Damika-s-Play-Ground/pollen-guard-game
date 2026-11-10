@@ -2,6 +2,7 @@ import { masteryChallengeText } from './mission-mastery.js';
 import { earnedResearchPoints, RESEARCH_NODES, RESEARCH_PATHS, normalizeResearchState } from './research-tree.js';
 import { RELICS, RELIC_REWARDS, normalizeRelicState, RELIC_LOADOUT_SIZE } from './relics.js';
 import { CAMPAIGN_MISSIONS } from './campaign.js';
+import { gardenKitConflictForResearch, gardenKitConflictForRelic } from './garden-kit.js';
 export const ACHIEVEMENT_DEFINITIONS = [
   ['first-pop','First bloom','Scatter your first mite.'],
   ['builder','Master gardener','Place eight defenders in one run.'],
@@ -89,15 +90,16 @@ export function renderResearchTree({ document, root, profile, canRespec=true, re
     const description=document.createElement('p');description.textContent=path.summary;group.append(heading,description);
     for(const node of RESEARCH_NODES.filter(item=>item.path===path.id)){
       const unlocked=state.unlocked.includes(node.id),active=state.loadout[path.id]===node.id;
-      const relicConflict=active?null:relicLoadout.map(id=>RELICS.find(relic=>relic.id===id)).find(relic=>relic?.type===node.effect?.type);
+      const conflict=active?null:gardenKitConflictForResearch(node.id,relicLoadout,Object.values(state.loadout));
+      const conflictName=conflict?.kind==='research'?conflict.researchName:conflict?.relicName;
       const prior=RESEARCH_NODES.find(item=>item.path===path.id&&item.tier===node.tier-1);
       const available=unlocked||(!prior||state.unlocked.includes(prior.id))&&state.unlocked.length<points;
       const card=document.createElement('article');card.className=`research-node${active?' equipped':''}${unlocked?' researched':''}`;
       const title=document.createElement('h5');title.textContent=`${node.tier}. ${node.name}`;
-      const copy=document.createElement('p');copy.id=`research-description-${node.id}`;copy.textContent=`${node.description}${relicConflict?` Garden Kit conflict: ${node.effect.type} already uses ${relicConflict.name}; unequip that relic before equipping this research choice.`:''}`;
+      const copy=document.createElement('p');copy.id=`research-description-${node.id}`;copy.textContent=`${node.description}${conflict?` Garden Kit conflict: ${node.effect.type} already uses ${conflictName}; unequip that ${conflict.kind==='research'?'research choice':'relic'} before equipping this research choice.`:''}`;
       const button=document.createElement('button');button.type='button';button.dataset.researchNode=node.id;
-      button.disabled=!canRespec||!available||Boolean(relicConflict&&unlocked);
-      button.textContent=active?'Unequip':relicConflict?unlocked?`Role in kit · ${relicConflict.name}`:'Research · 1 point (relic stays)':unlocked?'Equip':available?'Research · 1 point':prior?`Locked · research ${prior.name}`:'Locked · earn a point';
+      button.disabled=!canRespec||!available||Boolean(conflict&&unlocked);
+      button.textContent=active?'Unequip':conflict?unlocked?`Role in kit · ${conflictName}`:'Research · 1 point (stays unlocked)':unlocked?'Equip':available?'Research · 1 point':prior?`Locked · research ${prior.name}`:'Locked · earn a point';
       button.setAttribute('aria-pressed',String(active));
       button.setAttribute('aria-label',`${active?'Equipped':unlocked?'Equip':'Research'} ${node.name}`);
       button.setAttribute('aria-describedby',copy.id);
@@ -125,18 +127,18 @@ export function renderRelicLoadout({document,root,profile,canRefit=true,research
     const owned=unlocked.has(relic.id),equipped=state.loadout.includes(relic.id);
     const blockedBy=state.loadout.filter(id=>relic.incompatible.includes(id)||RELICS.find(item=>item.id===id)?.incompatible.includes(relic.id));
     const conflict=blockedBy[0];
-    const researchConflict=relic.type?RESEARCH_NODES.find(node=>researchLoadout.includes(node.id)&&node.effect?.type===relic.type):null;
+    const researchConflict=gardenKitConflictForRelic(relic.id,researchLoadout);
     const full=state.loadout.length>=RELIC_LOADOUT_SIZE&&!equipped;
     const card=document.createElement('article');card.className=`relic-card${equipped?' equipped':''}${owned?' unlocked':''}`;
     const title=document.createElement('h4');title.textContent=relic.name;
-    const detail=document.createElement('p');detail.id=`relic-description-${relic.id}`;detail.textContent=`${relic.description}${relic.incompatible.length?` Field-kit incompatibility: ${relic.incompatible.map(id=>RELICS.find(item=>item.id===id)?.name||id).join(', ')} cannot be equipped alongside it.`:''}${researchConflict?` Garden Kit conflict: ${relic.type} already uses ${researchConflict.name}; unequip that research choice before equipping this relic.`:''}`;
+    const detail=document.createElement('p');detail.id=`relic-description-${relic.id}`;detail.textContent=`${relic.description}${relic.incompatible.length?` Field-kit incompatibility: ${relic.incompatible.map(id=>RELICS.find(item=>item.id===id)?.name||id).join(', ')} cannot be equipped alongside it.`:''}${researchConflict?` Garden Kit conflict: ${relic.type} already uses ${researchConflict.researchName}; unequip that research choice before equipping this relic.`:''}`;
     const reward=document.createElement('small');
     const rewardMission=RELIC_REWARDS.find(item=>item.relicId===relic.id);
     const missionName=CAMPAIGN_MISSIONS.find(item=>item.id===rewardMission?.missionId)?.name||'campaign clear';
     reward.textContent=owned?'Unlocked':`Unlock: clear ${missionName}`;
     const button=document.createElement('button');button.type='button';button.dataset.relic=relic.id;
     button.disabled=!canRefit||!owned||Boolean(conflict)||full&&!equipped||Boolean(researchConflict&&!equipped);
-    button.textContent=equipped?'Unequip':researchConflict?`Role in kit · ${researchConflict.name}`:conflict?`Incompatible with ${RELICS.find(item=>item.id===conflict)?.name||'equipped relic'}`:full?'Unequip a relic first':owned?'Equip relic':'Locked';
+    button.textContent=equipped?'Unequip':researchConflict?`Role in kit · ${researchConflict.researchName}`:conflict?`Incompatible with ${RELICS.find(item=>item.id===conflict)?.name||'equipped relic'}`:full?'Unequip a relic first':owned?'Equip relic':'Locked';
     button.setAttribute('aria-pressed',String(equipped));
     button.setAttribute('aria-label',`${equipped?'Unequip':'Equip'} ${relic.name}`);
     button.setAttribute('aria-describedby',detail.id);

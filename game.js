@@ -32,7 +32,7 @@ import { primaryImpactCausalityTarget } from './src/impact-causality.js';
 import { handleJournalNavigationKey, handoffJournal, setJournalDestination } from './src/journal-navigation.js';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, CHALLENGE_RULES, difficultyFor, normalizeChallengeRules } from './src/challenge-rules.js';
 import { createRunState, transitionRunState, runStateSaveFlags, runStateStopsClock } from './src/run-state.js';
-import { clearResearchLoadout, deselectResearchNode, earnedResearchPoints, normalizeResearchState, purchaseResearchNode, researchLoadoutIds, researchStartingAdjustment, selectResearchNode } from './src/research-tree.js';
+import { clearResearchLoadout, deselectResearchNode, earnedResearchPoints, normalizeResearchState, purchaseResearchNode, RESEARCH_NODES, researchLoadoutIds, researchStartingAdjustment, selectResearchNode } from './src/research-tree.js';
 import { equipRelic, unequipRelic, normalizeRelicState, relicLoadoutIds } from './src/relics.js';
 import { gardenKitConflictForRelic, gardenKitConflictForResearch, reconcileGardenKitLoadouts } from './src/garden-kit.js';
 import { calculatePathLength, distanceToPath } from './src/path-geometry.js';
@@ -197,7 +197,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   });
   let profile = profileStorage.loadProfile();
   const reconciledGardenKit=reconcileGardenKitLoadouts(profile.research,profile.relics,profile.completedMissions,earnedResearchPoints(profile));
-  let gardenKitMigrationPending=reconciledGardenKit.removedRelics.length>0;
+  let gardenKitMigrationPending=reconciledGardenKit.removedRelics.length>0||reconciledGardenKit.removedResearch.length>0;
   profile={...profile,research:reconciledGardenKit.research,relics:reconciledGardenKit.relics};
   let researchLoadout=researchLoadoutIds(profile.research);
   let relicLoadout=relicLoadoutIds(profile.relics);
@@ -1297,24 +1297,25 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('journalDestinations').addEventListener('keydown',event=>handleJournalNavigationKey(event,byId('journalDestinations').parentElement));
   byId('researchTree').addEventListener('click',event=>{
     if(!researchCanRespec()){setToast('Research can only be refit between missions in a standard Classic garden.');return;}
-    let next;
+    let next,purchasedUnequipped=false;
     const respecButton=event.target.closest('[data-research-respec]');
     let focusSelector='[data-research-respec]';
     if(respecButton)next=clearResearchLoadout(profile.research,earnedResearchPoints(profile));
     else {
       const button=event.target.closest('[data-research-node]');if(!button)return;
       const nodeId=button.dataset.researchNode,unlocked=profile.research.unlocked.includes(nodeId),active=researchLoadout.includes(nodeId);
-      const conflict=active?null:gardenKitConflictForResearch(nodeId,relicLoadout);
-      if(conflict){setToast(`${conflict.relicName} is already in this kit for ${conflict.role}. Unequip it first to use ${conflict.researchName}.`);return;}
+      const conflict=active?null:gardenKitConflictForResearch(nodeId,relicLoadout,researchLoadout);
+      const nodeDefinition=RESEARCH_NODES.find(node=>node.id===nodeId),priorPathChoice=nodeDefinition&&profile.research.loadout[nodeDefinition.path];
+      if(conflict&&unlocked){const existingName=conflict.kind==='research'?conflict.researchName:conflict.relicName;setToast(`${existingName} is already in this kit for ${conflict.role}. Unequip it first to use ${conflict.kind==='research'?conflict.conflictingResearchName:conflict.researchName}.`);return;}
       let result=active?deselectResearchNode(profile.research,nodeId,earnedResearchPoints(profile)):unlocked?selectResearchNode(profile.research,nodeId,earnedResearchPoints(profile)):purchaseResearchNode(profile.research,nodeId,earnedResearchPoints(profile));
-      if(result.ok&&conflict&&!unlocked)result=deselectResearchNode(result.state,nodeId,earnedResearchPoints(profile));
+      if(result.ok&&conflict&&!unlocked){result=deselectResearchNode(result.state,nodeId,earnedResearchPoints(profile));if(result.ok&&priorPathChoice)result=selectResearchNode(result.state,priorPathChoice,earnedResearchPoints(profile));purchasedUnequipped=result.ok;}
       if(!result.ok){setToast(result.reason);return;}next=result.state;focusSelector=`[data-research-node="${nodeId}"]`;
     }
     profile={...profile,research:normalizeResearchState(next,earnedResearchPoints(profile))};researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];persistProfile();
     if(runIsOver()||(!wave&&!towers.length&&!hasPendingSavedGarden()))resetRun();renderResearch();
     const requestedFocus=byId('researchTree').querySelector(focusSelector);
     (requestedFocus&&!requestedFocus.disabled?requestedFocus:byId('researchTree').querySelector('[data-research-node]:not(:disabled)')||byId('guideCloseBtn')).focus({preventScroll:true});
-    setToast('Research loadout saved. These sidegrades apply to the next fresh garden.');
+    setToast(purchasedUnequipped?'Research unlocked but left unequipped because this tower role already has a Garden Kit modifier. Unequip that choice before equipping this one.':'Research loadout saved. These sidegrades apply to the next fresh garden.');
   });
   byId('relicLoadout').addEventListener('click',event=>{
     if(!relicRulesEligible()||hasPendingSavedGarden()&& !runIsOver()||!runIsOver()&&(wave||towers.length||runIsActivelyRunning())){setToast('Relics can only be refit between missions. Resume or explicitly restart this garden first.');return;}
