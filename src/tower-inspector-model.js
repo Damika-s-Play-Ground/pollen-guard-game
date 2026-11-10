@@ -119,6 +119,10 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
   const quote = towerUpgradeQuote(selectedTower, def);
   const cost = level === 3 || !hasBranchChoice ? 0 : quote.cost;
   const shortage = Math.max(0, cost - cash);
+  const tutorialBlocksUpgrade=tutorialActive&&(tutorialTask!==3||selectedTower.id!==tutorialTowerId);
+  const hasUpgradeableAction=level<3&&hasBranchChoice;
+  const upgradeFocusable=hasUpgradeableAction&&shortage>0&&!tutorialBlocksUpgrade;
+  const upgradeDisabled=!hasUpgradeableAction||shortage>0||tutorialBlocksUpgrade;
   const investment = quote.investment;
   const remaining = Math.max(0, (selectedTower.abilityReadyAt || 0) - gameTime);
   const usedThisWave = selectedTower.type === 'sunflower' && selectedTower.abilityUsedWave === wave;
@@ -175,9 +179,10 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
     previewMotion:animation,
     selectedBranch: selectedTower.branchChoice,
     onChooseBranch,
-    upgradeText: level === 3 ? 'MAX LEVEL' : level === 1 && !hasBranchChoice ? 'Choose branch' : `Upgrade · ${cost} ✿`,
+    upgradeText: level === 3 ? 'MAX LEVEL' : level === 1 && !hasBranchChoice ? 'Choose branch' : `Upgrade · ${cost} ✿${shortage ? ` · Need ${shortage} more` : ''}`,
     upgradeTitle: level === 3 ? 'This defender is fully upgraded.' : !hasBranchChoice ? 'Choose a branch to preview its upgrade.' : `${def.branches[chosenBranch][0]}: ${def.branches[chosenBranch][1]}. Upgrade cost: ${cost} petals${shortage ? ` · Need ${shortage} more` : ''}.`,
-    upgradeDisabled: level >= 3 || (level === 1 && !hasBranchChoice) || cash < cost || (tutorialActive && (tutorialTask !== 3 || selectedTower.id !== tutorialTowerId)),
+    upgradeDisabled,
+    upgradeFocusable,
     contextUpgradeText: level === 3 ? 'Max level' : !hasBranchChoice ? 'Choose branch' : shortage ? `Upgrade · ${cost} ✿ · Need ${shortage} more` : `Upgrade · ${cost} ✿`,
     targetMode: selectedTower.targetMode || 'First',
     targetModeDisabled: Boolean(def.income) || (tutorialActive && (tutorialTask !== 2 || selectedTower.id !== tutorialTowerId)),

@@ -2,7 +2,7 @@ export function buildHudView({
   cash, lives, popped, wave, lifeCapacity, limit, mapName, challengeLabel,
   running, paused, gameOver, selectedTower, roster, previousTowerKey, nextTowerKey,
   intermission, tutorialActive, tutorialTask, bloomCharge, hasEnemies, speed,
-  resumeDisabled, upgradeDisabled
+  resumeDisabled, upgradeDisabled, upgradeFocusable=false
 }) {
   const finished = gameOver;
   const runStatus = finished ? 'ended' : paused ? 'paused' : running ? 'in progress' : 'planning';
@@ -31,7 +31,8 @@ export function buildHudView({
     bloomStatus: gameOver ? 'Run ended.' : !hasEnemies ? 'Wait for enemies on the trail.' : bloomCharge < 100 ? `Charge by popping enemies · ${100 - bloomCharge} more needed.` : 'Ready · affects every enemy on the trail.',
     snareStatus: gameOver ? 'Run ended.' : cash < 45 ? `Need ${45 - cash} more petals.` : !hasEnemies ? 'Wait for enemies on the trail.' : 'Ready · stuns every enemy on the trail.',
     resumeDisabled,
-    upgradeDisabled
+    upgradeDisabled,
+    upgradeFocusable
   };
 }
 
@@ -64,5 +65,9 @@ export function renderHud(document, view) {
   const resume = byId('resumeBtn');
   if (resume.disabled !== view.resumeDisabled) resume.disabled = view.resumeDisabled;
   const upgrade = byId('upgradeBtn');
-  if (view.upgradeDisabled !== undefined && upgrade.disabled !== view.upgradeDisabled) upgrade.disabled = view.upgradeDisabled;
+  if (view.upgradeDisabled !== undefined) {
+    const disabled=Boolean(view.upgradeDisabled&&!view.upgradeFocusable);
+    if(upgrade.disabled!==disabled)upgrade.disabled=disabled;
+    upgrade.setAttribute('aria-disabled',String(Boolean(view.upgradeDisabled)));
+  }
 }

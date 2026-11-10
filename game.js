@@ -884,6 +884,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function updateHud() {
     const running=runIsRunning(),gameOver=runIsOver(),paused=runIsPaused();
     const upgradeDisabled=selectedTower?selectedTower.level>=3||(selectedTower.level===1&&selectedTower.branchChoice==null)||cash<selectedUpgradeCost(selectedTower)||(tutorialPractice.active&&(tutorialPractice.task!==3||selectedTower.id!==tutorialPractice.towerId)):undefined;
+    const upgradeFocusable=Boolean(selectedTower&&selectedTower.level<3&&selectedTower.branchChoice!=null&&cash<selectedUpgradeCost(selectedTower)&&!(tutorialPractice.active&&(tutorialPractice.task!==3||selectedTower.id!==tutorialPractice.towerId)));
     const view=buildHudView({
       cash,lives,popped,wave,lifeCapacity:config().lives+(guardianMode==='ward'?2:0),limit:config().limit,
       mapName:maps[selectedMap].name,challengeLabel:challengeDisplayLabel(),
@@ -893,7 +894,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       previousTowerKey:keyCodeLabel(keyBindings.previousTower),nextTowerKey:keyCodeLabel(keyBindings.nextTower),
       intermission,tutorialActive:tutorialPractice.active,tutorialTask:tutorialPractice.task,
       bloomCharge,hasEnemies:enemies.length>0,speed,
-      resumeDisabled:!hasSavedRun(),upgradeDisabled
+      resumeDisabled:!hasSavedRun(),upgradeDisabled,upgradeFocusable
     });
     presentHud({
       view,cash,lives,seedObjective,

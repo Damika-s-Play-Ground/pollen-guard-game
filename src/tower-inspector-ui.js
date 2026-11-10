@@ -83,8 +83,10 @@ export function renderTowerInspector({ document, canvasHost, view }) {
 
   byId('upgradeBtn').textContent = view.upgradeText;
   byId('upgradeBtn').title = view.upgradeTitle;
-  byId('upgradeBtn').disabled = view.upgradeDisabled;
-  byId('contextUpgradeBtn').disabled = view.upgradeDisabled;
+  byId('upgradeBtn').disabled = view.upgradeDisabled&&!view.upgradeFocusable;
+  byId('upgradeBtn').setAttribute('aria-disabled',String(Boolean(view.upgradeDisabled)));
+  byId('contextUpgradeBtn').disabled = view.upgradeDisabled&&!view.upgradeFocusable;
+  byId('contextUpgradeBtn').setAttribute('aria-disabled',String(Boolean(view.upgradeDisabled)));
   byId('contextUpgradeBtn').textContent = view.contextUpgradeText;
   byId('contextUpgradeBtn').title = view.upgradeTitle;
   byId('targetModeSelect').value = view.targetMode;
