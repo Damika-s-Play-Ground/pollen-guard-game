@@ -3,6 +3,7 @@ const MILESTONES=new Set(['placement','launch']);
 export function createFirstActionStudyMetrics({now=()=>performance.now()}={}) {
   let readyAt=null;
   const milestones=new Map();
+  const invalidPlacementTimes=[];
 
   function markReady() {
     if(readyAt===null){const time=now();if(Number.isFinite(time))readyAt=time;}
@@ -15,10 +16,17 @@ export function createFirstActionStudyMetrics({now=()=>performance.now()}={}) {
     milestones.set(milestone,time-readyAt);return true;
   }
 
+  function recordInvalidPlacement() {
+    if(readyAt===null)return false;
+    const time=now();if(!Number.isFinite(time)||time<readyAt)return false;
+    invalidPlacementTimes.push(time-readyAt);return true;
+  }
+
   function summary() {
     const placementMs=milestones.get('placement'),launchMs=milestones.get('launch');
     return {
       ready:readyAt!==null,
+      invalidPlacementMs:invalidPlacementTimes.map(Math.round),
       placementMs:placementMs===undefined?null:Math.round(placementMs),
       placementWithin30s:placementMs===undefined?null:placementMs<=30000,
       launchMs:launchMs===undefined?null:Math.round(launchMs),
@@ -26,6 +34,6 @@ export function createFirstActionStudyMetrics({now=()=>performance.now()}={}) {
     };
   }
 
-  function clear(){readyAt=null;milestones.clear();}
-  return {markReady,record,summary,clear};
+  function clear(){readyAt=null;milestones.clear();invalidPlacementTimes.length=0;}
+  return {markReady,record,recordInvalidPlacement,summary,clear};
 }

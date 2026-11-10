@@ -1090,8 +1090,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function placeTower(point) {
     return measureActionFeedback('placement',()=>{
     if(tutorialPractice.active&&(tutorialPractice.task!==0||selectedType!=='sprout')){setToast('Practice placement uses one Sprout Slinger first.');return;}
-    const def=towersDef[selectedType];if(!def)return;const error=placementError(point);if(error){setToast(error);updatePlacementHint({...point,inside:true});return;}
-    const result=performPlayerAction('placeTower',{towerId:nextEntityId,towerType:selectedType,x:point.x,y:point.y});if(!result.ok){setToast(result.reason);return;}
+    const def=towersDef[selectedType];if(!def)return;const error=placementError(point);if(error){firstActionStudyMetrics?.recordInvalidPlacement();setToast(error);updatePlacementHint({...point,inside:true});return;}
+    const result=performPlayerAction('placeTower',{towerId:nextEntityId,towerType:selectedType,x:point.x,y:point.y});if(!result.ok){firstActionStudyMetrics?.recordInvalidPlacement();setToast(result.reason);return;}
     firstActionStudyMetrics?.record('placement');
     const plantedAt=performance.now()/1000;towerPlantingAt.set(result.tower.id,plantedAt);if(shouldEmitParticles(uiSettings))particles=appendCosmeticParticles(particles,plantingDustParticles(result.tower.x,result.tower.y,plantedAt));selectedTower=repeatBuild?null:result.tower;placementCandidate=null;byId('placementConfirm').hidden=true;if(!repeatBuild)selectedType=null;if(mobileLayout.matches)setDefenderSheetOpen(false);canvas.focus({preventScroll:true});playCue('place');if(towers.length>=8)unlock('builder');setToast(`${def.name} planted.`);if(firstActionCoachVisible)recordFirstActionCoachAction('place');advanceTutorialPractice('place',{towerId:result.tower.id,type:result.tower.type});updateHud();renderTowerOptions();renderSelected();updatePlacementHint();if(!mobileLayout.matches&&selectedTower)revealSelectedTower();saveRun();draw();
     });
