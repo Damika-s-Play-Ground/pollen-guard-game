@@ -169,6 +169,20 @@ export function createProfileStorage(storageProvider, { mapIds = [], achievement
       try { backup=storageProvider().getItem(PROFILE_BACKUP_KEY); } catch {}
       return {status:profileLoadState,primary,backup};
     },
+    restoreProfileRecovery(bundle) {
+      if(!isRecord(bundle)||bundle.format!=='pollen-guard-profile-recovery-v1')throw new Error('This is not a Pollen Guard profile recovery file.');
+      const candidates=[bundle.primary,bundle.backup];
+      let recovered=null;
+      for(const raw of candidates){
+        if(typeof raw!=='string')continue;
+        try { const parsed=JSON.parse(raw);if(isRecord(parsed)){recovered=normalizeProfile(parsed,{mapIds,achievementIds});break;} } catch {}
+      }
+      if(!recovered)throw new Error('No readable profile was found in that recovery file.');
+      const current=this.loadProfile();
+      this.saveProfile(current);
+      this.saveProfile(recovered);
+      return recovered;
+    },
     loadSettings: () => read(UI_SETTINGS_STORAGE_KEY, DEFAULT_UI_SETTINGS, normalizeUiSettings),
     saveSettings(value) {
       try { write(UI_SETTINGS_STORAGE_KEY, value); return true; }

@@ -1477,9 +1477,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('playtestInspectBtn').onclick=()=>{const events=playtestRecorder.inspect();playtestStatus.textContent=events.length?`${events.length} events: ${events.map(event=>`${event.type} at ${event.at}`).join('; ')}`:'No recorded events.';};
   byId('playtestDeleteBtn').onclick=()=>{playtestRecorder.clear();refreshPlaytestStatus();};
   byId('playtestExportBtn').onclick=()=>{const blob=new Blob([JSON.stringify(playtestRecorder.export(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='pollen-guard-playtest.json';link.click();URL.revokeObjectURL(url);playtestStatus.textContent='Playtest file exported after your request.';};
-  const profileRecoveryStatus=byId('profileRecoveryStatus'),exportProfileRecoveryBtn=byId('exportProfileRecoveryBtn');
+  const profileRecoveryStatus=byId('profileRecoveryStatus'),exportProfileRecoveryBtn=byId('exportProfileRecoveryBtn'),importProfileRecoveryLabel=byId('importProfileRecoveryLabel'),importProfileRecoveryInput=byId('importProfileRecoveryInput');
   if(profileStorage.profileLoadState()!=='ok'){
-    profileRecoveryStatus.hidden=false;exportProfileRecoveryBtn.hidden=false;
+    profileRecoveryStatus.hidden=false;exportProfileRecoveryBtn.hidden=false;importProfileRecoveryLabel.hidden=false;
     profileRecoveryStatus.textContent=profileStorage.profileLoadState()==='recovered-backup'
       ?'The profile could not be read. The previous saved profile was recovered; export recovery data before continuing.'
       :'The profile and its recovery copy could not be read. The original data is preserved for export.';
@@ -1488,6 +1488,19 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const blob=new Blob([JSON.stringify({format:'pollen-guard-profile-recovery-v1',...profileStorage.profileRecoveryData()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;link.download='pollen-guard-profile-recovery.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),0);
     profileRecoveryStatus.textContent='Profile recovery data exported. Keep this file somewhere safe.';
+  };
+  importProfileRecoveryInput.onchange=async()=>{
+    const file=importProfileRecoveryInput.files?.[0];if(!file)return;
+    let bundle;
+    try { bundle=JSON.parse(await file.text()); }
+    catch { profileRecoveryStatus.textContent='That recovery file could not be read as JSON.';return; }
+    if(!window.confirm('Restore a profile from this recovery file? Your current profile will be kept as the recovery copy.'))return;
+    try {
+      profileStorage.restoreProfileRecovery(bundle);
+      window.location.reload();
+    } catch(error) {
+      profileRecoveryStatus.textContent=error instanceof Error?error.message:'The profile could not be restored.';
+    }
   };
   window.addEventListener('pagehide',()=>playtestRecorder.record('quit'),{once:true});
   refreshPlaytestStatus();
