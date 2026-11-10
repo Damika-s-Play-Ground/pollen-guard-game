@@ -1,15 +1,15 @@
 export const RELIC_LOADOUT_SIZE = 2;
 
 export const RELICS = Object.freeze([
-  { id:'amber-lens', name:'Amber Lens', type:'sprout', description:'Sprout Slinger range +8%; attack interval +10%.', incompatible:['thorn-seal'], effect:{rangeMultiplier:1.08,rateMultiplier:1.10} },
-  { id:'dewdrop-phial', name:'Dewdrop Phial', type:'dew', description:'Dew Bell slow lasts +0.3s; attack interval +8%.', incompatible:['ember-jar'], effect:{slow:0.3,rateMultiplier:1.08} },
-  { id:'bursting-husk', name:'Bursting Husk', type:'puff', description:'Puff Pod splash radius +12; attack interval +10%.', incompatible:[], effect:{splash:12,rateMultiplier:1.10} },
-  { id:'thorn-seal', name:'Thorn Seal', type:'thorn', description:'Thorn Beacon armor break +1; range −6%.', incompatible:['amber-lens'], effect:{armorBreak:1,rangeMultiplier:0.94} },
-  { id:'sunmark-kernel', name:'Sunmark Kernel', type:'sunflower', description:'Sunflower earns +5 petals per clear; Golden Seeds link radius −8%.', incompatible:['windglass'], effect:{income:5,allyLinkRadiusMultiplier:0.92} },
-  { id:'windglass', name:'Windglass', type:'gust', description:'Kite Keeper push strength +20%; attack interval +10%.', incompatible:['sunmark-kernel'], effect:{pushMultiplier:1.20,rateMultiplier:1.10} },
-  { id:'ember-jar', name:'Ember Jar', type:'ember', description:'Ember burn lasts +0.4s; attack interval +10%.', incompatible:['dewdrop-phial'], effect:{burn:0.4,rateMultiplier:1.10} },
-  { id:'briar-loop', name:'Briar Loop', type:'briar', description:'Briar poison lasts +0.4s; range −5%.', incompatible:[], effect:{poison:0.4,rangeMultiplier:0.95} },
-  { id:'beacon-bell', name:'Beacon Bell', type:'pollenBeacon', description:'Pollen Beacon reaches +10 units farther; its interval buff is weaker (−10% instead of −12%).', incompatible:[], effect:{rangeBonus:10,buffMultiplier:0.90} }
+  { id:'amber-lens', name:'Amber Lens', type:'sprout', description:'Benefit: Sprout Slinger range +8%. Tradeoff: attack interval +10% (fires more slowly).', incompatible:['thorn-seal'], effect:{rangeMultiplier:1.08,rateMultiplier:1.10} },
+  { id:'dewdrop-phial', name:'Dewdrop Phial', type:'dew', description:'Benefit: Dew Bell slow lasts +0.3s. Tradeoff: attack interval +8% (fires more slowly).', incompatible:['ember-jar'], effect:{slow:0.3,rateMultiplier:1.08} },
+  { id:'bursting-husk', name:'Bursting Husk', type:'puff', description:'Benefit: Puff Pod splash radius +12. Tradeoff: attack interval +10% (fires more slowly).', incompatible:[], effect:{splash:12,rateMultiplier:1.10} },
+  { id:'thorn-seal', name:'Thorn Seal', type:'thorn', description:'Benefit: Thorn Beacon breaks +1 armor. Tradeoff: range −6%.', incompatible:['amber-lens'], effect:{armorBreak:1,rangeMultiplier:0.94} },
+  { id:'sunmark-kernel', name:'Sunmark Kernel', type:'sunflower', description:'Benefit: Sunflower earns +5 petals per clear. Tradeoff: Golden Seeds link radius −8%.', incompatible:['windglass'], effect:{income:5,allyLinkRadiusMultiplier:0.92} },
+  { id:'windglass', name:'Windglass', type:'gust', description:'Benefit: Kite Keeper push strength +20%. Tradeoff: attack interval +10% (fires more slowly).', incompatible:['sunmark-kernel'], effect:{pushMultiplier:1.20,rateMultiplier:1.10} },
+  { id:'ember-jar', name:'Ember Jar', type:'ember', description:'Benefit: Ember burn lasts +0.4s. Tradeoff: attack interval +10% (fires more slowly).', incompatible:['dewdrop-phial'], effect:{burn:0.4,rateMultiplier:1.10} },
+  { id:'briar-loop', name:'Briar Loop', type:'briar', description:'Benefit: Briar poison lasts +0.4s. Tradeoff: range −5%.', incompatible:[], effect:{poison:0.4,rangeMultiplier:0.95} },
+  { id:'beacon-bell', name:'Beacon Bell', type:'pollenBeacon', description:'Benefit: Pollen Beacon reaches +10 units farther. Tradeoff: its attack-speed buff falls from 12% to 10%.', incompatible:[], effect:{rangeBonus:10,buffMultiplier:0.90} }
 ]);
 
 export const RELIC_REWARDS = Object.freeze([

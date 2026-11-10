@@ -8,18 +8,18 @@ export const RESEARCH_PATHS = Object.freeze([
 ]);
 
 export const RESEARCH_NODES = Object.freeze([
-  { id:'sprout-survey', path:'trailcraft', tier:1, name:'Surveying Seeds', description:'Sprout Slinger range +10%; attack interval +8%.', effect:{ type:'sprout', rangeMultiplier:1.10, rate:1.08 } },
-  { id:'thorn-overlook', path:'trailcraft', tier:2, name:'Thorn Overlook', description:'Thorn Beacon range +10%; attack interval +10%.', effect:{ type:'thorn', rangeMultiplier:1.10, rate:1.10 } },
-  { id:'kite-tailwind', path:'trailcraft', tier:3, name:'Measured Tailwind', description:'Kite Keeper range +9%; attack interval +10%.', effect:{ type:'gust', rangeMultiplier:1.09, rate:1.10 } },
-  { id:'ember-bellows', path:'trailcraft', tier:4, name:'Ember Bellows', description:'Ember burn lasts +0.25s; attack interval +10%.', effect:{ type:'ember', burn:0.25, rate:1.10 } },
-  { id:'dew-deepening', path:'fieldstudy', tier:1, name:'Deepening Dew', description:'Dew Bell slow lasts +0.25s; attack interval +9%.', effect:{ type:'dew', slow:0.25, rate:1.09 } },
-  { id:'puff-canopy', path:'fieldstudy', tier:2, name:'Canopy Bursts', description:'Puff Pod splash radius +10; attack interval +10%.', effect:{ type:'puff', splash:10, rate:1.10 } },
-  { id:'briar-tangle', path:'fieldstudy', tier:3, name:'Long Tangle', description:'Briar poison lasts +0.35s; attack interval +12%.', effect:{ type:'briar', poison:0.35, rate:1.12 } },
-  { id:'thorn-fracture', path:'fieldstudy', tier:4, name:'Fracture Study', description:'Thorn Beacon armor break +1; range −8%.', effect:{ type:'thorn', armorBreak:1, rangeMultiplier:0.92 } },
-  { id:'sunflower-yield', path:'stewardship', tier:1, name:'Rich Loam', description:'Sunflower earns +4 petals per clear; Golden Seeds link radius −10%.', effect:{ type:'sunflower', income:4, allyLinkRadius:0.90 } },
-  { id:'beacon-network', path:'stewardship', tier:2, name:'Beacon Network', description:'Pollen Beacon reaches +16 units farther; its attack-speed buff is slightly weaker (−9% instead of −12%).', effect:{ type:'pollenBeacon', rangeBonus:16, buffMultiplier:0.91 } },
-  { id:'compost-lattice', path:'stewardship', tier:3, name:'Compost Lattice', description:'Compost Trap reaches +12 units farther, but can trigger one fewer time per run.', effect:{ type:'compostTrap', rangeBonus:12, triggerLimit:-1 } },
-  { id:'seed-reserve', path:'stewardship', tier:4, name:'Risky Seed Reserve', description:'Start with +14 petals and −1 life.', effect:{ type:'start', cash:14, lives:-1 } }
+  { id:'sprout-survey', path:'trailcraft', tier:1, name:'Surveying Seeds', description:'Benefit: Sprout Slinger range +10%. Tradeoff: attack interval +8% (fires more slowly).', effect:{ type:'sprout', rangeMultiplier:1.10, rate:1.08 } },
+  { id:'thorn-overlook', path:'trailcraft', tier:2, name:'Thorn Overlook', description:'Benefit: Thorn Beacon range +10%. Tradeoff: attack interval +10% (fires more slowly).', effect:{ type:'thorn', rangeMultiplier:1.10, rate:1.10 } },
+  { id:'kite-tailwind', path:'trailcraft', tier:3, name:'Measured Tailwind', description:'Benefit: Kite Keeper range +9%. Tradeoff: attack interval +10% (fires more slowly).', effect:{ type:'gust', rangeMultiplier:1.09, rate:1.10 } },
+  { id:'ember-bellows', path:'trailcraft', tier:4, name:'Ember Bellows', description:'Benefit: Ember burn lasts +0.25s. Tradeoff: attack interval +10% (fires more slowly).', effect:{ type:'ember', burn:0.25, rate:1.10 } },
+  { id:'dew-deepening', path:'fieldstudy', tier:1, name:'Deepening Dew', description:'Benefit: Dew Bell slow lasts +0.25s. Tradeoff: attack interval +9% (fires more slowly).', effect:{ type:'dew', slow:0.25, rate:1.09 } },
+  { id:'puff-canopy', path:'fieldstudy', tier:2, name:'Canopy Bursts', description:'Benefit: Puff Pod splash radius +10. Tradeoff: attack interval +10% (fires more slowly).', effect:{ type:'puff', splash:10, rate:1.10 } },
+  { id:'briar-tangle', path:'fieldstudy', tier:3, name:'Long Tangle', description:'Benefit: Briar poison lasts +0.35s. Tradeoff: attack interval +12% (fires more slowly).', effect:{ type:'briar', poison:0.35, rate:1.12 } },
+  { id:'thorn-fracture', path:'fieldstudy', tier:4, name:'Fracture Study', description:'Benefit: Thorn Beacon breaks +1 armor. Tradeoff: range −8%.', effect:{ type:'thorn', armorBreak:1, rangeMultiplier:0.92 } },
+  { id:'sunflower-yield', path:'stewardship', tier:1, name:'Rich Loam', description:'Benefit: Sunflower earns +4 petals per clear. Tradeoff: Golden Seeds link radius −10%.', effect:{ type:'sunflower', income:4, allyLinkRadius:0.90 } },
+  { id:'beacon-network', path:'stewardship', tier:2, name:'Beacon Network', description:'Benefit: Pollen Beacon reaches +16 units farther. Tradeoff: its attack-speed buff falls from 12% to 9%.', effect:{ type:'pollenBeacon', rangeBonus:16, buffMultiplier:0.91 } },
+  { id:'compost-lattice', path:'stewardship', tier:3, name:'Compost Lattice', description:'Benefit: Compost Trap reaches +12 units farther. Tradeoff: one fewer trigger per run.', effect:{ type:'compostTrap', rangeBonus:12, triggerLimit:-1 } },
+  { id:'seed-reserve', path:'stewardship', tier:4, name:'Risky Seed Reserve', description:'Benefit: start with +14 petals. Tradeoff: start with −1 life.', effect:{ type:'start', cash:14, lives:-1 } }
 ]);
 
 const NODES_BY_ID = new Map(RESEARCH_NODES.map(node=>[node.id,node]));
