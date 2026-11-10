@@ -1,5 +1,12 @@
 const rounded = value => Math.round((Number(value) || 0) * 10) / 10;
 
+export function buildResultRecord({customMap=false,profileSaved=true,challengeBoardId=null,bestWave={}}={}){
+  if(customMap)return 'Custom maps do not award campaign bests or challenge scores.';
+  if(!profileSaved)return 'This result could not be saved on this device. Free browser storage and try again.';
+  if(challengeBoardId)return 'Challenge result saved as a local personal best on this device. Challenge codes do not verify scores.';
+  return `Personal best: wave ${Math.max(0,...Object.values(bestWave||{}))}`;
+}
+
 export function renderRunDebrief(container, report, document) {
   container.replaceChildren();
   const heading = document.createElement('h3'); heading.textContent = 'Combat report'; container.append(heading);

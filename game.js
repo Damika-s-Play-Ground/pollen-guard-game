@@ -74,7 +74,7 @@ import { createHudScreenController } from './src/hud-screen-controller.js';
 import { createHudResourceAnnouncements } from './src/hud-announcements.js';
 import { createPauseFocusController } from './src/pause-focus.js';
 import { buildRunDebrief, createCombatPerformance, registerCombatTower } from './src/combat-performance.js';
-import { renderResultsScreen } from './src/results-ui.js';
+import { buildResultRecord, renderResultsScreen } from './src/results-ui.js';
 import { createConfirmationFlow } from './src/confirmation-flow.js';
 import { activateUpgrade, branchCommitConfirmation, createUpgradeActivationGate } from './src/upgrade-interaction.js';
 import { createActionFeedbackMetrics } from './src/action-feedback-metrics.js';
@@ -317,7 +317,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       debrief:byId('runDebrief')
     }, {
       won, wave, popped, petals:Math.floor(cash),
-      record:maps[selectedMap]?.customMap?'Custom maps do not award campaign bests or challenge scores.':!profileSaved?'This result could not be saved on this device. Free browser storage and try again.':challengeBoardId?'Challenge result saved as a local personal best on this device. Challenge codes do not verify scores.':`Personal best: wave ${Math.max(0,...Object.values(profile.bestWave||{}))}`,
+      record:buildResultRecord({customMap:Boolean(maps[selectedMap]?.customMap),profileSaved,challengeBoardId,bestWave:profile.bestWave}),
       report:buildRunDebrief(combatPerformance,{mapName:maps[selectedMap].name,challengeLabel:challengeDisplayLabel(),won})
     }, document);
     const mission=CAMPAIGN_MISSION_BY_ID[selectedMap];
