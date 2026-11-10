@@ -1,4 +1,4 @@
-export function bindUiSettingsControls({ controls, settings, saveSettings, applySettings, redraw, syncAudio, setSoundEnabled }) {
+export function bindUiSettingsControls({ controls, settings, saveSettings, applySettings, redraw, syncAudio, syncAutoStart = () => {}, setSoundEnabled }) {
   controls.sound.onclick = () => {
     settings.sound = !settings.sound;
     saveSettings();
@@ -22,4 +22,5 @@ export function bindUiSettingsControls({ controls, settings, saveSettings, apply
   controls.palette.onchange = event => { settings.palette = event.target.value; saveSettings(); applySettings(); redraw(); };
   controls.textSize.onchange = event => { settings.textSize = event.target.value; saveSettings(); applySettings(); };
   controls.showAirRoute.onchange = event => { settings.showAirRoute = event.target.checked; saveSettings(); redraw(); applySettings(); };
+  controls.autoStartDelay.onchange = event => { settings.autoStartDelaySeconds = Number(event.target.value); saveSettings(); syncAutoStart(); };
 }

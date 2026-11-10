@@ -24,6 +24,7 @@ export function createWaveTransitionController({ getContext = () => ({}), schedu
     countdown.update({
       eligible: phase === 'countdown',
       key,
+      ...(Number.isSafeInteger(context.preparationSeconds)?{delayMs:context.preparationSeconds*1000}:{}),
       validate: () => waveTransitionPhase(getContext()) === 'countdown'
     });
     return phase;

@@ -7,7 +7,7 @@ export function autoStartIsEligible({ enabled, wave, running, paused, hidden, ga
 }
 
 export function createAutoStartCountdown({ schedule = setTimeout, cancel = clearTimeout, now = Date.now, delayMs = AUTO_START_DELAY_MS, onLaunch = () => {}, onCountdown = () => {} } = {}) {
-  let timeoutId = null, tickId = null, deadline = 0, runKey = null, stillEligible = () => false;
+  let timeoutId = null, tickId = null, deadline = 0, runKey = null, stillEligible = () => false, activeDelayMs=delayMs;
   const clear = () => {
     if (timeoutId !== null) cancel(timeoutId);
     if (tickId !== null) cancel(tickId);
@@ -23,21 +23,22 @@ export function createAutoStartCountdown({ schedule = setTimeout, cancel = clear
     if (seconds > 0) tickId = schedule(updateCountdown, Math.min(250, Math.max(1, deadline - now())));
     else tickId = null;
   };
-  const update = ({ eligible, key, validate = () => eligible } = {}) => {
+  const update = ({ eligible, key, validate = () => eligible, delayMs:requestedDelayMs=activeDelayMs } = {}) => {
+    if(Number.isFinite(requestedDelayMs)&&requestedDelayMs>0&&requestedDelayMs!==activeDelayMs){activeDelayMs=requestedDelayMs;clear();runKey=null;}
     if (!eligible) { stop(); return false; }
     if (timeoutId !== null && runKey === key) { stillEligible = validate; return true; }
     clear();
     runKey = key;
     stillEligible = validate;
-    deadline = now() + delayMs;
-    onCountdown(Math.ceil(delayMs / 1000));
+    deadline = now() + activeDelayMs;
+    onCountdown(Math.ceil(activeDelayMs / 1000));
     tickId = schedule(updateCountdown, 250);
     timeoutId = schedule(() => {
       clear();
       runKey = null;
       if (stillEligible()) onLaunch();
       onCountdown(null);
-    }, delayMs);
+    }, activeDelayMs);
     return true;
   };
   return { update, cancel: stop };

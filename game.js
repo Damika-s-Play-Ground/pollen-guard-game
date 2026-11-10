@@ -289,7 +289,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
         masterVolume:byId('masterVolume'), masterVolumeValue:byId('masterVolumeValue'),
         musicVolume:byId('musicVolume'), musicVolumeValue:byId('musicVolumeValue'),
         effectsVolume:byId('effectsVolume'), effectsVolumeValue:byId('effectsVolumeValue'),
-        compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'), showAirRoute:byId('showAirRouteToggle')
+        compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'), showAirRoute:byId('showAirRouteToggle'), autoStartDelay:byId('autoStartDelaySelect')
       }
     });
   }
@@ -905,19 +905,21 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function autoStartContext(){return {enabled:uiSettings.autoStart,wave,running:runIsRunning(),paused:runIsPaused()||runStateStopsClock(runState),hidden:document.hidden,
     gameOver:runIsOver(),intermission,mandatoryChoice:endlessChoiceRequired({challenge,wave,endlessChoiceWave}),held:uiSettings.autoStartHold,
+    preparationSeconds:uiSettings.autoStartDelaySeconds,
     modalOpen:[...document.querySelectorAll('dialog')].some(dialog=>dialog.open),tutorialActive:tutorialPractice.active};}
   function renderAutoStartControls(){
     const autoButton=byId('autoStartBtn'),holdButton=byId('holdNextBtn'),status=byId('autoStartStatus');
     if(!autoButton||!holdButton||!status)return;
     const context=autoStartContext(),eligible=waveTransitionPhase(context)==='countdown';
     autoButton.textContent=autoStartCountdownSeconds!==null&&eligible?`Auto · ${autoStartCountdownSeconds}s`:`Auto · ${uiSettings.autoStart?'On':'Off'}`;
+    autoButton.title=`Automatically launch later waves after a ${uiSettings.autoStartDelaySeconds}-second real-time countdown`;
     autoButton.setAttribute('aria-pressed',String(uiSettings.autoStart));
     holdButton.hidden=!uiSettings.autoStart;
     holdButton.textContent=uiSettings.autoStartHold?'Release hold':'Hold next';
     holdButton.setAttribute('aria-pressed',String(uiSettings.autoStartHold));
     holdButton.disabled=!uiSettings.autoStart||wave===0||context.running||context.paused||context.gameOver||context.mandatoryChoice||context.modalOpen||context.tutorialActive;
     status.textContent=autoStartCountdownSeconds!==null&&eligible?`Next wave launches in ${autoStartCountdownSeconds} seconds.`:
-      uiSettings.autoStartHold?'Auto is on; the next wave is held for manual launch.':uiSettings.autoStart?'Auto is on; later waves wait five seconds after a clear.':'';
+      uiSettings.autoStartHold?'Auto is on; the next wave is held for manual launch.':uiSettings.autoStart?`Auto is on; later waves wait ${uiSettings.autoStartDelaySeconds} seconds after a clear.`:'';
   }
   function syncAutoStart(){
     const key=`${selectedMap}:${challenge}:${wave}:${endlessChoiceWave}`;
@@ -1422,9 +1424,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       masterVolume:byId('masterVolume'), masterVolumeValue:byId('masterVolumeValue'),
       musicVolume:byId('musicVolume'), musicVolumeValue:byId('musicVolumeValue'),
       effectsVolume:byId('effectsVolume'), effectsVolumeValue:byId('effectsVolumeValue'),
-      compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'), showAirRoute:byId('showAirRouteToggle')
+      compact:byId('compactToggle'), palette:byId('paletteSelect'), textSize:byId('textSizeSelect'), showAirRoute:byId('showAirRouteToggle'), autoStartDelay:byId('autoStartDelaySelect')
     }, settings:uiSettings, saveSettings:saveUiSettings, applySettings:()=>{applyUiSettings();updatePreview();},
-    redraw:draw, syncAudio:()=>gameAudio.sync(),
+    redraw:draw, syncAudio:()=>gameAudio.sync(), syncAutoStart,
     setSoundEnabled:enabled=>{soundOn=enabled;gameAudio.sync();if(enabled)playCue('soundOn');}
   });
   byId('keyboardBindings').onclick=event=>{const button=event.target.closest('[data-key-binding]');if(!button)return;pendingKeyBinding=button.dataset.keyBinding;byId('keyboardBindingStatus').textContent=`Press a key for ${buildKeyboardActionLabels(towersDef)[pendingKeyBinding]}. Escape cancels.`;button.focus({preventScroll:true});};

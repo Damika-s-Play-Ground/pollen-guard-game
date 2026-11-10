@@ -14,7 +14,7 @@ export const DEFAULT_UI_SETTINGS = Object.freeze({
   animation: 'full', shake: true, flashes: true, compact: false, palette: 'garden', showAirRoute: false,
   textSize: 'normal', tutorialSeen: false, tutorialInProgress: false, tutorialReturnToSavedRun: false, sound: false,
   masterVolume: 80, musicVolume: 20, effectsVolume: 70,
-  keyBindings: DEFAULT_KEY_BINDINGS, spellLoadout: DEFAULT_SPELL_LOADOUT, autoStart: false, autoStartHold: false
+  keyBindings: DEFAULT_KEY_BINDINGS, spellLoadout: DEFAULT_SPELL_LOADOUT, autoStart: false, autoStartHold: false, autoStartDelaySeconds:5
 });
 
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -93,6 +93,7 @@ export function normalizeUiSettings(value) {
     keyBindings: normalizeKeyBindings(source.keyBindings),
     autoStart: typeof source.autoStart === 'boolean' ? source.autoStart : DEFAULT_UI_SETTINGS.autoStart,
     autoStartHold: source.autoStart === true && source.autoStartHold === true,
+    autoStartDelaySeconds: [5,10,15].includes(source.autoStartDelaySeconds) ? source.autoStartDelaySeconds : DEFAULT_UI_SETTINGS.autoStartDelaySeconds,
     sound: typeof source.sound === 'boolean' ? source.sound : DEFAULT_UI_SETTINGS.sound,
     masterVolume: Number.isFinite(source.masterVolume) ? Math.round(Math.max(0, Math.min(100, source.masterVolume))) : DEFAULT_UI_SETTINGS.masterVolume,
     musicVolume: Number.isFinite(source.musicVolume) ? Math.round(Math.max(0, Math.min(100, source.musicVolume))) : DEFAULT_UI_SETTINGS.musicVolume,
