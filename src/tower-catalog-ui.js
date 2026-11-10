@@ -13,6 +13,11 @@ export function specialistEncounterHint(groups=[]) {
   return '';
 }
 
+export function sunflowerPurchaseForecast({ cost, income }) {
+  if(!Number.isFinite(cost)||cost<=0||!Number.isFinite(income)||income<=0)return null;
+  return `Next clear: +${income} base petals · about ${Math.ceil(cost/income)} clears to repay ${cost} petals from harvest alone.`;
+}
+
 export function syncTowerCatalogSelection(buttons, selectedType=null) {
   for(const button of buttons){
     const selected=button.dataset.type===selectedType;
@@ -56,6 +61,11 @@ export function renderTowerCatalog({ document, root, towersDef, towerRoles, sele
     const copy = document.createElement('span'); copy.className = 'tower-copy';
     const name = document.createElement('b'); name.textContent = tower.name;
     const role = document.createElement('small'); role.textContent = STARTER_TOWER_ROLE_LABELS[id] || (tower.supportStructure ? supportRole : tower.role);role.className=STARTER_TOWER_ROLE_LABELS[id]?'tower-role-label':'';copy.append(name, role);
+    if(id==='sunflower'){
+      const forecast=document.createElement('small');forecast.className='tower-income-forecast';forecast.textContent=sunflowerPurchaseForecast({cost:tower.cost,income:effective.income});
+      const conditional=document.createElement('small');conditional.className='tower-income-conditional';conditional.textContent='Separate: shared wave rewards, Golden Harvest, and Golden Seeds haste for nearby Sprouts.';
+      copy.append(forecast,conditional);
+    }
     const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = `${tower.cost} ✿`;
     const shortage=document.createElement('small');shortage.className='affordability-shortfall';shortage.dataset.cost=String(tower.cost);shortage.hidden=shortfall===0;shortage.textContent=shortfall?`Need ${shortfall} more`:'';cost.append(shortage);
     button.append(icon, copy, cost);

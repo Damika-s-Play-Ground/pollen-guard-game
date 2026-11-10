@@ -176,6 +176,9 @@ body[data-palette="high-contrast"]{--text-cream:#fff;--text-muted:#e4eadf;--reso
 .defender-sheet .starter-tower-list .cost{font-size:calc(16px * var(--ui-text-scale))}
 .defender-sheet .starter-tower-list .affordability-shortfall{font-size:calc(14px * var(--ui-text-scale))}
 .tower-copy small.tower-role-label,.branch-choice small{font-size:calc(14px * var(--ui-text-scale))}
+.tower-income-forecast,.tower-income-conditional{display:block;margin-top:3px;line-height:1.35;white-space:normal}
+.tower-income-forecast{color:var(--resource-amber);font-variant-numeric:tabular-nums}
+.tower-income-conditional{color:var(--text-muted)}
 .defender-sheet .starter-tower-list .tower-copy small.tower-role-label{font-size:calc(14px * var(--ui-text-scale))}
 .selected-context>#contextUpgradeBtn{font-size:calc(16px * var(--ui-text-scale))}
 .threat-wave,.threat-route,.threat-counter,.selected-context>#contextTitle,.placement-hint,.affordability-shortfall{font-size:calc(14px * var(--ui-text-scale))}
