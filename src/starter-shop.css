@@ -114,6 +114,9 @@
     align-items: center;
     font-size: calc(10px * var(--ui-text-scale));
     line-height: 1.15;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .defender-sheet .starter-tower-list .affordability-shortfall {
