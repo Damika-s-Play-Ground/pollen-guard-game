@@ -217,3 +217,10 @@ body[data-palette="high-contrast"]{--text-cream:#fff;--text-muted:#e4eadf;--reso
 .pause-menu-actions{display:flex;flex-wrap:wrap;gap:8px}
 .pause-menu-actions button{min-height:44px}
 @media(max-width:860px){.pause-menu{margin:8px 0}.pause-menu-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.pause-menu-actions button{font-size:calc(12px * var(--ui-text-scale));white-space:normal}}
+@media(max-width:350px){
+  .map-footer:has(>.selected-context:not([hidden])){padding-top:0}
+  .map-footer:has(>.selected-context:not([hidden]))>.map-legend{display:none}
+  .map-footer>.selected-context:not([hidden]){order:-1;margin:0}
+  .context-branch small{font-size:calc(10px * var(--ui-text-scale));line-height:1.15;white-space:normal}
+  .context-branch .affordability-shortfall{font-size:calc(9px * var(--ui-text-scale));white-space:normal}
+}
