@@ -1247,7 +1247,16 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       visuals.statusTicks.forEach(([enemy,ticks])=>{if(ticks.some(tick=>tick.channel==='heat')){const p=enemyPosition(enemy);burst(p.x,p.y,'#ff9b4d',1);}});
       visuals.impacts.forEach(([shot,position])=>burst(position.x,position.y,shot.color,shot.splash?8:3,shot.splitProjectile?'split':shot.sourceTowerType,shot.splash||0));
       if(result.lost)finishRun(false);
-      if(result.waveClear){transitionRun({type:'WAVE_CLEAR'});updateGatePanel();const {bonus,income}=result.waveClear;queueRewardFeedback([{amount:bonus,x:canvas.width*.5,y:canvas.height*.35}]);checkProgress();byId('waveInfo').textContent=`Wave ${wave} cleared · +${bonus} petals${income?` (${income} from Sunflowers)`:''}. The fixed wave reward is ready for your next plan.`;setToast('Wave bonus harvested!');playCue('waveClear');if(challenge!=='endless'&&wave>=config().limit)finishRun(true);if(!runIsOver())saveRun();updatePreview();}
+      if(result.waveClear){
+        transitionRun({type:'WAVE_CLEAR'});updateGatePanel();
+        const {bonus,income}=result.waveClear,terminalClear=challenge!=='endless'&&wave>=config().limit;
+        queueRewardFeedback([{amount:bonus,x:canvas.width*.5,y:canvas.height*.35}]);checkProgress();
+        if(terminalClear)finishRun(true);
+        else{
+          setToast('Wave bonus harvested!',900);playCue('waveClear');saveRun();updatePreview();
+          byId('waveInfo').textContent=`Wave ${wave} cleared · +${bonus} petals${income?` (${income} from Sunflowers)`:''}. The fixed wave reward is ready for your next plan.`;
+        }
+      }
       if(leakAlert)setToast(leakAlert);
       updateHud();
     }
