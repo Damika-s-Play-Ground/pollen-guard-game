@@ -50,7 +50,7 @@ import { ENEMY_INTEL, enemyIntelFor, firstEncounterIntel } from './src/enemy-int
 import { buildEnemyBriefingView, filterEnemyGuide as filterEnemyGuideCards, renderEnemyBriefing, renderEnemyGuide } from './src/enemy-guide-ui.js';
 import { buildPlacementHintView, renderPlacementHint } from './src/placement-ui.js';
 import { placementPreviewRange as calculatePlacementPreviewRange } from './src/placement-preview.js';
-import { resolveGuidanceOwner, guidanceVisibility } from './src/guidance-arbitration.js';
+import { applyGuidanceVisibility, resolveGuidanceOwner, guidanceVisibility } from './src/guidance-arbitration.js';
 import { pathCoveragePercent } from './src/route-coverage.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
 import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutorialPracticeState, finishTutorialPracticeState, resetTutorialPracticeState } from './src/tutorial-progress.js';
@@ -400,9 +400,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       document.querySelectorAll('.tutorial-focus').forEach(element=>element.classList.remove('tutorial-focus'));
       canvas.parentElement.classList.remove('tutorial-focus-map');
     }
-    hint.hidden=!visibility.placementHint;
-    if(mapNoteGuidance)mapNoteGuidance.hidden=!visibility.mapNote;
-    byId('placementConfirm').hidden=visibility.criticalWarning||!placementCandidate;
+    applyGuidanceVisibility({visibility,coach,placementHint:hint,mapNoteGuidance,placementConfirm:byId('placementConfirm'),placementCandidate});
   }
   function syncInteractionPresentation(){
     const mode=deriveInteractionMode({selectedType,selectedTower,placementCandidate,aimedSpellId,guardianMoveActive,abilityPreview,selectionChooserOpen:!byId('selectionChooser').hidden});

@@ -25,3 +25,10 @@ export function guidanceVisibility(owner) {
     criticalWarning:owner==='warning'
   };
 }
+
+export function applyGuidanceVisibility({ visibility, coach, placementHint, mapNoteGuidance, placementConfirm, placementCandidate }) {
+  coach.hidden=!visibility.tutorialCoach;
+  placementHint.hidden=!visibility.placementHint;
+  if(mapNoteGuidance)mapNoteGuidance.hidden=!visibility.mapNote;
+  placementConfirm.hidden=visibility.criticalWarning||!placementCandidate;
+}
