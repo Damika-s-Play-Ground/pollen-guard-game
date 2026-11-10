@@ -1,6 +1,6 @@
 import { getEffectiveTowerStats, describeTowerStatChanges, formatMapUnits, towerUpgradeQuote, saleRefund, towersAreLinked } from './game-core.js';
 import { TOWER_COMBINATIONS } from './tower-combinations.js';
-import { DOT_TICK_RULES, canHitTarget } from './combat-rules.js';
+import { DOT_TICK_RULES, canTowerHitTarget, isPointInTowerRange } from './combat-rules.js';
 import { chooseTargetForTower, targetPriorityInfo } from './targeting.js';
 import { enemyCombatProfiles, towersDef } from './game-data.js';
 import { towerArtSvg } from './tower-art.js';
@@ -66,8 +66,8 @@ export function buildTowerTargetStatus({ tower, enemies = [], challenge, challen
   if (def.income) return `Unavailable · ${def.name} harvests petals and cannot attack enemies.`;
 
   const range = getEffectiveTowerStats(tower, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def).range;
-  const inRange = enemies.filter(enemy => Math.hypot(tower.x - enemyPosition(enemy).x, tower.y - enemyPosition(enemy).y) <= range);
-  const eligible = inRange.filter(enemy => canHitTarget({ canHitAir: def.antiAir }, enemy));
+  const inRange = enemies.filter(enemy => isPointInTowerRange(tower, enemyPosition(enemy), range));
+  const eligible = inRange.filter(enemy => canTowerHitTarget({tower,target:enemy,range,canHitAir:def.antiAir,positionOf:enemyPosition}));
   const target = chooseTargetForTower(tower, eligible, enemyPosition);
   if (target) {
     const name = enemyCombatProfiles[target.type]?.name || target.type;

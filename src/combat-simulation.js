@@ -1,6 +1,6 @@
 import { getEffectiveTowerStats, towersAreLinked } from './game-core.js';
 import { towersDef, enemyCombatProfiles } from './game-data.js';
-import { assignEnemyCombatProfile, canHitTarget, DOT_TICK_RULES, tickEnemyStatuses } from './combat-rules.js';
+import { assignEnemyCombatProfile, canTowerHitTarget, DOT_TICK_RULES, tickEnemyStatuses } from './combat-rules.js';
 import { resolveProjectileImpact } from './combat-actions.js';
 import { chooseTargetForTower } from './targeting.js';
 import { recordCombatControl, recordCombatDamage, recordComboAttack, recordComboImpact, recordEnemyDefeat, recordEnemyLeak, recordTowerIncome } from './combat-performance.js';
@@ -96,8 +96,7 @@ function tickTower(tower, state, dt, positionOf, hooks = {}, pollenBeaconBuffedI
   if (pollenBeaconBuffedIds.has(tower.id)) stats.rate *= state.relicLoadout?.includes('beacon-bell') ? .90 : state.researchLoadout?.includes('beacon-network') ? .91 : towersDef.pollenBeacon.buffMultiplier;
   const rejuvenationField=state.rejuvenationField;
   if (rejuvenationField?.duration>0 && Math.hypot(tower.x-rejuvenationField.x,tower.y-rejuvenationField.y)<=78) stats.rate*=.85;
-  const candidates = state.enemies.filter(enemy => canHitTarget({ canHitAir: def.antiAir }, enemy) &&
-    Math.hypot(tower.x - positionOf(enemy).x, tower.y - positionOf(enemy).y) <= stats.range);
+  const candidates = state.enemies.filter(enemy => canTowerHitTarget({tower,target:enemy,range:stats.range,canHitAir:def.antiAir,positionOf}));
   if (!candidates.length) return;
   const target = chooseTargetForTower(tower, candidates, positionOf);
   tower.cooldown = stats.rate;
@@ -252,11 +251,11 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
       const point = positionOf(enemy);
       const covered = state.towers.some(tower => {
         const def = towersDef[tower.type];
-        if (!def || def.supportStructure || !canHitTarget({ canHitAir: def.antiAir }, enemy)) return false;
+        if (!def || def.supportStructure) return false;
         const hasLink = state.towers.some(other => other !== tower && towersAreLinked(tower, other, towersDef, state.towers,state.researchLoadout??[],state.relicLoadout??[]));
         const terrain=state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground';
         const range = getEffectiveTowerStats(tower, { challenge: state.challenge, challengeRules:state.challengeRules, linked: hasLink, terrain,researchLoadout:state.researchLoadout??[],relicLoadout:state.relicLoadout??[] }, def).range;
-        return Math.hypot(tower.x - point.x, tower.y - point.y) <= range;
+        return canTowerHitTarget({tower,target:enemy,range,canHitAir:def.antiAir,positionOf:()=>point});
       });
       recordEnemyLeak(state.performance, enemy, covered);
       state.enemies.splice(state.enemies.indexOf(enemy), 1);

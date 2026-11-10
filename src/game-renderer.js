@@ -7,7 +7,7 @@ import { pathSegmentsWithinRadius } from './route-coverage.js';
 import { guardianDestinationIsSafe, GUARDIAN_PATH_CLEARANCE, GUARDIAN_PULSE_RADIUS } from './meadow-guardian.js';
 import { TERRAIN_TYPES, TERRAIN_ZONES } from './terrain.js';
 import { enemySilhouetteMetrics } from './enemy-silhouette.js';
-import { canHitTarget, isBurrowed } from './combat-rules.js';
+import { canTowerHitTarget, isBurrowed } from './combat-rules.js';
 
 const COMBINATION_LINK_STYLES = Object.freeze({
   'golden-seeds': Object.freeze({ color:'#ffd447', dash:[5, 7] }),
@@ -677,7 +677,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if(groundSegments.length){ctx.beginPath();for(const segment of groundSegments){ctx.moveTo(segment.x1,segment.y1);ctx.lineTo(segment.x2,segment.y2);}ctx.strokeStyle='#f8ffe6';ctx.lineWidth=Math.max(3,5/(displayScale||1));ctx.setLineDash([]);ctx.stroke();}
     if(def.antiAir&&airPath)drawAirCoverage(ctx,airPath,pointer,range,displayScale);
     ctx.save();ctx.strokeStyle='#fff3a6';ctx.lineWidth=2;ctx.setLineDash([3,2]);
-    enemies.filter(enemy=>canHitTarget({canHitAir:Boolean(def.antiAir)},enemy)&&Math.hypot(enemyPosition(enemy).x-pointer.x,enemyPosition(enemy).y-pointer.y)<=range).forEach(enemy=>{const target=enemyPosition(enemy);ctx.beginPath();ctx.arc(target.x,target.y,enemy.radius+4,0,Math.PI*2);ctx.stroke();});ctx.restore();
+    enemies.filter(enemy=>canTowerHitTarget({tower:pointer,target:enemy,range,canHitAir:Boolean(def.antiAir),positionOf:enemyPosition})).forEach(enemy=>{const target=enemyPosition(enemy);ctx.beginPath();ctx.arc(target.x,target.y,enemy.radius+4,0,Math.PI*2);ctx.stroke();});ctx.restore();
     (valid?placementComboPreviews(selectedType,pointer):[]).forEach(({combination,counterpart})=>{
       const style=COMBINATION_LINK_STYLES[combination.id];if(!style)return;
       ctx.save();ctx.globalAlpha=.9;ctx.setLineDash(style.dash.map(length=>length/(displayScale||1)));ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2.5/(displayScale||1));ctx.beginPath();ctx.moveTo(counterpart.x,counterpart.y);ctx.lineTo(pointer.x,pointer.y);ctx.stroke();ctx.setLineDash([]);

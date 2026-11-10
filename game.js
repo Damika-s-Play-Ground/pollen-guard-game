@@ -6,7 +6,7 @@ import { createRenderGate, createRenderSignature } from './src/render-gate.js';
 import { refreshPurchaseAffordability } from './src/affordability-ui.js';
 import { modes, maps, towersDef, towerRoles, enemyCombatProfiles } from './src/game-data.js';
 import { CAMPAIGN_WAVES, registerCustomWaveSchedules, validateWaveSchedules, waveSchedulesForMap, WAVE_SCHEDULE_VERSION } from './src/waves.js';
-import { COMBAT_RULES, COMBAT_INTERACTION_MATRIX, canHitTarget } from './src/combat-rules.js';
+import { COMBAT_RULES, COMBAT_INTERACTION_MATRIX, canHitTarget, canTowerHitTarget } from './src/combat-rules.js';
 import { CAMERA_MAX_ZOOM, CAMERA_MIN_ZOOM, cameraTransform, createCameraView, normalizeCameraView, panCameraView, resetCameraView, toggleCameraPan, zoomCameraView } from './src/camera-view.js';
 import { createEnemy, stepCombat } from './src/combat-simulation.js';
 import { BOSS_VARIANTS, bossLeakCost } from './src/boss-encounters.js';
@@ -1188,7 +1188,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       visualTime:uiSettings.animation==='full'?gameTime:0,enemyHitFlash:enemy=>renderSnapshots.hitFlash(enemy.id),
       impactCausalityForEnemy:enemy=>{const cue=impactCausalityCues.get(enemy.id);if(!cue||uiSettings.animation==='off')return null;const age=gameTime-cue.time;return age<0||age>=.32?null:{from:cue.from,color:cue.color,alpha:1-age/.32};},
       recoilForTower:id=>shotRecoil(uiSettings.animation,gameTime,towerRecoilAt.get(id)?.time),
-      attackCueForTower:tower=>{if(uiSettings.animation!=='full'||tower.cooldown<=0||tower.cooldown>ATTACK_ANTICIPATION_SECONDS)return null;const def=towersDef[tower.type];if(!def||def.income||def.supportStructure)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other)),stats=getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def),candidates=enemies.filter(enemy=>canHitTarget({canHitAir:def.antiAir},enemy)&&Math.hypot(tower.x-enemyPosition(enemy).x,tower.y-enemyPosition(enemy).y)<=stats.range),target=chooseTargetForTower(tower,candidates,enemyPosition);return target?attackAnticipation(uiSettings.animation,tower,enemyPosition(target)) : null;},
+      attackCueForTower:tower=>{if(uiSettings.animation!=='full'||tower.cooldown<=0||tower.cooldown>ATTACK_ANTICIPATION_SECONDS)return null;const def=towersDef[tower.type];if(!def||def.income||def.supportStructure)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other)),stats=getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def),candidates=enemies.filter(enemy=>canTowerHitTarget({tower,target:enemy,range:stats.range,canHitAir:def.antiAir,positionOf:enemyPosition})),target=chooseTargetForTower(tower,candidates,enemyPosition);return target?attackAnticipation(uiSettings.animation,tower,enemyPosition(target)) : null;},
       plantingForTower:id=>plantingSettle(uiSettings.animation,visualNow,towerPlantingAt.get(id)),
       armorFeedbackForEnemy:enemy=>activeArmorFeedback(armorImpactCues.get(enemy.id),gameTime),
       healerLinks,healerFeedbackForEnemy:enemy=>{const pulse=healerPulses.get(enemy.id);return pulse?{amount:pulse.amount,alpha:Math.max(.25,1-(gameTime-pulse.time)/.5)}:null;},
@@ -1203,7 +1203,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const def=towersDef[selectedTower.type];if(def.income||def.supportStructure)return null;
     const linked=towers.some(other=>other!==selectedTower&&towersLinked(selectedTower,other));
     const range=getEffectiveTowerStats(selectedTower,{challenge,challengeRules,linked,researchLoadout,relicLoadout},def).range;
-    const eligible=enemies.filter(enemy=>Math.hypot(selectedTower.x-enemyPosition(enemy).x,selectedTower.y-enemyPosition(enemy).y)<=range&&canHitTarget({canHitAir:def.antiAir},enemy));
+    const eligible=enemies.filter(enemy=>canTowerHitTarget({tower:selectedTower,target:enemy,range,canHitAir:def.antiAir,positionOf:enemyPosition}));
     return chooseTargetForTower(selectedTower,eligible,enemyPosition)?.id??null;
   }
   function applyChallenge() {
