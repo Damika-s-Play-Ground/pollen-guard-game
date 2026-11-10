@@ -5,7 +5,7 @@ export const MASTERY_TIERS=Object.freeze(['completion','objective','efficiency']
 
 export function masteryChallengeText(mission) {
   if(!mission||!Number.isSafeInteger(mission.masteryMaxTowers))return '';
-  return `Optional efficiency challenge: win with ${mission.masteryMaxTowers} or fewer defenders after preserving the mission objective.`;
+  return `Optional tactical medal: preserve the mission objective with ${mission.masteryMaxTowers} or fewer defenders.`;
 }
 
 export function buildMissionMasteryProgress(profile,{
@@ -40,9 +40,8 @@ export function missionMasteryResultText(result,{difficulty='standard',mission}=
   const label=MASTERY_DIFFICULTIES.includes(difficulty)?difficulty[0].toUpperCase()+difficulty.slice(1):'Standard';
   if(!result?.eligible)return `Mastery not recorded. ${result?.reason||'Choose a compatible campaign run.'}`;
   const record=result.record||{};
-  const status=value=>value?'earned':'not yet earned';
-  const efficiency=record.efficiency?status(true):record.objective
-    ?`available: win with ${mission.masteryMaxTowers} or fewer defenders`
-    :`locked until the mission objective is preserved (then ${mission.masteryMaxTowers} or fewer defenders)`;
-  return `${label} mastery · Completion ${status(record.completion)} · Objective preservation ${status(record.objective)} · Efficiency ${efficiency}.`;
+  const medal=record.efficiency?'earned':record.objective
+    ?`available: clear with ${mission.masteryMaxTowers} or fewer defenders`
+    :`not earned: preserve the mission objective and use ${mission.masteryMaxTowers} or fewer defenders`;
+  return `${label} campaign · Clear ${record.completion?'earned':'not yet earned'} · Optional tactical medal ${medal}.`;
 }

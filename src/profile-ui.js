@@ -60,14 +60,13 @@ export function renderCampaignMap({ document, root, missions, profile, selectedM
       const status=completed.has(mission.id)?(profile.missionRecords?.[mission.id]?.objectiveMet?'Cleared · objective met':'Cleared'):
         unlocked?'Available':`Locked · clear ${missions[missions.indexOf(mission)-1]?.name||'the previous mission'}`;
       button.textContent=`${completed.has(mission.id)?'✦ ':unlocked?'○ ':'🔒 '}${mission.name} · ${status}`;
-      const detail=document.createElement('p');detail.textContent=`${mission.brief} Objective: ${mission.objective}`;
+      const detail=document.createElement('p');detail.textContent=`${mission.brief} Defend through all waves. Optional medal: ${mission.objective}`;
       const mastery=profile.missionMastery?.[mission.id]?.[difficulty]||{};
       const masteryLine=document.createElement('p');masteryLine.className='mission-mastery';
-      const tierCount=['completion','objective','efficiency'].filter(tier=>mastery[tier]===true).length;
-      const optional=mastery.efficiency===true?'earned':mastery.objective===true
-        ?`available · ${mission.masteryMaxTowers} or fewer defenders`
-        :`locked until objective · ${mission.masteryMaxTowers} or fewer defenders`;
-      masteryLine.textContent=`${difficulty[0].toUpperCase()+difficulty.slice(1)} mastery ${tierCount}/3 · Clear ${mastery.completion?'earned':'open'} · Objective ${mastery.objective?'earned':'open'} · Optional efficiency ${optional}.`;
+      const medal=mastery.efficiency===true?'earned':mastery.objective===true
+        ?`available · clear with ${mission.masteryMaxTowers} or fewer defenders`
+        :`open · preserve the medal condition with ${mission.masteryMaxTowers} or fewer defenders`;
+      masteryLine.textContent=`${difficulty[0].toUpperCase()+difficulty.slice(1)} · Clear ${mastery.completion?'earned':'open'} · Optional tactical medal ${medal}.`;
       const challenge=document.createElement('p');challenge.className='mission-mastery-challenge';challenge.textContent=masteryChallengeText(mission);
       card.append(button,detail,masteryLine,challenge);group.append(card);
     }
