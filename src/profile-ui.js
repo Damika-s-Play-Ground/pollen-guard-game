@@ -94,7 +94,7 @@ export function renderResearchTree({ document, root, profile, canRespec=true, re
       const available=unlocked||(!prior||state.unlocked.includes(prior.id))&&state.unlocked.length<points;
       const card=document.createElement('article');card.className=`research-node${active?' equipped':''}${unlocked?' researched':''}`;
       const title=document.createElement('h5');title.textContent=`${node.tier}. ${node.name}`;
-      const copy=document.createElement('p');copy.id=`research-description-${node.id}`;copy.textContent=node.description;
+      const copy=document.createElement('p');copy.id=`research-description-${node.id}`;copy.textContent=`${node.description}${relicConflict?` Garden Kit conflict: ${node.effect.type} already uses ${relicConflict.name}; unequip that relic before equipping this research choice.`:''}`;
       const button=document.createElement('button');button.type='button';button.dataset.researchNode=node.id;
       button.disabled=!canRespec||!available||Boolean(relicConflict&&unlocked);
       button.textContent=active?'Unequip':relicConflict?unlocked?`Role in kit · ${relicConflict.name}`:'Research · 1 point (relic stays)':unlocked?'Equip':available?'Research · 1 point':prior?`Locked · research ${prior.name}`:'Locked · earn a point';
@@ -129,7 +129,7 @@ export function renderRelicLoadout({document,root,profile,canRefit=true,research
     const full=state.loadout.length>=RELIC_LOADOUT_SIZE&&!equipped;
     const card=document.createElement('article');card.className=`relic-card${equipped?' equipped':''}${owned?' unlocked':''}`;
     const title=document.createElement('h4');title.textContent=relic.name;
-    const detail=document.createElement('p');detail.textContent=`${relic.description}${relic.incompatible.length?` Field-kit incompatibility: ${relic.incompatible.map(id=>RELICS.find(item=>item.id===id)?.name||id).join(', ')} cannot be equipped alongside it.`:''}`;
+    const detail=document.createElement('p');detail.id=`relic-description-${relic.id}`;detail.textContent=`${relic.description}${relic.incompatible.length?` Field-kit incompatibility: ${relic.incompatible.map(id=>RELICS.find(item=>item.id===id)?.name||id).join(', ')} cannot be equipped alongside it.`:''}${researchConflict?` Garden Kit conflict: ${relic.type} already uses ${researchConflict.name}; unequip that research choice before equipping this relic.`:''}`;
     const reward=document.createElement('small');
     const rewardMission=RELIC_REWARDS.find(item=>item.relicId===relic.id);
     const missionName=CAMPAIGN_MISSIONS.find(item=>item.id===rewardMission?.missionId)?.name||'campaign clear';
@@ -139,7 +139,7 @@ export function renderRelicLoadout({document,root,profile,canRefit=true,research
     button.textContent=equipped?'Unequip':researchConflict?`Role in kit · ${researchConflict.name}`:conflict?`Incompatible with ${RELICS.find(item=>item.id===conflict)?.name||'equipped relic'}`:full?'Unequip a relic first':owned?'Equip relic':'Locked';
     button.setAttribute('aria-pressed',String(equipped));
     button.setAttribute('aria-label',`${equipped?'Unequip':'Equip'} ${relic.name}`);
-    button.setAttribute('aria-describedby',`relic-description-${relic.id}`);detail.id=`relic-description-${relic.id}`;
+    button.setAttribute('aria-describedby',detail.id);
     card.append(title,detail,reward,button);root.append(card);
   }
   return {state};
