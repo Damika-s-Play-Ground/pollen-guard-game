@@ -80,7 +80,7 @@ export function renderResearchTree({ document, root, profile, canRespec=true, re
   const points=earnedResearchPoints(profile),state=normalizeResearchState(profile.research,points);
   root.replaceChildren();
   const status=document.createElement('p');status.className='research-summary';
-  status.textContent=`Research · ${state.unlocked.length} of ${points} points spent · ${Math.max(0,points-state.unlocked.length)} available. Earn 1 for each cleared chapter and 1 for every 3 mastery medals.`;
+  status.textContent=`Research · ${state.unlocked.length} of ${points} points spent · ${Math.max(0,points-state.unlocked.length)} available. Earn 1 for each cleared chapter and 1 for every 3 mastery marks across difficulties.`;
   root.append(status);
   if(!canRespec){const note=document.createElement('p');note.className='research-lock';note.textContent='Research changes are available between missions. Finish or restart this garden before changing its research loadout.';root.append(note);}
   for(const path of RESEARCH_PATHS){
