@@ -18,6 +18,28 @@ const COMBINATION_LINK_STYLES = Object.freeze({
   'cyclone-cap': Object.freeze({ color:'#dd9fff', dash:[8, 7, 2, 7] })
 });
 
+const enemyRoleGlyphSprites = new WeakMap();
+
+function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize) {
+  const document = ctx.canvas?.ownerDocument;
+  if (!document?.createElement) { ctx.fillText(glyph, x, y); return; }
+  let sprites = enemyRoleGlyphSprites.get(document);
+  if (!sprites) { sprites = new Map(); enemyRoleGlyphSprites.set(document, sprites); }
+  const key = `${fontSize}:${glyph}`;
+  let sprite = sprites.get(key);
+  if (!sprite) {
+    sprite = document.createElement('canvas');
+    sprite.width = 32; sprite.height = 32;
+    const spriteContext = sprite.getContext('2d');
+    if (!spriteContext) { ctx.fillText(glyph, x, y); return; }
+    spriteContext.font = `${fontSize}px sans-serif`;
+    spriteContext.textAlign = 'center'; spriteContext.textBaseline = 'middle'; spriteContext.fillStyle = '#fff8df';
+    spriteContext.fillText(glyph, 16, 16);
+    sprites.set(key, sprite);
+  }
+  ctx.drawImage(sprite, x - 16, y - 16);
+}
+
 function tracePath(ctx, path) {
   ctx.beginPath();
   path.forEach(([x, y], index) => index ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
@@ -599,10 +621,11 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
       drawEnemyDetails(ctx, shape, point.x, bodyY, visualTime,enemyStrokeScale);
     }
     if (enemyHitFlash(enemy) > 0) { ctx.beginPath(); ctx.arc(point.x, bodyY, silhouette.radius + 2, 0, Math.PI * 2); ctx.strokeStyle = '#fff8d9'; ctx.lineWidth = 2.5; ctx.stroke(); }
-    ctx.font = enemy.boss ? '17px sans-serif' : '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff8df';
+    const roleGlyphFontSize = enemy.boss ? 17 : 13;
+    ctx.font = `${roleGlyphFontSize}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff8df';
     if (showEnemyRoleGlyphs) {
-      if (burrowed) ctx.fillText('⌃', point.x, point.y - 2);
-      else ctx.fillText(enemy.flying ? '✦' : enemy.type === 'armored' ? '⬟' : enemy.type === 'shield' ? '◇' : enemy.type === 'carrier' ? '⬡' : enemy.type === 'splitter' ? '●' : enemy.type === 'healer' ? '+' : enemy.boss ? '♛' : '•', point.x, bodyY);
+      if (burrowed) drawEnemyRoleGlyph(ctx, '⌃', point.x, point.y - 2, roleGlyphFontSize);
+      else drawEnemyRoleGlyph(ctx, enemy.flying ? '✦' : enemy.type === 'armored' ? '⬟' : enemy.type === 'shield' ? '◇' : enemy.type === 'carrier' ? '⬡' : enemy.type === 'splitter' ? '●' : enemy.type === 'healer' ? '+' : enemy.boss ? '♛' : '•', point.x, bodyY, roleGlyphFontSize);
     }
     const burrowEmergence=enemy.type==='burrower'&&enemy.burrowTimer<=0?burrowEmergenceForEnemy(enemy):null;
     if(burrowEmergence){ctx.save();ctx.globalAlpha=burrowEmergence.alpha??1;ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+11,0,Math.PI*2);ctx.strokeStyle='#e9cf82';ctx.lineWidth=Math.max(2.2,2.4/enemyStrokeScale);ctx.stroke();ctx.fillStyle='#fff0ae';ctx.font=`bold ${Math.max(8,9/enemyStrokeScale)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('SURFACED',point.x,bodyY+silhouette.radius+13/enemyStrokeScale);ctx.restore();}
