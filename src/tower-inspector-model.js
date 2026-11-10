@@ -18,30 +18,15 @@ export function isTowerLinkedToAnother(selectedTower, towers, towersLinked) {
   return towers.some(other => other !== selectedTower && towersLinked(selectedTower, other));
 }
 
-function combinationStatus(tower, towers, combo, researchLoadout=[],relicLoadout=[]) {
-  const partnerType = combo.towerTypes.find(type => type !== tower.type);
-  const partnerName = towersDef[partnerType]?.name || partnerType;
-  const partners = towers.filter(other => other !== tower && other.id !== tower.id && other.type === partnerType);
-  if (!partners.length) return `${combo.name} inactive · no ${partnerName} placed`;
-  if (partners.some(other => towersAreLinked(tower, other, towersDef, towers,researchLoadout,relicLoadout))) {
-    return `${combo.name} active (${combo.activeSummary})`;
-  }
-  const nearest = partners.reduce((best, other) => {
-    const distance = Math.hypot(tower.x - other.x, tower.y - other.y);
-    return distance < best.distance ? { partner: other, distance } : best;
-  }, { partner: partners[0], distance: Infinity });
-  const radius = combo.id === 'golden-seeds'
-    ? getEffectiveTowerStats(tower.type === 'sunflower' ? tower : nearest.partner, {researchLoadout,relicLoadout}, towersDef.sunflower).allyLinkRadius
-    : combo.id === 'windcarved-thorns' && towers.some(relay => relay.type === 'pollinatorRelay' &&
-      Math.hypot(relay.x - tower.x, relay.y - tower.y) <= combo.relayRange && Math.hypot(relay.x - nearest.partner.x, relay.y - nearest.partner.y) <= combo.relayRange)
-      ? combo.relayRadius : combo.radius;
-  return `${combo.name} inactive · nearest ${partnerName} ${formatMapUnits(nearest.distance)} away; needs < ${radius} map units`;
-}
-
 function combinationStatuses(tower, towers, researchLoadout=[],relicLoadout=[]) {
   return TOWER_COMBINATIONS
     .filter(combo => combo.towerTypes.includes(tower.type))
-    .map(combo => combinationStatus(tower, towers, combo,researchLoadout,relicLoadout))
+    .filter(combo=>{
+      const partnerType=combo.towerTypes.find(type=>type!==tower.type);
+      return towers.some(other=>other!==tower&&other.id!==tower.id&&other.type===partnerType&&
+        towersAreLinked(tower,other,towersDef,towers,researchLoadout,relicLoadout));
+    })
+    .map(combo=>`${combo.name} active (${combo.activeSummary})`)
     .join(' · ');
 }
 
