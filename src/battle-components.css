@@ -233,3 +233,5 @@ body[data-palette="high-contrast"]{--text-cream:#fff;--text-muted:#e4eadf;--reso
 @media(orientation:landscape) and (max-height:500px){.battle-support .placement-confirm:not([hidden]){position:fixed;z-index:30;left:50%;right:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,420px);max-width:none;box-shadow:var(--card-shadow)}}
 
 @media(max-width:700px){.canvas-wrap .map-camera-controls{position:static;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:none;padding:5px 8px;line-height:normal;border-top:1px solid var(--line);background:var(--surface-panel)}.canvas-wrap .camera-control{flex:1 1 44px;min-width:44px;min-height:44px;padding:4px;white-space:nowrap;font-size:calc(11px * var(--ui-text-scale))}}
+
+@media(max-width:700px){.map-footer>.selected-context:not([hidden]){order:-1;margin:0 0 4px}}
