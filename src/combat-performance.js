@@ -21,7 +21,7 @@ export function normalizeCombatPerformance(value) {
         (tower.level !== undefined && (!Number.isInteger(tower.level) || tower.level < 1 || tower.level > 3)) ||
         !['damage','kills','income','slowSeconds','stunSeconds'].every(key => finiteCount(tower[key] ?? 0)) ||
         (tower.comboEffects !== undefined && (!tower.comboEffects || typeof tower.comboEffects !== 'object' || Array.isArray(tower.comboEffects) ||
-          Object.entries(tower.comboEffects).some(([id,count]) => !['frosted-seeds','steam-burst','sporecap','windcarved-thorns','cyclone-cap'].includes(id) || !finiteCount(count))))) return null;
+          Object.entries(tower.comboEffects).some(([id,count]) => !['golden-seeds','frosted-seeds','steam-burst','sporecap','windcarved-thorns','cyclone-cap'].includes(id) || !finiteCount(count))))) return null;
   }
   for (const [type, enemy] of Object.entries(value.enemies)) {
     if (!/^(mite|zip|armored|shield|splitter|flyer|crumb|boss|healer|carrier|burrower)$/.test(type) || !enemy || typeof enemy !== 'object' ||
@@ -75,6 +75,14 @@ export function recordComboImpact(performance, towerId, towerType, combinationId
     ? results.filter(result => result.hit && result.enemy.id !== primaryTargetId).length
     : hits;
   if (count) tower.comboEffects[combinationId] = (tower.comboEffects[combinationId] || 0) + count;
+}
+
+export function recordComboAttack(performance, towerId, towerType, combinationId) {
+  if (combinationId !== 'golden-seeds') return;
+  const tower = towerRecord(performance, towerId, towerType);
+  if (!tower) return;
+  tower.comboEffects ||= {};
+  tower.comboEffects[combinationId] = (tower.comboEffects[combinationId] || 0) + 1;
 }
 
 export function recordCombatControl(performance, towerId, towerType, kind, seconds) {

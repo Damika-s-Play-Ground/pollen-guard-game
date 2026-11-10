@@ -3,7 +3,7 @@ import { towersDef, enemyCombatProfiles } from './game-data.js';
 import { assignEnemyCombatProfile, canHitTarget, DOT_TICK_RULES, tickEnemyStatuses } from './combat-rules.js';
 import { resolveProjectileImpact } from './combat-actions.js';
 import { chooseTargetForTower } from './targeting.js';
-import { recordCombatControl, recordCombatDamage, recordComboImpact, recordEnemyDefeat, recordEnemyLeak, recordTowerIncome } from './combat-performance.js';
+import { recordCombatControl, recordCombatDamage, recordComboAttack, recordComboImpact, recordEnemyDefeat, recordEnemyLeak, recordTowerIncome } from './combat-performance.js';
 import { advanceBossEncounter, BOSS_VARIANTS, bossLeakCost } from './boss-encounters.js';
 import { combinationForPair } from './tower-combinations.js';
 import { assignPollenBeaconBuffs, triggerCompostTraps } from './support-structures.js';
@@ -120,6 +120,7 @@ function tickTower(tower, state, dt, positionOf, hooks = {}, pollenBeaconBuffedI
   };
   shot.combinationEffect = steamBurst ? 'steam-burst' : frostedSeeds ? 'frosted-seeds' : sporecap ? 'sporecap' : cycloneCap ? 'cyclone-cap' : windcarvedThorns ? 'windcarved-thorns' : null;
   state.shots.push(shot);
+  if(hasGoldenSeeds)recordComboAttack(state.performance,tower.id,tower.type,'golden-seeds');
   hooks.onShot?.(shot);
 }
 

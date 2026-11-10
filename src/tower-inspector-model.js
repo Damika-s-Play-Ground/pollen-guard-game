@@ -158,7 +158,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
 
   const payback = def.income && stats.income > 0 ? Math.ceil(investment / stats.income) : 0;
   const pairing = combinationStatuses(selectedTower, towers,researchLoadout,relicLoadout);
-  const comboLabels={'frosted-seeds':'Frosted Seeds affected hits','steam-burst':'Steam Burst extra splash hits','sporecap':'Sporecap affected hits','windcarved-thorns':'Windcarved Thorns affected hits','cyclone-cap':'Cyclone Cap affected hits'};
+  const comboLabels={'golden-seeds':'Golden Seeds boosted attacks','frosted-seeds':'Frosted Seeds affected hits','steam-burst':'Steam Burst extra splash hits','sporecap':'Sporecap affected hits','windcarved-thorns':'Windcarved Thorns affected hits','cyclone-cap':'Cyclone Cap affected hits'};
   const comboContribution=Object.entries(performance?.towers?.[String(selectedTower.id)]?.comboEffects||{})
     .filter(([id,count])=>comboLabels[id]&&count>0)
     .map(([id,count])=>`${comboLabels[id]} ${count}`).join(' · ');
