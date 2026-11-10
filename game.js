@@ -1,7 +1,7 @@
 import { renderBossWarnings } from './src/boss-warning-ui.js';
 import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, towerUpgradeQuote, getEffectiveTowerStats, towersAreLinked, isUnsupportedRunVersion, RUN_SAVE_VERSION, assignRunEntityIds } from './src/game-core.js';
 import { DEFAULT_GAME_SPEED, toggleGameSpeed } from './src/simulation-speed.js';
-import { createGameLoop } from './src/game-loop.js';
+import { createGameLoop, shouldRenderBattleFrame } from './src/game-loop.js';
 import { createRenderGate, createRenderSignature } from './src/render-gate.js';
 import { refreshPurchaseAffordability } from './src/affordability-ui.js';
 import { modes, maps, towersDef, towerRoles, enemyCombatProfiles } from './src/game-data.js';
@@ -1250,12 +1250,14 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     updateHud();renderAchievements();setToast(retired?'Endless run retired; your checkpoint has been banked.':customMap?'Custom-map play does not award campaign progression or challenge scores.':profileSaved?(won?'Meadow saved!':combatPerformance.leaks.total?`Run ended after ${combatPerformance.leaks.total} leak${combatPerformance.leaks.total===1?'':'s'}; your best wave has been saved.`:'Run ended. Your best wave has been saved.'):'Run completed, but local progress could not be saved. Free browser storage and try again.');if(!historySaved)byId('runHistory').textContent='Run history could not be saved on this device; existing records are unchanged.';playCue(won?'victory':'defeat');showResults(won,masteryResult,{profileSaved});
   }
   let gameTime=0;
+  let initialBattleFrameRendered=false;
   const gameLoop=createGameLoop({
     requestFrame:callback=>requestAnimationFrame(callback),
     clock:simulationClock,
     getFrameOptions:()=>({paused:runStateStopsClock(runState)||document.hidden,speed}),
     simulateStep:dt=>{renderSnapshots.beginStep();simulate(dt);renderSnapshots.capture(enemies,shots);renderSnapshots.updateHitFlashes(enemies,dt);},
-    render:alpha=>{renderSelected();draw(alpha);}
+    shouldRender:()=>shouldRenderBattleFrame({initialFramePending:!initialBattleFrameRendered,running:runIsRunning(),terminal:runIsOver(),wallClockEffects:towerPlantingAt.size>0||particles.some(particle=>particle.wallClock)}),
+    render:alpha=>{initialBattleFrameRendered=true;renderSelected();draw(alpha);}
   });
   function simulate(dt) {
     gameTime+=dt;simulationTick++;
