@@ -6,6 +6,7 @@ import { normalizeRelicState } from './relics.js';
 import { normalizeChallengeBests } from './challenge-board.js';
 
 export const PROFILE_STORAGE_KEY = 'pollen-guard.profile.v2';
+export const PROFILE_BACKUP_KEY = 'pollen-guard.profile.backup.v1';
 export const UI_SETTINGS_STORAGE_KEY = 'pollen-guard.ui.v1';
 
 export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlockedMissions:['meadow'], completedMissions:[], missionRecords:{}, missionMastery:{}, research:{unlocked:[],loadout:{}}, relics:{unlocked:[],loadout:[]}, achievements: [], bestWave: {}, challengeBests:{} });
@@ -100,6 +101,8 @@ export function normalizeUiSettings(value) {
 }
 
 export function createProfileStorage(storageProvider, { mapIds = [], achievementIds = [] } = {}) {
+  let profileLoadState = 'ok';
+  let profileRecoverySnapshot = null;
   function read(key, fallback, normalize) {
     try {
       const raw = storageProvider().getItem(key);
@@ -113,9 +116,59 @@ export function createProfileStorage(storageProvider, { mapIds = [], achievement
     storageProvider().setItem(key, JSON.stringify(value));
   }
 
+  function readProfileCandidate(key) {
+    const raw=storageProvider().getItem(key);
+    if(raw===null)return null;
+    return normalizeProfile(JSON.parse(raw),{mapIds,achievementIds});
+  }
+
   return {
-    loadProfile: () => read(PROFILE_STORAGE_KEY, DEFAULT_PROFILE, value => normalizeProfile(value, { mapIds, achievementIds })),
-    saveProfile: value => write(PROFILE_STORAGE_KEY, value),
+    loadProfile() {
+      try {
+        const profile=readProfileCandidate(PROFILE_STORAGE_KEY);
+        if(!profile){
+          const backup=readProfileCandidate(PROFILE_BACKUP_KEY);
+          if(backup){
+            let backupRaw=null;
+            try { backupRaw=storageProvider().getItem(PROFILE_BACKUP_KEY); } catch {}
+            profileRecoverySnapshot={primary:null,backup:backupRaw};
+            profileLoadState='recovered-backup';
+            return backup;
+          }
+        }
+        profileLoadState='ok';
+        return profile??normalizeProfile(DEFAULT_PROFILE,{mapIds,achievementIds});
+      } catch {
+        let primary=null,backupRaw=null;
+        try { primary=storageProvider().getItem(PROFILE_STORAGE_KEY); } catch {}
+        try { backupRaw=storageProvider().getItem(PROFILE_BACKUP_KEY); } catch {}
+        profileRecoverySnapshot={primary,backup:backupRaw};
+        try {
+          const backup=readProfileCandidate(PROFILE_BACKUP_KEY);
+          if(backup){profileLoadState='recovered-backup';return backup;}
+        } catch {}
+        profileLoadState='unreadable';
+        return normalizeProfile(DEFAULT_PROFILE,{mapIds,achievementIds});
+      }
+    },
+    saveProfile(value) {
+      const storage=storageProvider();
+      let existing=null;
+      try { existing=storage.getItem(PROFILE_STORAGE_KEY); } catch {}
+      if(existing!==null){
+        try { normalizeProfile(JSON.parse(existing),{mapIds,achievementIds}); storage.setItem(PROFILE_BACKUP_KEY,existing); }
+        catch { /* Keep the previous known-good backup if the current profile is unreadable. */ }
+      }
+      storage.setItem(PROFILE_STORAGE_KEY,JSON.stringify(value));
+    },
+    profileLoadState: () => profileLoadState,
+    profileRecoveryData() {
+      if(profileRecoverySnapshot)return {status:profileLoadState,...profileRecoverySnapshot};
+      let primary=null,backup=null;
+      try { primary=storageProvider().getItem(PROFILE_STORAGE_KEY); } catch {}
+      try { backup=storageProvider().getItem(PROFILE_BACKUP_KEY); } catch {}
+      return {status:profileLoadState,primary,backup};
+    },
     loadSettings: () => read(UI_SETTINGS_STORAGE_KEY, DEFAULT_UI_SETTINGS, normalizeUiSettings),
     saveSettings(value) {
       try { write(UI_SETTINGS_STORAGE_KEY, value); return true; }
