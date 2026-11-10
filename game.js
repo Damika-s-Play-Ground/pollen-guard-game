@@ -1238,8 +1238,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
         onHealerHeal:(healer,target,amount)=>{healerInterventionObserved=true;healerPulses.set(target.id,{healerId:healer.id,targetId:target.id,amount,time:gameTime});},
         onBurrowEmerge:enemy=>burrowEmergenceCues.set(enemy.id,gameTime),
         onBossTelegraph:()=>playCue('bossWarning'),
-        onBossPhaseResolved:(enemy,phase)=>{if(enemy.bossVariant?.startsWith('meadow'))bossChoreoCues.set(enemy.id,{kind:'danger',phase,time:gameTime});},
-        onBossRecovery:(enemy,phase)=>{if(enemy.bossVariant?.startsWith('meadow'))bossChoreoCues.set(enemy.id,{kind:'recovery',phase,time:gameTime});}});
+        onBossPhaseResolved:(enemy,phase)=>bossChoreoCues.set(enemy.id,{kind:'danger',phase,time:gameTime}),
+        onBossRecovery:(enemy,phase)=>bossChoreoCues.set(enemy.id,{kind:'recovery',phase,time:gameTime})});
       ({spawnQueue,spawnClock,cash,lives,popped,bloomCharge,towers,enemies,shots,nextEntityId,intermission,rejuvenationField,seedObjective}=state);
       visuals.defeated.forEach(showEnemyDefeat);
       const leakAlert=describeLeakFeedback({leaked:visuals.leaked,livesBefore,livesAfter:lives,seedObjective});

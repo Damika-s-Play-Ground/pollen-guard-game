@@ -8,7 +8,10 @@ export function bossWarningText(enemies, cues = new Map(), now = 0) {
       const cue = cues.get?.(enemy.id);
       if (cue && now - cue.time < .9) {
         const kind = cue.kind === 'danger' && now - cue.time < .35 ? 'DANGER' : 'RECOVERY';
-        text = `${enemy.bossName} · ${kind} · ${kind === 'DANGER' ? 'Mite brood summoned' : 'Attack now'}`;
+        const danger=cue.phase===1
+          ? enemy.bossVariant?.startsWith('meadow')?'Mite brood summoned':enemy.bossVariant?.startsWith('creek')?'Shield pulse':enemy.bossVariant?.startsWith('ridge')?'Armor increased':'Boss phase resolved'
+          : enemy.bossVariant?.startsWith('meadow')?'Root rush':enemy.bossVariant?.startsWith('creek')?'Sky gnats summoned':enemy.bossVariant?.startsWith('ridge')?'Armored escort summoned':'Boss phase resolved';
+        text = `${enemy.bossName} · ${kind} · ${kind === 'DANGER' ? danger : 'Attack now'}`;
       }
     }
     if (!text) continue;
