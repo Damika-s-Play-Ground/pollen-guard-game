@@ -129,7 +129,8 @@ export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote,
     if (view.upcomingThreat) {
       const threat = view.upcomingThreat;
       const lead = document.createElement('span'); lead.className = 'threat-wave';
-      lead.textContent = `${threat.label} · Wave ${threat.wave}`;
+      const label=threat.label==='New threat'?'New':threat.label;
+      lead.textContent = `${label} · Wave ${threat.wave}`;
       const enemy = document.createElement('button'); enemy.type = 'button'; enemy.className = 'threat-enemy';
       enemy.dataset.enemyIntel = threat.type; enemy.setAttribute('aria-label', `Inspect ${threat.name} in the enemy field guide`);
       enemy.textContent = `${threat.icon} ${threat.name}`;

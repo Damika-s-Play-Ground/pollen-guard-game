@@ -46,11 +46,12 @@ body[data-palette="high-contrast"]{--state-danger:#ffb29e;--state-warning:#ffe56
 .canvas-wrap.has-selection-chooser .map-note,.canvas-wrap.has-selection-chooser .placement-hint{visibility:hidden}
 .map-tool{position:absolute;z-index:4;right:10px;top:10px;width:44px;height:44px;padding:0;font-size:26px;line-height:1}
 .map-tool[aria-pressed="true"]{border-color:var(--mint);color:var(--mint);background:#263a29}
-.upcoming-threat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0 10px;padding:8px;border:1px solid var(--control-border);border-radius:10px;min-width:0}
+.upcoming-threat{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;margin:8px 0 10px;padding:8px;border:1px solid var(--control-border);border-radius:10px;min-width:0}
 .upcoming-threat[hidden]{display:none!important}
 .threat-wave{grid-column:1/-1;color:var(--gold);font:500 calc(10px * var(--ui-text-scale)) 'DM Mono',monospace;letter-spacing:.06em;text-transform:uppercase}
 .threat-enemy{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:100%;min-width:0;min-height:44px;padding:7px 9px;text-align:left;font-size:calc(13px * var(--ui-text-scale));font-weight:700}
 .threat-route,.threat-counter{min-width:0;padding:5px 7px;border:1px solid var(--control-border);border-radius:7px;background:var(--surface-panel);font-size:calc(10px * var(--ui-text-scale));line-height:1.35;overflow-wrap:anywhere}
+@media(min-width:431px) and (max-width:700px){.upcoming-threat{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .selected-context{position:absolute;z-index:4;left:10px;top:10px;right:64px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:5px;padding:5px;border:1px solid #496247;border-radius:11px;background:#18251df2;box-shadow:var(--elevation-card);line-height:1.2}
 .selected-context[hidden]{display:none}
 .canvas-wrap.has-selected-tower .map-note{visibility:hidden}
