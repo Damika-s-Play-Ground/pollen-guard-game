@@ -3,17 +3,28 @@ const ACTIONS=new Set(['selection','placement','purchase','pause']);
 export function createActionFeedbackMetrics({
   now=()=>performance.now(),
   requestFrame=callback=>requestAnimationFrame(callback),
+  measurementState=()=>typeof document==='undefined'?'visible':document.visibilityState!=='visible'?'hidden':typeof document.hasFocus==='function'&&!document.hasFocus()?'unfocused':'visible',
   sampleLimit=120
 }={}){
   const samples=[];
+  const ignored={hidden:0,unfocused:0};
   function begin(action){
     if(!ACTIONS.has(action))return ()=>{};
-    const startedAt=now();let completed=false;
+    const startedAt=now(),startedState=measurementState();let completed=false;
     return ()=>{
       if(completed)return;
       completed=true;
       const handlerDuration=now()-startedAt;
+      if(startedState!=='visible'){
+        if(Object.hasOwn(ignored,startedState))ignored[startedState]++;
+        return;
+      }
       requestFrame(()=>requestFrame(()=>{
+        const state=measurementState();
+        if(state!=='visible'){
+          if(Object.hasOwn(ignored,state))ignored[state]++;
+          return;
+        }
         const duration=now()-startedAt;
         if(!Number.isFinite(duration)||duration<0||!Number.isFinite(handlerDuration)||handlerDuration<0)return;
         samples.push({action,handlerDuration,duration});
@@ -34,5 +45,6 @@ export function createActionFeedbackMetrics({
     }
     return result;
   }
-  return {begin,summary,clear:()=>samples.splice(0,samples.length)};
+  function diagnostics(){return {recorded:samples.length,ignored:{...ignored}};}
+  return {begin,summary,diagnostics,clear:()=>{samples.splice(0,samples.length);ignored.hidden=0;ignored.unfocused=0;}};
 }

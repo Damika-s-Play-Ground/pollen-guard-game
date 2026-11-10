@@ -118,7 +118,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const feedbackTimingEnabled=new URLSearchParams(window.location.search).get('feedbackTiming')==='1';
   const actionFeedbackMetrics=feedbackTimingEnabled?createActionFeedbackMetrics():null;
   const playtestRecorder=createPlaytestRecorder(localStorage);
-  if(actionFeedbackMetrics)window.__pollenGuardActionFeedback=()=>actionFeedbackMetrics.summary();
+  if(actionFeedbackMetrics){window.__pollenGuardActionFeedback=()=>actionFeedbackMetrics.summary();window.__pollenGuardActionFeedbackDiagnostics=()=>actionFeedbackMetrics.diagnostics();}
   function measureActionFeedback(action,callback){
     const finish=actionFeedbackMetrics?.begin(action);
     try{return callback();}finally{finish?.();}
