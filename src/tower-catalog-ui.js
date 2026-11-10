@@ -6,19 +6,21 @@ export const SPECIALIST_TOWER_TYPES=Object.freeze(['thorn','sunflower','gust','e
 
 export function specialistEncounterHint(groups=[]) {
   const present=new Set(groups.map(group=>group.type));
-  if(present.has('flyer'))return 'Air threat ahead · Thorn Beacon and Kite Keeper can hit flying pests.';
-  if(present.has('armored'))return 'Armored pests ahead · Thorn Beacon reaches far; Piercing Point bypasses armor after upgrade.';
-  if(present.has('splitter'))return 'Splitters ahead · Briar Patch adds poison to grouped ground pests.';
-  if(present.has('zip'))return 'Fast pests ahead · Dew Bell slows ground targets.';
-  return '';
+  const hints=[];
+  if(present.has('flyer'))hints.push('Air threat ahead · Thorn Beacon and Kite Keeper can hit flying pests.');
+  if(present.has('armored'))hints.push('Armored pests ahead · Thorn Beacon reaches far; Piercing Point bypasses armor after upgrade.');
+  if(present.has('splitter'))hints.push('Splitters ahead · Briar Patch adds poison to grouped ground pests.');
+  if(present.has('zip'))hints.push('Fast pests ahead · Dew Bell slows ground targets.');
+  return hints.join(' ');
 }
 
 export function specialistTypesForEncounter(groups=[]) {
   const present=new Set(groups.map(group=>group.type));
-  if(present.has('flyer'))return ['thorn','gust'];
-  if(present.has('armored'))return ['thorn'];
-  if(present.has('splitter'))return ['briar'];
-  return [];
+  const relevant=new Set();
+  if(present.has('flyer'))for(const type of ['thorn','gust'])relevant.add(type);
+  if(present.has('armored'))relevant.add('thorn');
+  if(present.has('splitter'))relevant.add('briar');
+  return SPECIALIST_TOWER_TYPES.filter(type=>relevant.has(type));
 }
 
 export function sunflowerPurchaseForecast({ cost, income }) {
