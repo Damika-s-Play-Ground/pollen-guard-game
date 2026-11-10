@@ -529,7 +529,6 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if (tower) {
       ctx.beginPath(); ctx.arc(tower.x, tower.y, abilityPreview.radius, 0, Math.PI * 2);
       ctx.fillStyle = '#ffe18a20'; ctx.fill(); ctx.setLineDash([7, 5]); ctx.strokeStyle = '#fff0a9'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
-      enemies.forEach(enemy => { if (abilityPreview.targetIds && !abilityPreview.targetIds.includes(enemy.id)) return; const point = enemyPosition(enemy, renderAlpha); ctx.beginPath(); ctx.arc(point.x, point.y, enemy.radius + 7, 0, Math.PI * 2); ctx.fillStyle = '#ffe18a44'; ctx.fill(); ctx.strokeStyle = '#fff7c9'; ctx.lineWidth = 2.5; ctx.stroke(); });
     }
   }
   healerLinks.forEach(link=>{if(!link?.from||!link?.to)return;ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);ctx.setLineDash([6/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash([]);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();});
@@ -580,6 +579,10 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if(burrowEmergence){ctx.save();ctx.globalAlpha=burrowEmergence.alpha??1;ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+11,0,Math.PI*2);ctx.strokeStyle='#e9cf82';ctx.lineWidth=Math.max(2.2,2.4/enemyStrokeScale);ctx.stroke();ctx.fillStyle='#fff0ae';ctx.font=`bold ${Math.max(8,9/enemyStrokeScale)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('SURFACED',point.x,bodyY+silhouette.radius+13/enemyStrokeScale);ctx.restore();}
     if(enemy.carryingSeedId!==null&&enemy.carryingSeedId!==undefined){ctx.fillStyle='#fff1a0';ctx.font='bold 13px sans-serif';ctx.fillText('✦',point.x+enemy.radius*.75,bodyY-enemy.radius*.8);}
   });
+  // Ability target markers must sit above enemy silhouettes, like selected-target markers.
+  if(abilityPreview&&towers.some(tower=>tower.id===abilityPreview.towerId)){
+    enemies.forEach(enemy=>{if(abilityPreview.targetIds&&!abilityPreview.targetIds.includes(enemy.id))return;const point=enemyPosition(enemy,renderAlpha);ctx.beginPath();ctx.arc(point.x,point.y,enemy.radius+7,0,Math.PI*2);ctx.fillStyle='#ffe18a44';ctx.fill();ctx.strokeStyle='#fff7c9';ctx.lineWidth=2.5;ctx.stroke();});
+  }
   if (guardian) {
     if (guardianMoveActive && guardian.downTimer <= 0) {
       const safe = guardianCursor && guardianDestinationIsSafe(guardian, guardianCursor, path, width, height);
