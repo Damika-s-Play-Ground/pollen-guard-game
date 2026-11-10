@@ -62,6 +62,7 @@
   "./src/journal-navigation.js",
   "./src/keyboard-bindings-ui.js",
   "./src/keyboard-bindings.js",
+  "./src/keyboard-inspector.js",
   "./src/leak-feedback.js",
   "./src/map-editor-ui.js",
   "./src/map-editor.js",

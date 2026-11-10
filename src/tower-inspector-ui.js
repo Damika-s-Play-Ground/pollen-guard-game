@@ -23,6 +23,8 @@ export function renderTowerInspector({ document, canvasHost, view }) {
   canvasHost.classList.toggle('has-selected-tower', !empty);
   const branches = byId('branchChoices');
   const contextBranches = byId('contextBranches');
+  const focusedContextBranchIndex=contextBranches.querySelectorAll('[data-branch]').indexOf?.(document.activeElement)??Array.from(contextBranches.querySelectorAll('[data-branch]')).indexOf(document.activeElement);
+  const focusedDetailBranchIndex=branches.querySelectorAll('[data-branch]').indexOf?.(document.activeElement)??Array.from(branches.querySelectorAll('[data-branch]')).indexOf(document.activeElement);
   if (empty) {
     branches.replaceChildren();
     contextBranches.replaceChildren();
@@ -75,6 +77,8 @@ export function renderTowerInspector({ document, canvasHost, view }) {
   });
   contextBranches.replaceChildren(...contextChoices);
   contextBranches.hidden = !contextChoices.length;
+  if(focusedContextBranchIndex>=0)contextChoices[focusedContextBranchIndex]?.focus?.({preventScroll:true});
+  if(focusedDetailBranchIndex>=0)branches.querySelectorAll('[data-branch]')[focusedDetailBranchIndex]?.focus?.({preventScroll:true});
   for (const button of branches.querySelectorAll('[data-branch]')) {
     const selected = view.selectedBranch === Number(button.dataset.branch);
     button.classList.toggle('selected', selected);

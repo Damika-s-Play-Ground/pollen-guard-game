@@ -114,6 +114,7 @@ export function resolveKeyboardCommand(event, { dialogOpen = false, placementAct
   if (event.key === 'Escape') return placementActive ? { type: 'cancel-placement', preventDefault: true } : null;
   if (placementActive && /^Arrow(Up|Down|Left|Right)$/.test(event.key)) return { type: 'move-placement-cursor', direction: event.key.slice(5), ...(event.shiftKey ? { step: 90 } : {}), preventDefault: true };
   if (placementActive && event.key === 'Enter') return { type: 'keyboard-placement', preventDefault: true };
+  if (interactionMode === 'inspect' && event.key === 'ArrowDown') return { type: 'focus-inspector-branch', preventDefault: true };
 
   const action = Object.entries(bindings).find(([, code]) => code === event.code)?.[0];
   if (action === 'pause') return { type: 'toggle-pause', preventDefault: true };

@@ -39,6 +39,7 @@ import { calculatePathLength, distanceToPath } from './src/path-geometry.js';
 import { AIR_ROUTE_SCHEDULE_VERSION, createEnemyRouteGeometry, distinctAirRoutePath } from './src/air-routes.js';
 import { defaultGateRoute, gateSwitchesForMap, pathForGateRoute, summarizeGateRoute } from './src/gate-routes.js';
 import { bindCanvasPointerInput, bindKeyboardInput, findTowersAtPoint, movePlacementCursor, worldRadiusForCssPixels } from './src/game-input.js';
+import { bindEnterButtonKeyboard, bindInspectorBranchKeyboard, bindInspectorButtonKeyboard, focusInspectorBranch } from './src/keyboard-inspector.js';
 import { createStaticMapCache, drawBattlefield, plantingSettle, shotRecoil } from './src/game-renderer.js';
 import { createRenderSnapshots } from './src/render-snapshot.js';
 import { towerArtSvg } from './src/tower-art.js';
@@ -668,7 +669,17 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function setToast(message,duration=2300) { const toast=byId('toast'); toast.setAttribute('role','status');toast.setAttribute('aria-live','polite');toast.setAttribute('aria-atomic','true');toast.textContent=message; clearTimeout(setToast.timer); setToast.timer=duration>0?setTimeout(()=>toast.textContent='',duration):null; }
   function announceKeyboardStatus(message) { clearTimeout(announceKeyboardStatus.timer);announceKeyboardStatus.timer=setTimeout(()=>{byId('keyboardAnnouncement').textContent=message;},350); }
-  function announceTowerSelection(tower) { const def=towersDef[tower.type];announceKeyboardStatus(`Selected ${def.name}, level ${tower.level}, targeting ${tower.targetMode||'First'}. Use the inspector controls to upgrade, change targeting, or sell.`); }
+  function announceTowerSelection(tower) { const def=towersDef[tower.type],branchHelp=tower.level===1&&tower.branchChoice==null?' Press Down Arrow to focus branch choices; use Left and Right arrows to choose, Enter to commit, or Escape to return to the battlefield.':' Press Down Arrow to focus the available inspector action.';announceKeyboardStatus(`Selected ${def.name}, level ${tower.level}, targeting ${tower.targetMode||'First'}. Use the inspector controls to upgrade, change targeting, or sell.${branchHelp}`); }
+  bindInspectorBranchKeyboard(byId('contextBranches'),{canvas});
+  bindInspectorButtonKeyboard(byId('contextUpgradeBtn'),{canvas});
+  bindEnterButtonKeyboard(byId('confirmAccept'));
+  function focusSelectedTowerKeyboardAction(){
+    if(selectedTower?.level===1&&selectedTower.branchChoice==null&&focusInspectorBranch(byId('contextBranches'),{document,canvas,announce:announceKeyboardStatus}))return;
+    const action=byId('contextUpgradeBtn');
+    if(!action.disabled){action.focus({preventScroll:true});return;}
+    byId('contextSellBtn').focus({preventScroll:true});
+    announceKeyboardStatus(`${byId('selectedName').textContent}: focus is on the inspector actions. Press Escape to return to the battlefield.`);
+  }
   const playCue=(cue,variant)=>gameAudio.play(cue,variant);
   function unlock(id) { if(maps[selectedMap]?.customMap)return;if(!profile.achievements.includes(id)){profile.achievements.push(id);persistProfile();renderAchievements();setToast(`Milestone earned: ${ACHIEVEMENT_DEFINITIONS.find(a=>a[0]===id)?.[1]||id}`);playCue('achievement');} }
   function checkProgress() {
@@ -864,7 +875,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(!selectedTower)abilityPreview=null;
     const linked=isTowerLinkedToAnother(selectedTower,towers,towersLinked);
     const view=selectedTower?buildTowerInspectorModel({selectedTower,towers,challenge,challengeRules,linked,cash,wave,gameTime,terrain:terrainAt(selectedTower),researchLoadout,relicLoadout,performance:combatPerformance,animation:uiSettings.animation,tutorialActive:tutorialPractice.active,tutorialTask:tutorialPractice.task,tutorialTowerId:tutorialPractice.towerId,supportTargetingAvailable:healerInterventionObserved,
-      onChooseBranch:index=>{const result=performPlayerAction('chooseBranch',{towerId:selectedTower.id,branch:index});if(result.ok){renderSelected();saveRun();}}
+      onChooseBranch:index=>{const result=performPlayerAction('chooseBranch',{towerId:selectedTower.id,branch:index});if(result.ok){renderSelected();saveRun();canvas.focus({preventScroll:true});announceKeyboardStatus(byId('contextUpgradeBtn').disabled?'Branch chosen. The upgrade is not affordable yet.':'Branch chosen. Press Down Arrow to focus the Upgrade action.');}}
     }):{empty:true};
     renderTowerInspector({document,canvasHost:canvas.parentElement,view});
     updateUpgradePreview();updateTargetIndicator();updateSelectedAbilityDock();
@@ -1502,6 +1513,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     else if(command.type==='snare')useSnare();
     else if(command.type==='select-tower'){selectTowerShortcut(command.towerType);if(!pointer.inside)pointer={x:canvas.width/2,y:canvas.height/2,inside:true};updatePlacementHint(pointer);draw();}
     else if(command.type==='cycle-tower')cyclePlacedTower(command.direction);
+    else if(command.type==='focus-inspector-branch')focusSelectedTowerKeyboardAction();
   });
 
   function selectTowerShortcut(type) {
