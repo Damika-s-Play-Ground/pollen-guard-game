@@ -89,7 +89,7 @@ import { renderUiSettings } from './src/settings-ui.js';
 import { bindUiSettingsControls } from './src/settings-controller.js';
 import { MAX_RUN_IMPORT_BYTES, bindRunTransferControls, renderRunTransferStatus, runImportFailureMessage, runImportWriteFailureMessage } from './src/run-transfer-ui.js';
 import { renderCombatReference } from './src/combat-reference-ui.js';
-import { activateGuardianPulse, advanceMeadowGuardian, GUARDIAN_PULSE_COOLDOWN } from './src/meadow-guardian.js';
+import { activateGuardianPulse, advanceMeadowGuardian, guardianMoveInterrupted, guardianMoveUnavailable, GUARDIAN_PULSE_COOLDOWN } from './src/meadow-guardian.js';
 import { createMissionKitState } from './src/mission-kit.js';
 import { closeMissionPreparation, missionChangeNeedsConfirmation } from './src/mission-preparation.js';
 import { aimedSpellTargets, buildSpellPreview, DEFAULT_SPELL_LOADOUT, normalizeSpellLoadout, rejuvenationTargets, SPELLS } from './src/spells.js';
@@ -630,7 +630,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     return result;
   }
   function beginGuardianMove() {
-    if(guardianMode!=='guardian'||!guardian||guardian.downTimer>0||runIsOver())return;
+    if(guardianMode!=='guardian'||guardianMoveUnavailable(guardian,runIsOver()))return;
     if(aimedSpellId)cancelAimedSpell();
     guardianMoveOrigin={selectedType};selectedType=null;guardianMoveActive=true;syncInteractionPresentation();
     pointer={x:guardian.targetX,y:guardian.targetY,inside:true};renderTowerOptions();canvas.focus({preventScroll:true});updateGuardianControls();draw();
@@ -972,7 +972,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const card=byId('guardianAbilityControl');if(!card)return;
     card.hidden=guardianMode!=='guardian';
     const move=byId('guardianMoveBtn'),pulse=byId('guardianPulseBtn'),status=byId('guardianStatus');
-    const moveDisabled=!guardian||runIsOver(),pulseDisabled=!guardian||!runIsActivelyRunning()||guardian.downTimer>0||guardian.pulseCooldown>0;
+    const moveDisabled=guardianMoveUnavailable(guardian,runIsOver()),pulseDisabled=!guardian||!runIsActivelyRunning()||guardian.downTimer>0||guardian.pulseCooldown>0;
     if(move.disabled!==moveDisabled)move.disabled=moveDisabled;
     const pressed=String(guardianMoveActive);if(move.getAttribute('aria-pressed')!==pressed)move.setAttribute('aria-pressed',pressed);
     const moveText=guardianMoveActive?'Click grass · Enter confirms · Esc cancels':'Move guardian';if(move.textContent!==moveText)move.textContent=moveText;
@@ -1297,7 +1297,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       updateHud();
     }
     else if(!runIsOver())advanceDroppedSeeds(seedObjective,dt);
-    if(guardianMode==='guardian'&&!runIsOver()){advanceMeadowGuardian(guardian,dt,{path,width:canvas.width,height:canvas.height,enemies,enemyPosition});if(guardian.downTimer>0||guardian.pulseCooldown>0)updateGuardianControls();}
+    if(guardianMode==='guardian'&&!runIsOver()){
+      advanceMeadowGuardian(guardian,dt,{path,width:canvas.width,height:canvas.height,enemies,enemyPosition});
+      if(guardianMoveInterrupted(guardian,guardianMoveActive))endGuardianMove();
+      if(guardian.downTimer>0||guardian.pulseCooldown>0)updateGuardianControls();
+    }
     particles=particles.filter(p=>p.wallClock||p.life>0);particles.forEach(p=>{if(p.wallClock)return;p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.95;p.vy*=.95;});
     saveClock+=dt;if(saveClock>=1){saveClock=0;if(wave||towers.length||guardianMode!=='none')saveRun();}
   }

@@ -8,6 +8,14 @@ export const GUARDIAN_PULSE_RADIUS = 76;
 export const GUARDIAN_PULSE_COOLDOWN = 18;
 export const GUARDIAN_DOWN_TIME = 4;
 
+export function guardianMoveUnavailable(guardian, gameOver = false) {
+  return !guardian || gameOver || guardian.downTimer > 0;
+}
+
+export function guardianMoveInterrupted(guardian, moveActive) {
+  return Boolean(moveActive && guardian?.downTimer > 0);
+}
+
 function pointOnSafeGrass(point, path, width, height) {
   return Array.isArray(path) && path.length >= 2 && point && Number.isFinite(point.x) && Number.isFinite(point.y) &&
     point.x >= GUARDIAN_RADIUS && point.x <= width - GUARDIAN_RADIUS &&
