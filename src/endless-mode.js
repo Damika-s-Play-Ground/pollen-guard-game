@@ -8,6 +8,8 @@ export const ENDLESS_CHOICE_INTERVAL = 5;
 export const ENDLESS_THREAT_BUDGET = 220;
 export const ENDLESS_ENEMY_CAP = 160;
 export const ENDLESS_MIN_SPAWN_INTERVAL = 0.14;
+// Population and spawn-rate pressure are capped; enemy durability and speed
+// continue to rise, so Endless offers recurring tactical choices, not novel waves forever.
 
 export function isEndlessChoice(value) {
   return typeof value === 'string' && Object.hasOwn(ENDLESS_CHOICES, value);

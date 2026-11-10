@@ -11,7 +11,7 @@ export function renderRunDebrief(container, report, document) {
   container.replaceChildren();
   const heading = document.createElement('h3'); heading.textContent = 'Combat report'; container.append(heading);
   const context = document.createElement('p'); context.className = 'debrief-context';
-  context.textContent = `${report.mapName} · ${report.challengeLabel} · ${report.won ? 'Victory' : 'Defeat'}${report.complete ? '' : ' · partial contribution history'}`; container.append(context);
+  context.textContent = `${report.mapName} · ${report.challengeLabel} · ${report.retired ? 'Retired' : report.won ? 'Victory' : 'Defeat'}${report.complete ? '' : ' · partial contribution history'}`; container.append(context);
   const totals = document.createElement('p'); totals.className = 'debrief-totals';
   totals.textContent = `${report.totalDamage} effective damage (${report.towerDamage} by defenders${report.otherDamage ? ` · ${report.otherDamage} by meadow powers` : ''}) · ${report.totalKills} defeats · ${report.totalLeaks} leaks`; container.append(totals);
   const suggestion = document.createElement('p'); suggestion.className = 'debrief-suggestion'; suggestion.textContent = report.suggestion; container.append(suggestion);
@@ -44,9 +44,11 @@ export function renderRunDebrief(container, report, document) {
 }
 
 export function renderResultsScreen(elements, model, document) {
-  elements.kicker.textContent = model.won ? 'GARDEN COMPLETE' : 'RUN COMPLETE';
-  elements.title.textContent = model.won ? 'Garden saved' : 'The trail got through';
-  elements.description.textContent = model.won
+  elements.kicker.textContent = model.retired ? 'ENDLESS RUN BANKED' : model.won ? 'GARDEN COMPLETE' : 'RUN COMPLETE';
+  elements.title.textContent = model.retired ? 'Run retired' : model.won ? 'Garden saved' : 'The trail got through';
+  elements.description.textContent = model.retired
+    ? 'You ended the run at a clear checkpoint. Your best wave and run record have been saved.'
+    : model.won
     ? 'Your defenders protected the meadow. Here is how the run finished.'
     : model.report?.suggestion
       ? `Run insight: ${model.report.suggestion}`

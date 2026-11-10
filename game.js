@@ -261,7 +261,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const runIsActivelyRunning=()=>runState.phase==='running';
   const runIsPaused=()=>runState.basePhase==='user-paused';
   const pauseFocus=createPauseFocusController({resumeButton:byId('pauseResumeBtn'),fallbackFocus:canvas,document});
-  const runIsOver=()=>runState.basePhase==='won'||runState.basePhase==='lost';
+  const runIsOver=()=>runState.basePhase==='won'||runState.basePhase==='lost'||runState.basePhase==='retired';
   function transitionRun(event) { runState=transitionRunState(runState,event); if(waveTransitionController)syncAutoStart(); }
   const confirmationFlow=createConfirmationFlow({
     dialog:byId('confirmDialog'), title:byId('confirmTitle'), message:byId('confirmText'), accept:byId('confirmAccept'),
@@ -320,9 +320,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       wave:byId('resultWave'), popped:byId('resultPopped'), petals:byId('resultPetals'), record:byId('resultRecord'),
       debrief:byId('runDebrief')
     }, {
-      won, wave, popped, petals:Math.floor(cash),
+      won, retired:runState.basePhase==='retired', wave, popped, petals:Math.floor(cash),
       record:buildResultRecord({customMap:Boolean(maps[selectedMap]?.customMap),profileSaved,challengeBoardId,bestWave:profile.bestWave}),
-      report:buildRunDebrief(combatPerformance,{mapName:maps[selectedMap].name,challengeLabel:challengeDisplayLabel(),won})
+      report:buildRunDebrief(combatPerformance,{mapName:maps[selectedMap].name,challengeLabel:challengeDisplayLabel(),won,retired:runState.basePhase==='retired'})
     }, document);
     const mission=CAMPAIGN_MISSION_BY_ID[selectedMap];
     const masteryElement=byId('missionMasteryResult');
@@ -927,7 +927,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const required=endlessChoiceRequired({challenge,wave,endlessChoiceWave});
     const visible=challenge==='endless'&&!runIsRunning()&&!runIsOver()&&endlessChoiceDue(wave);
     const panel=byId('endlessChoices');
-    renderEndlessChoices(panel,{visible,selected:visible&&!required?endlessModifier:null,document,focusFallback:runIsRunning()?byId('pauseBtn'):byId('startBtn'),onChoose:modifierId=>{
+    renderEndlessChoices(panel,{visible,selected:visible&&!required?endlessModifier:null,document,focusFallback:runIsRunning()?byId('pauseBtn'):byId('startBtn'),onRetire:()=>{if(challenge==='endless'&&!runIsRunning()&&!runIsOver()&&endlessChoiceDue(wave))finishRun(false,{retired:true});},onChoose:modifierId=>{
       const result=performPlayerAction('chooseEndlessModifier',{modifierId});
       if(!result.ok){setToast(result.reason);return;}
       setToast(`${ENDLESS_CHOICES[modifierId].label} selected for the next five waves.`);saveRun();updateHud();updatePreview();
@@ -1189,11 +1189,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const kit=createMissionKitState({challenge,guardianMode,path,width:canvas.width,height:canvas.height,modeDefinitions:modes}),preset=difficultyFor(difficulty,challenge);researchLoadout=researchRulesEligible()?researchLoadoutIds(profile.research):[];relicLoadout=relicRulesEligible()?relicLoadoutIds(profile.relics):[];const researchStart=researchStartingAdjustment(researchLoadout);terrainRulesVersion=1;rewardRulesVersion=WAVE_REWARD_RULES_VERSION;uiSettings.autoStartHold=false;saveUiSettings();lives=Math.max(1,kit.lives+preset.livesDelta+researchStart.lives);guardian=kit.guardian;seedObjective=challengeRules.includes(SEED_RECOVERY_RULE)?createSeedObjective():null;spellLoadout=challengeBoardId?[...CHALLENGE_SPELL_LOADOUT]:normalizeSpellLoadout(uiSettings.spellLoadout);rejuvenationField=null;cash=Math.max(0,config().cash+preset.cashDelta+researchStart.cash);towers=[];enemies=[];shots=[];particles=[];spawnQueue=[];spawnClock=0;wave=0;popped=0;bloomCharge=0;endlessModifier=null;endlessChoiceWave=0;nextEntityId=1;guardianMoveActive=false;guardianMoveOrigin=null;waveScheduleVersion=WAVE_SCHEDULE_VERSION;calcPath();combatPerformance=createCombatPerformance();transitionRun({type:'RESET'});intermission=0;updateGatePanel();gameTime=0;simulationTick=0;actionLog=[];actionLogComplete=true;actionLogLimitShown=false;runSeed=createRunSeed();selectedTower=null;selectedType='sprout';simulationClock.reset();resetRenderSnapshots();syncSpellLoadoutChecks();updatePlayOptionsLabel();renderTowerOptions();renderSelected();updateHud();updatePreview();saveRun();draw();
     if(hadRun)clearCompatibleBackup();
   }
-  function finishRun(won) {
+  function finishRun(won,{retired=false}={}) {
     if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}
     const customMap=maps[selectedMap]?.customMap===true;
     if(won&&customMap)won=lives>=maps[selectedMap].customObjective.minLives;
-    transitionRun({type:won?'WIN':'LOSE'});updateGatePanel();
+    transitionRun({type:retired?'RETIRE':won?'WIN':'LOSE'});updateGatePanel();
     let profileSaved=true;
     const persistCompletion=()=>{try{persistProfile();return true;}catch{return false;}};
     if(customMap){profileSaved=true;}
@@ -1208,11 +1208,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       masteryResult=buildMissionMasteryProgress(profile,{missionId:mission.id,difficulty,challenge,challengeRules,guardianMode,won,lives,leaks:combatPerformance.leaks.total,towerCount:towers.length});
       if(masteryResult.changed){profile={...profile,missionMastery:masteryResult.mastery};profile.research=normalizeResearchState(profile.research,earnedResearchPoints(profile));profileSaved=persistCompletion()&&profileSaved;renderCampaignMap();renderResearch();}
     }
-    byId('waveInfo').textContent=customMap?(won?`Custom objective met: ${lives} seeds remain (target ${maps[selectedMap].customObjective.minLives}).`:`Custom objective missed: keep ${maps[selectedMap].customObjective.minLives} seeds through wave 15; ${lives} remain.`):won?'All waves cleared! This garden is thriving.':'The seed pod was overrun. Try another layout or challenge rule.';
+    byId('waveInfo').textContent=retired?`Endless checkpoint ${wave} banked.`:customMap?(won?`Custom objective met: ${lives} seeds remain (target ${maps[selectedMap].customObjective.minLives}).`:`Custom objective missed: keep ${maps[selectedMap].customObjective.minLives} seeds through wave 15; ${lives} remain.`):won?'All waves cleared! This garden is thriving.':'The seed pod was overrun. Try another layout or challenge rule.';
     if(won&&!challengeBoardId&&!customMap)unlock('guardian');else if(!won)shakeBoard();
-    const historySaved=storeRunHistory(createRunSnapshot(),won?'won':'lost');
+    const historySaved=storeRunHistory(createRunSnapshot(),retired?'retired':won?'won':'lost');
     if(!isUnsupportedRunVersion(loadJson(RUN_KEY,null))){try{localStorage.removeItem(RUN_KEY);}catch{}clearCompatibleBackup();}
-    updateHud();renderAchievements();setToast(customMap?'Custom-map play does not award campaign progression or challenge scores.':profileSaved?(won?'Meadow saved!':combatPerformance.leaks.total?`Run ended after ${combatPerformance.leaks.total} leak${combatPerformance.leaks.total===1?'':'s'}; your best wave has been saved.`:'Run ended. Your best wave has been saved.'):'Run completed, but local progress could not be saved. Free browser storage and try again.');if(!historySaved)byId('runHistory').textContent='Run history could not be saved on this device; existing records are unchanged.';playCue(won?'victory':'defeat');showResults(won,masteryResult,{profileSaved});
+    updateHud();renderAchievements();setToast(retired?'Endless run retired; your checkpoint has been banked.':customMap?'Custom-map play does not award campaign progression or challenge scores.':profileSaved?(won?'Meadow saved!':combatPerformance.leaks.total?`Run ended after ${combatPerformance.leaks.total} leak${combatPerformance.leaks.total===1?'':'s'}; your best wave has been saved.`:'Run ended. Your best wave has been saved.'):'Run completed, but local progress could not be saved. Free browser storage and try again.');if(!historySaved)byId('runHistory').textContent='Run history could not be saved on this device; existing records are unchanged.';playCue(won?'victory':'defeat');showResults(won,masteryResult,{profileSaved});
   }
   let gameTime=0;
   const gameLoop=createGameLoop({

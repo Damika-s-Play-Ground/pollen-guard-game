@@ -16,7 +16,7 @@ function validEntry(entry) {
     Number.isSafeInteger(entry.leaks)&&entry.leaks>=0&&Array.isArray(entry.towers)&&entry.towers.every(tower=>isRecord(tower)&&typeof tower.type==='string'&&Number.isSafeInteger(tower.level)&&tower.level>=1&&tower.level<=3&&(tower.branch===null||Number.isSafeInteger(tower.branch)))&&
     typeof entry.actionLogComplete==='boolean'&&Number.isSafeInteger(entry.actionCount)&&entry.actionCount>=0&&typeof entry.stateHash==='string'&&
     (entry.milestones===undefined||Array.isArray(entry.milestones)&&entry.milestones.every(value=>typeof value==='string'&&value.length<=100))&&
-    ['won','lost'].includes(entry.outcome) && (entry.run === null || isRecord(entry.run));
+    ['won','lost','retired'].includes(entry.outcome) && (entry.run === null || isRecord(entry.run));
 }
 
 export function normalizeRunHistory(value) {
@@ -28,7 +28,7 @@ export function normalizeRunHistory(value) {
 
 export function recordCompletedRun(historyValue, run, { mapName, outcome, leaks = 0, milestones = [], recordedAt = new Date().toISOString() } = {}) {
   const history = normalizeRunHistory(historyValue);
-  if (!isRecord(run) || !['won','lost'].includes(outcome) || typeof mapName !== 'string' || mapName.length > 100 ||
+  if (!isRecord(run) || !['won','lost','retired'].includes(outcome) || typeof mapName !== 'string' || mapName.length > 100 ||
     !Number.isSafeInteger(leaks) || leaks < 0 || !Array.isArray(milestones) || milestones.some(value=>typeof value!=='string'||value.length>100) || !Number.isFinite(Date.parse(recordedAt))) return history;
   const id = `${recordedAt}:${run.stateHash || 'unhashed'}`.slice(0, 100);
   const rules = Array.isArray(run.challengeRules) ? [...run.challengeRules].sort() : [];

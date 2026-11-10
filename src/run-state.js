@@ -1,5 +1,5 @@
 function phaseOf(state) {
-  if (state.basePhase === 'won' || state.basePhase === 'lost') return state.basePhase;
+  if (state.basePhase === 'won' || state.basePhase === 'lost' || state.basePhase === 'retired') return state.basePhase;
   if (state.hidden) return 'hidden-paused';
   if (state.dialogOpen) return 'modal-paused';
   return state.basePhase;
@@ -38,6 +38,8 @@ export function transitionRunState(state, event) {
       return withPhase(state, { basePhase: 'won' });
     case 'LOSE':
       return withPhase(state, { basePhase: 'lost' });
+    case 'RETIRE':
+      return withPhase(state, { basePhase: 'retired' });
     case 'RESET':
       return withPhase(state, { basePhase: 'planning', resumePhase: null, dialogOpen: false, hidden: false });
     case 'RESTORE':
@@ -64,5 +66,5 @@ export function runStateSaveFlags(state) {
 
 export function runStateStopsClock(state) {
   return state.phase === 'user-paused' || state.phase === 'modal-paused' ||
-    state.phase === 'hidden-paused' || state.phase === 'won' || state.phase === 'lost';
+    state.phase === 'hidden-paused' || state.phase === 'won' || state.phase === 'lost' || state.phase === 'retired';
 }

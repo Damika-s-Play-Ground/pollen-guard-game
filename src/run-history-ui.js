@@ -6,7 +6,7 @@ export function renderRunHistory(container, entries, document, { onVerifyReplay 
   const compareStatus = document.createElement('p'); compareStatus.className='run-history-status'; compareStatus.setAttribute('role','status'); compareStatus.setAttribute('aria-live','polite'); container.append(compareStatus);
   for (const entry of entries) {
     const card=document.createElement('article');card.className='run-history-card';
-    const heading=document.createElement('h4');heading.textContent=`${entry.mapName} · ${entry.outcome==='won'?'Victory':'Defeat'} · wave ${entry.wave}`;card.append(heading);
+    const heading=document.createElement('h4');heading.textContent=`${entry.mapName} · ${{won:'Victory',lost:'Defeat',retired:'Retired'}[entry.outcome]} · wave ${entry.wave}`;card.append(heading);
     const towerSummary=entry.towers.map(tower=>{const name=tower.type.replace(/([a-z])([A-Z])/g,'$1 $2');return `${name[0]?.toUpperCase()||''}${name.slice(1)} L${tower.level}${Number.isInteger(tower.branch)?` path ${tower.branch+1}`:''}`;}).join(', ')||'no defenders',milestones=entry.milestones||[];
     const detail=document.createElement('p');detail.textContent=`${new Date(entry.recordedAt).toLocaleString()} · ${entry.challenge} / ${entry.difficulty}${entry.rules.length?` · ${entry.rules.join(' + ')}`:''} · ${entry.popped} defeated · ${entry.leaks} leaks · ${entry.towers.length} defenders (${towerSummary}) · ${milestones.length} milestones · v${entry.version}`;card.append(detail);
     const actions=document.createElement('div');actions.className='run-history-actions';
