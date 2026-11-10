@@ -357,7 +357,7 @@ export function buildWaveQueue(waveNumber, schedules = AUTHORED_WAVES, options =
   if(options.endless){
     if(isEndlessChoice(options.endlessModifier)){
       const modifier=ENDLESS_CHOICES[options.endlessModifier];
-      for(let index=0;index<modifier.count;index++)queue.push({type:modifier.type,interval:modifier.interval,lane:modifier.lane,telegraph:modifier.telegraph});
+      for(let index=0;index<modifier.count;index++)queue.push({type:modifier.type,interval:modifier.interval,lane:modifier.lane,telegraph:modifier.telegraph,rewardBonus:modifier.rewardBonus});
     }
     // A boss appears at every five-wave checkpoint, even when an authored cycle
     // would otherwise omit one. Existing bosses are not duplicated.

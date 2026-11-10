@@ -35,7 +35,7 @@ export function createEnemy(type, wave, id, lane = 'ground', telegraph = '', enc
   const enemy = assignEnemyCombatProfile({
     id, type, lane, telegraph, progress: 0, maxHp: definition.hp, hp: definition.hp,
     shield: definition.shield || 0, speed: definition.speed, radius: definition.radius,
-    color: definition.color, reward: definition.reward, armor: definition.armor || 0,
+    color: definition.color, reward: definition.reward + (Number.isFinite(encounter.rewardBonus)?Math.max(0,encounter.rewardBonus):0), armor: definition.armor || 0,
     flying: Boolean(definition.flying), boss: Boolean(definition.boss), slow: 0, stun: 0,
     ...(type === 'healer' ? { healerCharges:definition.healerCharges, healerCooldown:definition.healerCooldown,
       healerTelegraphTimer:definition.healerTelegraphTimer } : {}),
@@ -209,7 +209,7 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
       const spawn = state.spawnQueue.shift();
       state.enemies.push(createEnemy(typeof spawn === 'string' ? spawn : spawn.type, state.wave, state.nextEntityId++,
         typeof spawn === 'string' ? 'ground' : spawn.lane, typeof spawn === 'string' ? '' : spawn.telegraph,
-        { mapId:state.selectedMap, scheduleVersion:state.waveScheduleVersion, seedCarrier:Boolean(spawn.seedCarrier&&state.seedObjective) }));
+        { mapId:state.selectedMap, scheduleVersion:state.waveScheduleVersion, seedCarrier:Boolean(spawn.seedCarrier&&state.seedObjective), rewardBonus:Number.isFinite(spawn.rewardBonus)?spawn.rewardBonus:0 }));
       state.spawnClock = typeof spawn === 'string' ? .56 : spawn.interval;
     }
   }
