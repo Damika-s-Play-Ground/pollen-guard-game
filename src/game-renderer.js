@@ -424,10 +424,11 @@ export function enemyCueStackRanks(centers) {
   if (!centers.length) return ranks;
   let cellSize = 0;
   for (const center of centers) {
-    if (!Number.isFinite(center.x) || !Number.isFinite(center.y) || !Number.isFinite(center.radius) || center.radius < 0) {
+    const overlapRadius=center.overlapRadius??center.radius;
+    if (!Number.isFinite(center.x) || !Number.isFinite(center.y) || !Number.isFinite(overlapRadius) || overlapRadius < 0) {
       return countCueOverlaps(centers, ranks);
     }
-    cellSize = Math.max(cellSize, center.radius * 2 + 18);
+    cellSize = Math.max(cellSize, overlapRadius * 2 + 18);
   }
   if (cellSize >= Math.sqrt(Number.MAX_VALUE)) return countCueOverlaps(centers, ranks);
 
@@ -454,7 +455,7 @@ export function enemyCueStackRanks(centers) {
           if (right <= left) continue;
           const b = centers[right];
           if (a.id === b.id) continue;
-          const reach = a.radius + b.radius + 18, dx = a.x - b.x, dy = a.y - b.y;
+          const reach = (a.overlapRadius??a.radius) + (b.overlapRadius??b.radius) + 18, dx = a.x - b.x, dy = a.y - b.y;
           if (!(Math.hypot(dx, dy) < reach)) continue;
           const higher = a.id > b.id ? a.id : b.id;
           ranks.set(higher, ranks.get(higher) + 1);
@@ -469,7 +470,7 @@ function countCueOverlaps(centers, ranks) {
   for (let left = 0; left < centers.length; left++) for (let right = left + 1; right < centers.length; right++) {
     const a = centers[left], b = centers[right];
     if (a.id === b.id) continue;
-    const reach = a.radius + b.radius + 18, dx = a.x - b.x, dy = a.y - b.y;
+    const reach = (a.overlapRadius??a.radius) + (b.overlapRadius??b.radius) + 18, dx = a.x - b.x, dy = a.y - b.y;
     if (!(Math.hypot(dx, dy) < reach)) continue;
     const higher = a.id > b.id ? a.id : b.id;
     ranks.set(higher, ranks.get(higher) + 1);
@@ -595,7 +596,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   // Keep threat information readable even when volleys and impact particles cross the enemy.
   const bossWarningBoxes = [];
   const bossWarnings = [];
-  const enemyCueCenters = enemies.map(enemy => { const point=enemyPosition(enemy,renderAlpha),silhouette=enemySilhouetteMetrics(enemy,visualTime);return {id:enemy.id,radius:silhouette.radius,x:point.x,y:point.y-(enemy.flying?silhouette.radius*.85:silhouette.float),rawY:point.y}; });
+  const enemyCueCenters = enemies.map(enemy => { const point=enemyPosition(enemy,renderAlpha),silhouette=enemySilhouetteMetrics(enemy,visualTime);return {id:enemy.id,radius:silhouette.radius,overlapRadius:silhouette.overlapRadius,x:point.x,y:point.y-(enemy.flying?silhouette.radius*.85:silhouette.float),rawY:point.y}; });
   const cueCentersById = new Map(enemyCueCenters.map(center=>[center.id,center]));
   const cueStackRanks = enemyCueStackRanks(enemyCueCenters);
   enemies.forEach(enemy => {
