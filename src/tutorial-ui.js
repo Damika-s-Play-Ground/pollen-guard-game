@@ -78,8 +78,8 @@ export function buildFirstActionCoachView({visible,phase='place',selectedType='s
     : phase==='place-during-wave'
       ? 'Wave 1 is underway. Plant a defender on open grass.'
       : selectedType
-        ? `Place ${selectedName} with the first bend in range, then launch.`
-        : 'Choose a defender; keep the first bend in its range, then launch.';
+        ? `Place ${selectedName} with the first three bends in range, then launch.`
+        : 'Choose a defender to cover the first three bends, then launch.';
   return visible
     ? {visible:true,text,focusSelector:null,focusMap:false}
     : {visible:false,text:'',focusSelector:null,focusMap:false};
