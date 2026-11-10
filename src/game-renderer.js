@@ -678,6 +678,13 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   // Keep threat information readable even when volleys and impact particles cross the enemy.
   const bossWarningBoxes = [];
   const bossWarnings = [];
+  const terrainLabelBoxes = (TERRAIN_ZONES[map.biome]||[]).map(zone=>{
+    const terrainScale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
+    const label=TERRAIN_TYPES[zone.type].label,fontSize=Math.max(9,10/terrainScale);
+    const labelY=zone.y+zone.radius*(terrainScale<.7&&zone.type==='waterEdge'?-2.2:terrainScale<.7?.82:.58);
+    const labelWidth=label.length*fontSize*.62+10,labelHeight=fontSize+6;
+    return {left:zone.x-labelWidth/2,right:zone.x+labelWidth/2,top:labelY-labelHeight/2,bottom:labelY+labelHeight/2};
+  });
   const enemyCueCenters = enemyVisuals.map(({enemy,point,silhouette}) => ({id:enemy.id,radius:silhouette.radius,overlapRadius:silhouette.overlapRadius,x:point.x,y:point.y-(enemy.flying?silhouette.radius*.85:silhouette.float),rawY:point.y}));
   const cueCentersById = new Map(enemyCueCenters.map(center=>[center.id,center]));
   const cueStackRanks = enemyCueStackRanks(enemyCueCenters);
@@ -703,24 +710,28 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if (enemy.bossTelegraphTimer > 0 && enemy.bossTelegraph) {
       ctx.font = 'bold 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       const name = enemy.bossName || 'Bramble boss', labelWidth = Math.min(240, Math.max(ctx.measureText(name).width, ctx.measureText(enemy.bossTelegraph).width) + 12);
-      const labelX = Math.max(labelWidth / 2 + 4, Math.min(width - labelWidth / 2 - 4, point.x));
-      let labelTop = Math.max(4, bodyY - radius - 41);
-      const overlaps = top => {
-        const warningCollision=bossWarningBoxes.some(box=>Math.abs(box.x-labelX)<(box.width+labelWidth)/2+4&&Math.abs(box.top-top)<38);
-        const left=labelX-labelWidth/2-2,right=labelX+labelWidth/2+2,bottom=top+34;
+      const preferredX = Math.max(labelWidth / 2 + 4, Math.min(width - labelWidth / 2 - 4, point.x));
+      const preferredTop = Math.max(4, bodyY - radius - 41);
+      const overlaps = (x,top) => {
+        const warningCollision=bossWarningBoxes.some(box=>Math.abs(box.x-x)<(box.width+labelWidth)/2+4&&Math.abs(box.top-top)<38);
+        const left=x-labelWidth/2-2,right=x+labelWidth/2+2,bottom=top+34;
+        const terrainCollision=terrainLabelBoxes.some(box=>left<box.right+4&&right>box.left-4&&top<box.bottom+4&&bottom>box.top-4);
         const threatCollision=enemyCueCenters.some(center=>{
           const nearestX=Math.max(left,Math.min(right,center.x)),nearestY=Math.max(top,Math.min(bottom,center.y));
           const dx=center.x-nearestX,dy=center.y-nearestY,radius=center.overlapRadius+3;
           return dx*dx+dy*dy<radius*radius;
         });
-        return warningCollision||threatCollision;
+        return warningCollision||terrainCollision||threatCollision;
       };
-      if (overlaps(labelTop)) {
-        for (let offset=38; offset<height; offset+=38) {
-          const top = [labelTop+offset,labelTop-offset].find(y=>y>=4 && y<=height-38 && !overlaps(y));
-          if (top !== undefined) { labelTop=top; break; }
-        }
+      const candidates=[];
+      for(let column=-4;column<=4;column++)for(let row=-Math.ceil(height/38);row<=Math.ceil(height/38);row++){
+        const x=preferredX+column*(labelWidth+10),top=preferredTop+row*38;
+        if(x>=labelWidth/2+4&&x<=width-labelWidth/2-4&&top>=4&&top<=height-38)
+          candidates.push({x,top,score:(x-preferredX)**2+(top-preferredTop)**2});
       }
+      candidates.sort((a,b)=>a.score-b.score);
+      const placement=candidates.find(candidate=>!overlaps(candidate.x,candidate.top))||{x:preferredX,top:preferredTop};
+      const {x:labelX,top:labelTop}=placement;
       bossWarningBoxes.push({x:labelX,top:labelTop,width:labelWidth});
       bossWarnings.push({ x:point.x, bodyY, radius, labelX, labelTop, labelWidth, name, cue:enemy.bossTelegraph });
     }
