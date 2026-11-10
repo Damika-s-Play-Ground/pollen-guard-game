@@ -62,6 +62,15 @@ body[data-palette="high-contrast"]{--state-danger:#ffb29e;--state-warning:#ffe56
 .context-branch[aria-pressed="true"]{border-color:var(--mint);color:#d9f7bc;background:#263a29}
 .context-branch small{min-width:0;color:var(--gold);font:500 calc(9px * var(--ui-text-scale)) 'DM Mono',monospace;overflow-wrap:anywhere}
 .branch-evolution-preview{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:8px;background:#263a29}.branch-evolution-preview svg{display:block;width:28px;height:28px}.branch-choice .branch-evolution-preview{flex-basis:36px;width:36px;height:36px}.branch-choice .branch-evolution-preview svg{width:34px;height:34px}.context-branch .branch-evolution-preview{flex-basis:24px;width:24px;height:24px}.context-branch .branch-evolution-preview svg{width:22px;height:22px}
+@media(max-width:390px){
+  .selected-context{grid-template-columns:minmax(0,1fr) auto;align-items:stretch}
+  .selected-context>#contextTitle{grid-column:1/-1;grid-row:1;white-space:normal;overflow-wrap:anywhere}
+  .selected-context>#contextUpgradeBtn{grid-column:1;grid-row:3}
+  .selected-context>#contextSellBtn{grid-column:2;grid-row:3}
+  .context-branches{grid-row:2}
+  .context-branch{flex-wrap:wrap;justify-content:center;row-gap:0;min-height:50px;text-align:center}
+  .context-branch small{flex:1 0 100%;text-align:center}
+}
 .build-selection{margin:-6px 0 10px;padding:7px 9px;border-left:2px solid var(--mint);background:#17241b;color:#dcebd2;font-size:12px}
 .selected-heading{display:flex;align-items:center;gap:10px;margin:0 0 8px}
 .selected-portrait{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border:1px solid #496247;border-radius:12px;background:#263a29;font-size:25px}
