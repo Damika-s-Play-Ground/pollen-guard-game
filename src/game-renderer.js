@@ -22,21 +22,25 @@ const enemyRoleGlyphSprites = new WeakMap();
 // drawBattlefield is synchronous; reuse these per-enemy wrappers between frames
 // instead of allocating one short-lived object per enemy on every render.
 const enemyVisualScratch = [];
+const DEFAULT_ROLE_GLYPH_STYLE = Object.freeze({});
+const EXIT_WARNING_GLYPH_STYLE = Object.freeze({ fontWeight:'bold', color:'#fff' });
 
-function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize) {
+function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize, style = DEFAULT_ROLE_GLYPH_STYLE) {
   const document = ctx.canvas?.ownerDocument;
   if (!document?.createElement) { ctx.fillText(glyph, x, y); return; }
   let sprites = enemyRoleGlyphSprites.get(document);
   if (!sprites) { sprites = new Map(); enemyRoleGlyphSprites.set(document, sprites); }
-  const key = `${fontSize}:${glyph}`;
+  const fontWeight = style.fontWeight || '';
+  const color = style.color || '#fff8df';
+  const key = `${fontWeight}:${fontSize}:${color}:${glyph}`;
   let sprite = sprites.get(key);
   if (!sprite) {
     sprite = document.createElement('canvas');
     sprite.width = 32; sprite.height = 32;
     const spriteContext = sprite.getContext('2d');
     if (!spriteContext) { ctx.fillText(glyph, x, y); return; }
-    spriteContext.font = `${fontSize}px sans-serif`;
-    spriteContext.textAlign = 'center'; spriteContext.textBaseline = 'middle'; spriteContext.fillStyle = '#fff8df';
+    spriteContext.font = `${fontWeight ? `${fontWeight} ` : ''}${fontSize}px sans-serif`;
+    spriteContext.textAlign = 'center'; spriteContext.textBaseline = 'middle'; spriteContext.fillStyle = color;
     spriteContext.fillText(glyph, 16, 16);
     sprites.set(key, sprite);
   }
@@ -680,7 +684,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     drawStatusMarks(ctx, enemy, point.x, barTop - 11);
     const armorFeedback=armorFeedbackForEnemy(enemy);
     if(armorFeedback?.label){const label=armorFeedback.label,labelScale=Math.max(.35,enemyStrokeScale),fontSize=9/labelScale,labelWidth=(label.length*5.2+12)/labelScale,labelY=barTop-23/labelScale;ctx.save();ctx.globalAlpha=armorFeedback.alpha??1;ctx.fillStyle='#17271eeF';ctx.fillRect(point.x-labelWidth/2,labelY-8/labelScale,labelWidth,11/labelScale);ctx.strokeStyle=armorFeedback.kind==='blocked'?'#ff9a82':armorFeedback.kind==='bypassed'?'#b8ef83':'#ffe18a';ctx.lineWidth=1.5/labelScale;ctx.strokeRect(point.x-labelWidth/2,labelY-8/labelScale,labelWidth,11/labelScale);ctx.fillStyle=ctx.strokeStyle;ctx.font=`bold ${fontSize}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,point.x,labelY-2.5/labelScale);ctx.restore();}
-    if (enemy.progress > .82) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+7,0,Math.PI*2);ctx.setLineDash([2,2]);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.font='bold 8px sans-serif';ctx.fillStyle='#fff';ctx.fillText('!',point.x+radius+5,barTop-8); }
+    if (enemy.progress > .82) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+7,0,Math.PI*2);ctx.setLineDash([2,2]);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.font='bold 8px sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';drawEnemyRoleGlyph(ctx,'!',point.x+radius+5,barTop-8,8,EXIT_WARNING_GLYPH_STYLE); }
     if (enemy.id === selectedTargetId) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+9,0,Math.PI*2);ctx.setLineDash([3,2]);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);ctx.font='bold 8px sans-serif';ctx.fillStyle='#fff';ctx.fillText('TARGET',point.x,bodyY+radius+13+stackRank*9); }
     if (enemy.telegraph || enemy.bossTelegraphTimer > 0) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+13,0,Math.PI*2);ctx.setLineDash([3,3]);ctx.strokeStyle=enemy.boss?'#ffe2a0':'#fff';ctx.lineWidth=enemy.boss?3:2;ctx.stroke();ctx.setLineDash([]); }
     const choreography=enemy.boss?bossChoreoForEnemy(enemy):null;
