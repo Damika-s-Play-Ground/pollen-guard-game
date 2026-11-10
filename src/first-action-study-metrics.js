@@ -1,4 +1,4 @@
-const MILESTONES=new Set(['placement','launch']);
+const MILESTONES=new Set(['selection','placement','launch']);
 
 export function createFirstActionStudyMetrics({now=()=>performance.now()}={}) {
   let readyAt=null;
@@ -23,10 +23,12 @@ export function createFirstActionStudyMetrics({now=()=>performance.now()}={}) {
   }
 
   function summary() {
+    const selectionMs=milestones.get('selection');
     const placementMs=milestones.get('placement'),launchMs=milestones.get('launch');
     return {
       ready:readyAt!==null,
       invalidPlacementMs:invalidPlacementTimes.map(Math.round),
+      selectionMs:selectionMs===undefined?null:Math.round(selectionMs),
       placementMs:placementMs===undefined?null:Math.round(placementMs),
       placementWithin30s:placementMs===undefined?null:placementMs<=30000,
       launchMs:launchMs===undefined?null:Math.round(launchMs),

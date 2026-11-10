@@ -839,6 +839,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(guardianMoveActive)endGuardianMove();
     if(aimedSpellId)cancelAimedSpell();
     applyInteractionTransition('build',type);
+    firstActionStudyMetrics?.record('selection');
     hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});
     renderTowerOptions();renderSelected();updatePlacementHint();
     if(firstActionCoachVisible)updateTutorialCoach();
