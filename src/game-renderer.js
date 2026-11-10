@@ -612,6 +612,12 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     visual.enemy = enemy;
     visual.point = enemyPosition(enemy,renderAlpha);
     visual.silhouette = enemySilhouetteMetrics(enemy,visualTime);
+    visual.id = enemy.id;
+    visual.radius = visual.silhouette.radius;
+    visual.overlapRadius = visual.silhouette.overlapRadius;
+    visual.x = visual.point.x;
+    visual.y = visual.point.y - (enemy.flying ? visual.silhouette.radius * .85 : visual.silhouette.float);
+    visual.rawY = visual.point.y;
   }
   enemyVisuals.forEach(({enemy,point,silhouette}) => {
     const altitude=enemy.flying?silhouette.radius*.85:silhouette.float,bodyY=point.y-altitude;
@@ -685,11 +691,9 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const labelWidth=label.length*fontSize*.62+10,labelHeight=fontSize+6;
     return {left:zone.x-labelWidth/2,right:zone.x+labelWidth/2,top:labelY-labelHeight/2,bottom:labelY+labelHeight/2};
   });
-  const enemyCueCenters = enemyVisuals.map(({enemy,point,silhouette}) => ({id:enemy.id,radius:silhouette.radius,overlapRadius:silhouette.overlapRadius,x:point.x,y:point.y-(enemy.flying?silhouette.radius*.85:silhouette.float),rawY:point.y}));
-  const cueCentersById = new Map(enemyCueCenters.map(center=>[center.id,center]));
-  const cueStackRanks = enemyCueStackRanks(enemyCueCenters);
-  enemies.forEach(enemy => {
-    const cueCenter=cueCentersById.get(enemy.id),point={x:cueCenter.x,y:cueCenter.rawY},bodyY=cueCenter.y,radius=cueCenter.radius;
+  const cueStackRanks = enemyCueStackRanks(enemyVisuals);
+  for(let index=0;index<enemies.length;index++){
+    const enemy=enemies[index],cueCenter=enemyVisuals[index],point=cueCenter.point,bodyY=cueCenter.y,radius=cueCenter.radius;
     const stackRank=cueStackRanks.get(enemy.id)||0,cueY=bodyY-stackRank*11;
     const barWidth=enemy.boss?42:26,barTop=cueY-radius-9;
     ctx.fillStyle = '#263b2c'; ctx.fillRect(point.x - barWidth / 2 - 1, barTop - 1, barWidth + 2, 5);
@@ -716,7 +720,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
         const warningCollision=bossWarningBoxes.some(box=>Math.abs(box.x-x)<(box.width+labelWidth)/2+4&&Math.abs(box.top-top)<38);
         const left=x-labelWidth/2-2,right=x+labelWidth/2+2,bottom=top+34;
         const terrainCollision=terrainLabelBoxes.some(box=>left<box.right+4&&right>box.left-4&&top<box.bottom+4&&bottom>box.top-4);
-        const threatCollision=enemyCueCenters.some(center=>{
+        const threatCollision=enemyVisuals.some(center=>{
           const nearestX=Math.max(left,Math.min(right,center.x)),nearestY=Math.max(top,Math.min(bottom,center.y));
           const dx=center.x-nearestX,dy=center.y-nearestY,radius=center.overlapRadius+3;
           return dx*dx+dy*dy<radius*radius;
@@ -735,7 +739,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
       bossWarningBoxes.push({x:labelX,top:labelTop,width:labelWidth});
       bossWarnings.push({ x:point.x, bodyY, radius, labelX, labelTop, labelWidth, name, cue:enemy.bossTelegraph });
     }
-  });
+  }
   if (selectedType && pointer.inside) {
     const def = towersDef[selectedType], valid = !placementError(pointer);
     ctx.globalAlpha = .68; ctx.fillStyle = valid ? def.color : '#dd6655'; ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 14, 0, Math.PI * 2); ctx.fill();
