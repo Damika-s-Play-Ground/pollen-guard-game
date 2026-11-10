@@ -290,8 +290,8 @@ function drawStatusMarks(ctx, enemy, x, y) {
   });
 }
 
-function drawEnemyDetails(ctx, enemy, x, y, time = 0, displayScale = 1) {
-  const {gait}=enemySilhouetteMetrics(enemy,time);
+function drawEnemyDetails(ctx, enemy, x, y, time = 0, displayScale = 1, silhouette = enemySilhouetteMetrics(enemy,time)) {
+  const {gait}=silhouette;
   const scale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
   ctx.lineWidth = Math.max(enemy.boss ? 2 : 1.4,1/scale); ctx.strokeStyle = '#24372b'; ctx.fillStyle = '#fff0c9';
   if (enemy.flying) {
@@ -586,9 +586,8 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   // Threat silhouettes follow projectiles and particles; health and warning overlays follow the bodies.
   shots.forEach(shot=>drawProjectile(ctx,shot,shotPosition(shot,renderAlpha),shotAngle(shot,renderAlpha),displayScale));
   particles.forEach(particle=>drawCosmeticParticle(ctx,particle));
-  enemies.forEach(enemy => {
-    const point = enemyPosition(enemy, renderAlpha);
-    const silhouette=enemySilhouetteMetrics(enemy,visualTime),shape={...enemy,radius:silhouette.radius};
+  const enemyVisuals = enemies.map(enemy => ({enemy,point:enemyPosition(enemy,renderAlpha),silhouette:enemySilhouetteMetrics(enemy,visualTime)}));
+  enemyVisuals.forEach(({enemy,point,silhouette}) => {
     const altitude=enemy.flying?silhouette.radius*.85:silhouette.float,bodyY=point.y-altitude;
     const causality=impactCausalityForEnemy(enemy);
     if(causality?.from&&causality.alpha>0){ctx.save();ctx.globalAlpha=Math.min(1,causality.alpha)*.55;ctx.strokeStyle=causality.color||'#fff0a8';ctx.lineWidth=Math.max(1.5,2/enemyStrokeScale);ctx.setLineDash([5/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(causality.from.x,causality.from.y);ctx.lineTo(point.x,bodyY);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=Math.min(1,causality.alpha);ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+7,0,Math.PI*2);ctx.stroke();ctx.restore();}
@@ -617,8 +616,8 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
       ctx.beginPath(); ctx.ellipse(point.x, point.y, enemy.radius * 1.2, enemy.radius * .58, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(point.x, point.y - 1, enemy.radius * .5, Math.PI, Math.PI * 2); ctx.strokeStyle = '#d7b77b'; ctx.stroke();
     } else {
-      ctx.fillStyle = palette === 'high-contrast' ? (highContrastEnemyColors[enemy.type] || enemy.color) : enemy.color; traceEnemyShape(ctx, shape, point.x, bodyY, silhouette.radius); ctx.fill(); ctx.strokeStyle = '#172019'; ctx.lineWidth = Math.max(1.5,1.05/enemyStrokeScale); ctx.stroke();
-      drawEnemyDetails(ctx, shape, point.x, bodyY, visualTime,enemyStrokeScale);
+      ctx.fillStyle = palette === 'high-contrast' ? (highContrastEnemyColors[enemy.type] || enemy.color) : enemy.color; traceEnemyShape(ctx, enemy, point.x, bodyY, silhouette.radius); ctx.fill(); ctx.strokeStyle = '#172019'; ctx.lineWidth = Math.max(1.5,1.05/enemyStrokeScale); ctx.stroke();
+      drawEnemyDetails(ctx, enemy, point.x, bodyY, visualTime,enemyStrokeScale,silhouette);
     }
     if (enemyHitFlash(enemy) > 0) { ctx.beginPath(); ctx.arc(point.x, bodyY, silhouette.radius + 2, 0, Math.PI * 2); ctx.strokeStyle = '#fff8d9'; ctx.lineWidth = 2.5; ctx.stroke(); }
     const roleGlyphFontSize = enemy.boss ? 17 : 13;
@@ -653,7 +652,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   // Keep threat information readable even when volleys and impact particles cross the enemy.
   const bossWarningBoxes = [];
   const bossWarnings = [];
-  const enemyCueCenters = enemies.map(enemy => { const point=enemyPosition(enemy,renderAlpha),silhouette=enemySilhouetteMetrics(enemy,visualTime);return {id:enemy.id,radius:silhouette.radius,overlapRadius:silhouette.overlapRadius,x:point.x,y:point.y-(enemy.flying?silhouette.radius*.85:silhouette.float),rawY:point.y}; });
+  const enemyCueCenters = enemyVisuals.map(({enemy,point,silhouette}) => ({id:enemy.id,radius:silhouette.radius,overlapRadius:silhouette.overlapRadius,x:point.x,y:point.y-(enemy.flying?silhouette.radius*.85:silhouette.float),rawY:point.y}));
   const cueCentersById = new Map(enemyCueCenters.map(center=>[center.id,center]));
   const cueStackRanks = enemyCueStackRanks(enemyCueCenters);
   enemies.forEach(enemy => {
