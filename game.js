@@ -465,10 +465,12 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     measureActionFeedback('selection',()=>{const previewNeedsRefresh=wavePreviewNeedsSelectionRefresh(selectedTower,tower,towersDef);applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});syncTowerCatalogSelection(document.querySelectorAll('.tower-option'));byId('prospectiveLabel').textContent='No build pick · choose a defender to place';byId('cancelPlacementBtn').style.display='none';byId('towerDetail').textContent='';if(maps[selectedMap]?.customMap)byId('specialistRoster').open=true;renderSelected();updateHud();if(previewNeedsRefresh)updatePreview();revealSelectedTower();updatePlacementHint();draw();canvas.focus({preventScroll:true});announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});});
   }
   function showSelectionChooser(candidates) {
+    measureActionFeedback('selection',()=>{
     applyInteractionTransition('inspect-chooser');
     renderTowerOptions();renderSelected();updatePlacementHint();
     showTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement,candidates,towerDefinitions:towersDef,onSelect:selectPlacedTower,document});
     syncInteractionPresentation();draw();
+    });
   }
   function shakeBoard() {
     if(!uiSettings.shake||uiSettings.animation==='off')return;
@@ -1117,7 +1119,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       if(hits.length===1){selectPlacedTower(hits[0]);return;}
       hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});
       if(selectedType){if(event?.pointerType==='touch'){placementCandidate=point;pointer={...point,inside:true};updatePlacementHint(pointer);draw();}else placeTower(point);}
-      else{selectedTower=null;renderSelected();updateHud();draw();}
+      else{measureActionFeedback('selection',()=>{selectedTower=null;renderSelected();updateHud();draw();});}
     }
   });
   function drawSpellOverlay(){
