@@ -112,6 +112,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    grid-column: auto;
     font-size: calc(10px * var(--ui-text-scale));
     line-height: 1.15;
     max-width: 100%;
@@ -122,5 +123,14 @@
   .defender-sheet .starter-tower-list .affordability-shortfall {
     font-size: calc(9px * var(--ui-text-scale));
     overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 350px) {
+  .defender-sheet .starter-tower-list .tower-copy small.tower-role-label {
+    max-width: 100%;
+    padding-inline: 2px;
+    text-transform: none;
+    white-space: normal;
   }
 }
