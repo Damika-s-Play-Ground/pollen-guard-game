@@ -483,7 +483,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     width, height, displayScale = 1, map, path, pathLength, airPath, towers, selectedTower, towersDef, towersLinked, selectedTowerRange,
     enemies, enemyPosition, shots, shotPosition, shotAngle = () => 0, particles, selectedType, pointer, placementError,
     placementPreviewRange, abilityPreview, palette, highContrastEnemyColors, selectedTargetId, visualTime = 0, enemyHitFlash = () => 0, impactCausalityForEnemy = () => null, recoilForTower = () => 0, recoilAngleForTower = () => null,
-    plantingForTower = () => null, attackCueForTower = () => null, armorFeedbackForEnemy = () => null, healerLinks = [], healerFeedbackForEnemy = () => null, burrowEmergenceForEnemy = () => null, bossChoreoForEnemy = () => null, guardian = null, guardianMoveActive = false, guardianCursor = null, gateRoutePreviews = null, selectedGateRoute = null, placementComboPreviews = () => []
+    plantingForTower = () => null, attackCueForTower = () => null, armorFeedbackForEnemy = () => null, healerLinks = [], healerFeedbackForEnemy = () => null, burrowEmergenceForEnemy = () => null, bossChoreoForEnemy = () => null, guardian = null, guardianMoveActive = false, guardianCursor = null, gateRoutePreviews = null, selectedGateRoute = null, placementComboPreviews = () => [], showEnemyRoleGlyphs = true
   } = state;
   const enemyStrokeScale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
   ctx.clearRect(0, 0, width, height);
@@ -572,8 +572,10 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     }
     if (enemyHitFlash(enemy) > 0) { ctx.beginPath(); ctx.arc(point.x, bodyY, silhouette.radius + 2, 0, Math.PI * 2); ctx.strokeStyle = '#fff8d9'; ctx.lineWidth = 2.5; ctx.stroke(); }
     ctx.font = enemy.boss ? '17px sans-serif' : '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff8df';
-    if (burrowed) ctx.fillText('⌃', point.x, point.y - 2);
-    else ctx.fillText(enemy.flying ? '✦' : enemy.type === 'armored' ? '⬟' : enemy.type === 'shield' ? '◇' : enemy.type === 'carrier' ? '⬡' : enemy.type === 'splitter' ? '●' : enemy.type === 'healer' ? '+' : enemy.boss ? '♛' : '•', point.x, bodyY);
+    if (showEnemyRoleGlyphs) {
+      if (burrowed) ctx.fillText('⌃', point.x, point.y - 2);
+      else ctx.fillText(enemy.flying ? '✦' : enemy.type === 'armored' ? '⬟' : enemy.type === 'shield' ? '◇' : enemy.type === 'carrier' ? '⬡' : enemy.type === 'splitter' ? '●' : enemy.type === 'healer' ? '+' : enemy.boss ? '♛' : '•', point.x, bodyY);
+    }
     const burrowEmergence=enemy.type==='burrower'&&enemy.burrowTimer<=0?burrowEmergenceForEnemy(enemy):null;
     if(burrowEmergence){ctx.save();ctx.globalAlpha=burrowEmergence.alpha??1;ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+11,0,Math.PI*2);ctx.strokeStyle='#e9cf82';ctx.lineWidth=Math.max(2.2,2.4/enemyStrokeScale);ctx.stroke();ctx.fillStyle='#fff0ae';ctx.font=`bold ${Math.max(8,9/enemyStrokeScale)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('SURFACED',point.x,bodyY+silhouette.radius+13/enemyStrokeScale);ctx.restore();}
     if(enemy.carryingSeedId!==null&&enemy.carryingSeedId!==undefined){ctx.fillStyle='#fff1a0';ctx.font='bold 13px sans-serif';ctx.fillText('✦',point.x+enemy.radius*.75,bodyY-enemy.radius*.8);}
