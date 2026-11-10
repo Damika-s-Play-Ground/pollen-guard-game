@@ -705,7 +705,16 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
       const name = enemy.bossName || 'Bramble boss', labelWidth = Math.min(240, Math.max(ctx.measureText(name).width, ctx.measureText(enemy.bossTelegraph).width) + 12);
       const labelX = Math.max(labelWidth / 2 + 4, Math.min(width - labelWidth / 2 - 4, point.x));
       let labelTop = Math.max(4, bodyY - radius - 41);
-      const overlaps = top => bossWarningBoxes.some(box => Math.abs(box.x-labelX) < (box.width+labelWidth)/2+4 && Math.abs(box.top-top) < 38);
+      const overlaps = top => {
+        const warningCollision=bossWarningBoxes.some(box=>Math.abs(box.x-labelX)<(box.width+labelWidth)/2+4&&Math.abs(box.top-top)<38);
+        const left=labelX-labelWidth/2-2,right=labelX+labelWidth/2+2,bottom=top+34;
+        const threatCollision=enemyCueCenters.some(center=>{
+          const nearestX=Math.max(left,Math.min(right,center.x)),nearestY=Math.max(top,Math.min(bottom,center.y));
+          const dx=center.x-nearestX,dy=center.y-nearestY,radius=center.overlapRadius+3;
+          return dx*dx+dy*dy<radius*radius;
+        });
+        return warningCollision||threatCollision;
+      };
       if (overlaps(labelTop)) {
         for (let offset=38; offset<height; offset+=38) {
           const top = [labelTop+offset,labelTop-offset].find(y=>y>=4 && y<=height-38 && !overlaps(y));
