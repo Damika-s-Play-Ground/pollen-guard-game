@@ -125,7 +125,10 @@ export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote,
   }
 
   const { preview, boss } = view;
-  if(sheetThreatSummary)sheetThreatSummary.textContent=view.upcomingThreat?`Next: ${view.upcomingThreat.name} · Counter: ${view.upcomingThreat.counter}`:'';
+  if(sheetThreatSummary){
+    const threat=view.upcomingThreat;
+    sheetThreatSummary.textContent=threat?`Wave ${threat.wave} · ${threat.icon} ${threat.name} · ${threat.route} · Counter: ${threat.counter}`:'';
+  }
   if (threatStrip) {
     threatStrip.hidden = !view.upcomingThreat;
     if (view.upcomingThreat) {
