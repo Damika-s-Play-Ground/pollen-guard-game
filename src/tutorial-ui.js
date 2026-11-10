@@ -5,14 +5,21 @@ export const TUTORIAL_STEPS = Object.freeze([
   Object.freeze(['Inspect and specialize', 'Select a placed tower to change its target priority, choose an upgrade branch, and use its ability.'])
 ]);
 
-export function shouldShowFirstActionCoach({ tutorialSeen = false, tutorialInProgress = false, hasSavedRun = false } = {}) {
-  return !tutorialSeen && !tutorialInProgress && !hasSavedRun;
+export function shouldShowFirstActionCoach({ tutorialSeen = false, tutorialInProgress = false, hasSavedRun = false, phase = 'place' } = {}) {
+  const unfinishedAction=phase==='launch'||phase==='place-during-wave';
+  return !tutorialSeen && !tutorialInProgress && phase!=='complete' && phase!=='dismissed' && (!hasSavedRun||unfinishedAction);
 }
 
 export function advanceFirstActionCoach(state={},action) {
   const placed=Boolean(state.placed||action==='place'),launched=Boolean(state.launched||action==='launch');
   const visible=Boolean(state.visible)&&!(placed&&launched);
   return {visible,placed,launched,phase:placed?(launched?'complete':'launch'):(launched?'place-during-wave':'place')};
+}
+
+export function firstActionCoachProgress(phase='place') {
+  if(phase==='launch')return {phase,placed:true,launched:false};
+  if(phase==='place-during-wave')return {phase,placed:false,launched:true};
+  return {phase:phase==='complete'||phase==='dismissed'?phase:'place',placed:false,launched:false};
 }
 
 export function buildTutorialStepView(step) {

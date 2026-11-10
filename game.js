@@ -54,7 +54,7 @@ import { resolveGuidanceOwner, guidanceVisibility } from './src/guidance-arbitra
 import { pathCoveragePercent } from './src/route-coverage.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
 import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutorialPracticeState, finishTutorialPracticeState, resetTutorialPracticeState } from './src/tutorial-progress.js';
-import { advanceFirstActionCoach, buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, mountTutorialCoach, renderTutorialCoach, renderTutorialStep, shouldShowFirstActionCoach } from './src/tutorial-ui.js';
+import { advanceFirstActionCoach, buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, firstActionCoachProgress, mountTutorialCoach, renderTutorialCoach, renderTutorialStep, shouldShowFirstActionCoach } from './src/tutorial-ui.js';
 import { DEFAULT_KEY_BINDINGS, bindKey, keyCodeLabel } from './src/keyboard-bindings.js';
 import { keyboardActionLabels as buildKeyboardActionLabels, renderKeyboardBindings as presentKeyboardBindings } from './src/keyboard-bindings-ui.js';
 import { shouldEmitParticles } from './src/visual-preferences.js';
@@ -227,7 +227,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const healerPulses=new Map(),burrowEmergenceCues=new Map(),bossChoreoCues=new Map();
   let healerInterventionObserved=false;
   const renderSnapshots=createRenderSnapshots();
-  let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, firstActionCoachPlaced=false, firstActionCoachLaunched=false, firstActionCoachPhase='place', tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
+  const resumedFirstActionCoach=firstActionCoachProgress(uiSettings.firstActionCoachPhase);
+  let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, firstActionCoachPlaced=resumedFirstActionCoach.placed, firstActionCoachLaunched=resumedFirstActionCoach.launched, firstActionCoachPhase=resumedFirstActionCoach.phase, tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
   const aimedSpellControls=new Map();
   let runState=createRunState();
   let combatPerformance=createCombatPerformance();
@@ -351,7 +352,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     },tutorialStep,document);
   }
   function finishTutorial() {
-    tutorialPractice=finishTutorialPracticeState(tutorialPractice);firstActionCoachVisible=false;uiSettings.tutorialSeen=true;uiSettings.tutorialInProgress=false;uiSettings.tutorialReturnToSavedRun=false;saveUiSettings();byId('tutorialDialog').close();clearTutorialCoach({coach:byId('tutorialCoach'),board:canvas.parentElement,document});
+    tutorialPractice=finishTutorialPracticeState(tutorialPractice);firstActionCoachVisible=false;uiSettings.tutorialSeen=true;uiSettings.firstActionCoachPhase='complete';uiSettings.tutorialInProgress=false;uiSettings.tutorialReturnToSavedRun=false;saveUiSettings();byId('tutorialDialog').close();clearTutorialCoach({coach:byId('tutorialCoach'),board:canvas.parentElement,document});
     if(tutorialReturnToSavedRun&&hasSavedRun())restoreRun();else resetRun();
     tutorialReturnToSavedRun=false;byId('defenderCard').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
@@ -373,7 +374,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function recordFirstActionCoachAction(action) {
     const next=advanceFirstActionCoach({visible:firstActionCoachVisible,placed:firstActionCoachPlaced,launched:firstActionCoachLaunched},action);
     firstActionCoachVisible=next.visible;firstActionCoachPlaced=next.placed;firstActionCoachLaunched=next.launched;firstActionCoachPhase=next.phase;
-    if(action==='place'||!next.visible){uiSettings.tutorialSeen=true;saveUiSettings();}
+    uiSettings.firstActionCoachPhase=next.phase;
+    if(!next.visible)uiSettings.tutorialSeen=true;
+    saveUiSettings();
     updateTutorialCoach();updatePlacementHint();
   }
   function syncGuidanceVisibility(criticalWarning=criticalWarningActive,placementError=currentPlacementError){
@@ -389,7 +392,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
         const exit=byId('tutorialExitBtn'),active=tutorialPractice.active;
         exit.textContent=active?'End practice':'Dismiss';
         renderTutorialCoach({coach,text:byId('tutorialCoachText'),exit,board:canvas.parentElement,document,view:tutorialCoachView,
-          onEndPractice:active?finishTutorial:()=>{firstActionCoachVisible=false;uiSettings.tutorialSeen=true;saveUiSettings();updateTutorialCoach();updatePlacementHint();}});
+          onEndPractice:active?finishTutorial:()=>{firstActionCoachVisible=false;uiSettings.tutorialSeen=true;uiSettings.firstActionCoachPhase='dismissed';saveUiSettings();updateTutorialCoach();updatePlacementHint();}});
         guidanceViewKey=viewKey;
       }
     }else if(!coach.hidden){
@@ -1543,7 +1546,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   else if(selectRecoverableRun(startupPrimaryRaw,startupBackupRaw,maps,modes).source==='backup')setToast('The main save is invalid. Resume will recover the previous autosave.',0);
   if(uiSettings.tutorialInProgress){
     tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun);tutorialStep=3;updateTutorial();byId('tutorialText').textContent='Your practice restarts from step one after a reload. The saved garden remains protected.';byId('tutorialDialog').showModal();transitionRun({type:'DIALOG_OPEN'});
-  }else if(shouldShowFirstActionCoach({tutorialSeen:uiSettings.tutorialSeen,tutorialInProgress:uiSettings.tutorialInProgress,hasSavedRun:Boolean(startupPrimaryRaw||startupBackupRaw)})){firstActionCoachVisible=true;updateTutorialCoach();updatePlacementHint();if(mobileLayout.matches)setDefenderSheetOpen(true);if(firstActionStudyMetrics)requestAnimationFrame(()=>requestAnimationFrame(()=>firstActionStudyMetrics.markReady()));}
+  }else if(shouldShowFirstActionCoach({tutorialSeen:uiSettings.tutorialSeen,tutorialInProgress:uiSettings.tutorialInProgress,hasSavedRun:Boolean(startupPrimaryRaw||startupBackupRaw),phase:uiSettings.firstActionCoachPhase})){firstActionCoachVisible=true;updateTutorialCoach();updatePlacementHint();if(mobileLayout.matches)setDefenderSheetOpen(true);if(firstActionStudyMetrics)requestAnimationFrame(()=>requestAnimationFrame(()=>firstActionStudyMetrics.markReady()));}
   registerOfflineSupport({canApplyUpdate:()=>runIsOver()||(!wave&&!towers.length&&!enemies.length)});
   gameLoop.start();
 })();

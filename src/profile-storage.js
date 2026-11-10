@@ -12,7 +12,7 @@ export const UI_SETTINGS_STORAGE_KEY = 'pollen-guard.ui.v1';
 export const DEFAULT_PROFILE = Object.freeze({ unlockedMaps: ['meadow'], unlockedMissions:['meadow'], completedMissions:[], missionRecords:{}, missionMastery:{}, research:{unlocked:[],loadout:{}}, relics:{unlocked:[],loadout:[]}, achievements: [], bestWave: {}, challengeBests:{} });
 export const DEFAULT_UI_SETTINGS = Object.freeze({
   animation: 'full', shake: true, flashes: true, compact: false, palette: 'garden', showAirRoute: false,
-  textSize: 'normal', tutorialSeen: false, tutorialInProgress: false, tutorialReturnToSavedRun: false, sound: false,
+  textSize: 'normal', tutorialSeen: false, tutorialInProgress: false, tutorialReturnToSavedRun: false, firstActionCoachPhase:'place', sound: false,
   masterVolume: 80, musicVolume: 20, effectsVolume: 70,
   keyBindings: DEFAULT_KEY_BINDINGS, spellLoadout: DEFAULT_SPELL_LOADOUT, autoStart: false, autoStartHold: false, autoStartDelaySeconds:5
 });
@@ -89,6 +89,7 @@ export function normalizeUiSettings(value) {
     tutorialSeen: typeof source.tutorialSeen === 'boolean' ? source.tutorialSeen : DEFAULT_UI_SETTINGS.tutorialSeen,
     tutorialInProgress: typeof source.tutorialInProgress === 'boolean' ? source.tutorialInProgress : DEFAULT_UI_SETTINGS.tutorialInProgress,
     tutorialReturnToSavedRun: typeof source.tutorialReturnToSavedRun === 'boolean' ? source.tutorialReturnToSavedRun : DEFAULT_UI_SETTINGS.tutorialReturnToSavedRun,
+    firstActionCoachPhase: ['place','launch','place-during-wave','complete','dismissed'].includes(source.firstActionCoachPhase) ? source.firstActionCoachPhase : DEFAULT_UI_SETTINGS.firstActionCoachPhase,
     spellLoadout: normalizeSpellLoadout(source.spellLoadout),
     keyBindings: normalizeKeyBindings(source.keyBindings),
     autoStart: typeof source.autoStart === 'boolean' ? source.autoStart : DEFAULT_UI_SETTINGS.autoStart,
