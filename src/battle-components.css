@@ -158,6 +158,20 @@ body[data-palette="high-contrast"]{--text-cream:#fff;--text-muted:#e4eadf;--reso
 .tutorial-dot-row i.active{background:var(--action-lime)}
 .guide-dialog::backdrop,.confirm-dialog::backdrop,.tutorial-dialog::backdrop,.results-dialog::backdrop{background:color-mix(in srgb,var(--surface-deep) 85%,transparent)}
 .specialist-roster .tower-option,.research-path,.relic-card,.run-history-playback{border-color:var(--control-border);background:var(--surface-panel);color:var(--text-cream)}
+
+/* Item 081: keep HUD reading sizes and prices legible at the standard setting. */
+:root{--type-secondary:14px;--type-body:16px;--type-title:22px}
+.stat span,.cost,.context-branch small{font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums lining-nums}
+.cost,.context-branch small{font-size:calc(16px * var(--ui-text-scale));font-weight:700;white-space:nowrap}
+.defender-sheet .starter-tower-list .cost{font-size:calc(16px * var(--ui-text-scale))}
+.defender-sheet .starter-tower-list .affordability-shortfall{font-size:calc(14px * var(--ui-text-scale))}
+.tower-copy small.tower-role-label,.branch-choice small{font-size:calc(14px * var(--ui-text-scale))}
+.defender-sheet .starter-tower-list .tower-copy small.tower-role-label{font-size:calc(14px * var(--ui-text-scale))}
+.selected-context>#contextUpgradeBtn{font-size:calc(16px * var(--ui-text-scale))}
+.threat-wave,.threat-route,.threat-counter,.selected-context>#contextTitle,.placement-hint,.affordability-shortfall{font-size:calc(14px * var(--ui-text-scale))}
+.stat span{letter-spacing:.04em}
+@media(max-width:390px){.top{flex-wrap:wrap;gap:6px}.top-actions{width:100%;justify-content:space-between}.top-actions button,.top-actions .settings-panel>summary{padding:6px 7px;font-size:calc(14px * var(--ui-text-scale))}}
+@media(max-width:390px){.combat-actions button{font-size:calc(14px * var(--ui-text-scale))}.combat-actions #pauseBtn{font-size:calc(16px * var(--ui-text-scale))}.combat-actions #fastBtn{font-size:0}.combat-actions #fastBtn::after{font-size:calc(19px * var(--ui-text-scale))}.combat-actions #speedBtn{font-size:0}.combat-actions #speedBtn::after{font-size:calc(14px * var(--ui-text-scale))}.map-footer .ability-card>button{font-size:calc(14px * var(--ui-text-scale))}}
 .map-note,.battle-support .map-note{color:var(--text-cream);background:var(--surface-panel)}
 .tower-combination-card h3,.economy-forecast b,.debrief-table caption{color:var(--action-lime)}
 .tower-combination-card,.route-gate-panel{border-color:var(--control-border);background:var(--surface-panel);color:var(--text-cream)}
