@@ -49,6 +49,7 @@ import { buildMissionMasteryProgress, missionMasteryResultText } from './src/mis
 import { ENEMY_INTEL, enemyIntelFor, firstEncounterIntel } from './src/enemy-intel.js';
 import { buildEnemyBriefingView, filterEnemyGuide as filterEnemyGuideCards, renderEnemyBriefing, renderEnemyGuide } from './src/enemy-guide-ui.js';
 import { buildPlacementHintView, renderPlacementHint } from './src/placement-ui.js';
+import { placementPreviewRange as calculatePlacementPreviewRange } from './src/placement-preview.js';
 import { resolveGuidanceOwner, guidanceVisibility } from './src/guidance-arbitration.js';
 import { pathCoveragePercent } from './src/route-coverage.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
@@ -206,6 +207,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   if(!explicitAnimationPreference&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){uiSettings.animation='reduced';uiSettings.shake=false;}
   let selectedMap = 'meadow', gateRoute='default',gateSwitchesRemaining=0,terrainRulesVersion=1, challenge = 'classic', difficulty=DEFAULT_DIFFICULTY, challengeRules=[], challengeBoardId=null, importedBoardChallenge=null, challengeImportPreview=null, path = maps.meadow.path, pathLength = 0, routeGeometry = createEnemyRouteGeometry(maps.meadow,WAVE_SCHEDULE_VERSION);
   const terrainAt=point=>terrainRulesVersion>=1?terrainZoneAt(selectedMap,point):'ground';
+  const placementPreviewRange=(type,point)=>calculatePlacementPreviewRange(type,point,{challenge,challengeRules,researchLoadout,relicLoadout,terrainAt,towersDef,getEffectiveTowerStats});
   const initialResearchStart=researchStartingAdjustment(researchLoadout);
   let rewardRulesVersion=WAVE_REWARD_RULES_VERSION;
   let cash=220+initialResearchStart.cash, lives=Math.max(1,20+initialResearchStart.lives), popped=0, wave=0, bloomCharge=0, waveScheduleVersion=WAVE_SCHEDULE_VERSION, towers=[], enemies=[], shots=[], particles=[];
@@ -1138,7 +1140,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       airPath:distinctAirRoutePath(routeGeometry),showAirRoute:Boolean(uiSettings.showAirRoute||airRoutePreviewed||enemies.some(enemy=>enemy.flying)||(selectedTower&&towersDef[selectedTower.type]?.antiAir)),
       towers,selectedTower,towersDef,towersLinked,
       selectedTowerRange(tower){const def=towersDef[tower.type];if(def.supportStructure)return getEffectiveTowerStats(tower,{researchLoadout,relicLoadout},def).range; if(!def.range)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));return getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def).range;},
-      placementPreviewRange(type,point){return getEffectiveTowerStats({type,level:1},{challenge,challengeRules,linked:false,terrain:terrainAt(point),researchLoadout,relicLoadout},towersDef[type]).range;},abilityPreview:liveAbilityPreview,
+      placementPreviewRange,abilityPreview:liveAbilityPreview,
       placementComboPreviews(type,point){return previewTowerCombinations({id:'placement-preview',type,x:point.x,y:point.y},towers,towersLinked);},
       enemies,enemyPosition:enemy=>renderSnapshots.enemyPosition(enemy,routeGeometry.pathFor,renderAlpha),shots,shotPosition:shot=>renderSnapshots.shotPosition(shot,renderAlpha),
       shotAngle(shot,alpha){const from=renderSnapshots.shotPosition(shot,alpha),target=shot.target;if(!target)return 0;const point=renderSnapshots.enemyPosition(target,routeGeometry.pathFor,alpha);return Math.atan2(point.y-(target.flying?target.radius*.85:0)-from.y,point.x-from.x);},particles,selectedType,pointer,
