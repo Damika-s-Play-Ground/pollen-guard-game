@@ -10,6 +10,10 @@ export function shouldShowFirstActionCoach({ tutorialSeen = false, tutorialInPro
   return !tutorialSeen && !tutorialInProgress && phase!=='complete' && phase!=='dismissed' && (!hasSavedRun||unfinishedAction);
 }
 
+export function firstActionCoachHasSavedRun({ recoverableSource = 'none', storageUnavailable = false } = {}) {
+  return Boolean(storageUnavailable) || recoverableSource !== 'none';
+}
+
 export function advanceFirstActionCoach(state={},action) {
   const placed=Boolean(state.placed||action==='place'),launched=Boolean(state.launched||action==='launch');
   const visible=Boolean(state.visible)&&!(placed&&launched);

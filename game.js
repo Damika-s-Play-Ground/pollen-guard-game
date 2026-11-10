@@ -55,7 +55,7 @@ import { applyGuidanceVisibility, resolveGuidanceOwner, guidanceVisibility } fro
 import { pathCoveragePercent } from './src/route-coverage.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
 import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutorialPracticeState, finishTutorialPracticeState, resetTutorialPracticeState } from './src/tutorial-progress.js';
-import { advanceFirstActionCoach, buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, firstActionCoachProgress, mountTutorialCoach, renderTutorialCoach, renderTutorialStep, shouldShowFirstActionCoach } from './src/tutorial-ui.js';
+import { advanceFirstActionCoach, buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, firstActionCoachHasSavedRun, firstActionCoachProgress, mountTutorialCoach, renderTutorialCoach, renderTutorialStep, shouldShowFirstActionCoach } from './src/tutorial-ui.js';
 import { DEFAULT_KEY_BINDINGS, bindKey, keyCodeLabel } from './src/keyboard-bindings.js';
 import { keyboardActionLabels as buildKeyboardActionLabels, renderKeyboardBindings as presentKeyboardBindings } from './src/keyboard-bindings-ui.js';
 import { shouldEmitParticles } from './src/visual-preferences.js';
@@ -1574,14 +1574,15 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   createSpellControls();syncSpellLoadoutChecks();renderMapOptions();updatePlayOptionsLabel();renderAchievements();calcPath();renderTowerOptions();renderSelected();updateHud();updatePreview();
   let startupPrimaryRaw=null,startupBackupRaw=null,startupStorageUnavailable=false;
   try{startupPrimaryRaw=localStorage.getItem(RUN_KEY);startupBackupRaw=localStorage.getItem(RUN_BACKUP_KEY);}catch{startupStorageUnavailable=true;}
+  const startupRunResolution=selectRecoverableRun(startupPrimaryRaw,startupBackupRaw,maps,modes);
   const savedRunAtStartup=(()=>{try{return startupPrimaryRaw?JSON.parse(startupPrimaryRaw):null;}catch{return null;}})();
   byId('resumeBtn').disabled=!Boolean(startupPrimaryRaw||startupBackupRaw);
   if(startupStorageUnavailable)setToast('Saved run storage is unavailable. Your current garden remains playable, but progress may not save.',0);
   else if(isUnsupportedRunVersion(savedRunAtStartup)){futureSaveProtected=true;setToast(`Saved run uses newer game version ${savedRunAtStartup.version}; this build will preserve it.`,0);}
-  else if(selectRecoverableRun(startupPrimaryRaw,startupBackupRaw,maps,modes).source==='backup')setToast('The main save is invalid. Resume will recover the previous autosave.',0);
+  else if(startupRunResolution.source==='backup')setToast('The main save is invalid. Resume will recover the previous autosave.',0);
   if(uiSettings.tutorialInProgress){
     tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun);tutorialStep=3;updateTutorial();byId('tutorialText').textContent='Your practice restarts from step one after a reload. The saved garden remains protected.';byId('tutorialDialog').showModal();transitionRun({type:'DIALOG_OPEN'});
-  }else if(shouldShowFirstActionCoach({tutorialSeen:uiSettings.tutorialSeen,tutorialInProgress:uiSettings.tutorialInProgress,hasSavedRun:Boolean(startupPrimaryRaw||startupBackupRaw),phase:uiSettings.firstActionCoachPhase})){firstActionCoachVisible=true;updateTutorialCoach();updatePlacementHint();if(mobileLayout.matches)setDefenderSheetOpen(true);if(firstActionStudyMetrics)requestAnimationFrame(()=>requestAnimationFrame(()=>firstActionStudyMetrics.markReady()));}
+  }else if(shouldShowFirstActionCoach({tutorialSeen:uiSettings.tutorialSeen,tutorialInProgress:uiSettings.tutorialInProgress,hasSavedRun:firstActionCoachHasSavedRun({recoverableSource:startupRunResolution.source,storageUnavailable:startupStorageUnavailable}),phase:uiSettings.firstActionCoachPhase})){firstActionCoachVisible=true;updateTutorialCoach();updatePlacementHint();if(mobileLayout.matches)setDefenderSheetOpen(true);if(firstActionStudyMetrics)requestAnimationFrame(()=>requestAnimationFrame(()=>firstActionStudyMetrics.markReady()));}
   registerOfflineSupport({canApplyUpdate:()=>runIsOver()||(!wave&&!towers.length&&!enemies.length)});
   gameLoop.start();
 })();
