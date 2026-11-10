@@ -30,6 +30,13 @@ export function filterEnemyGuide({ list, empty, query }) {
   empty.hidden = count > 0;
 }
 
+export function closeEnemyGuide({ guide, trigger, fallback }) {
+  guide.open = false;
+  const target = trigger?.isConnected === false ? fallback : trigger || fallback;
+  target?.focus?.({ preventScroll:true });
+  return target;
+}
+
 export function renderEnemyGuide({ document, list, empty, query, intel, createEnemy, profiles, leakCost, guideWave }) {
   list.replaceChildren();
   for (const info of intel) {

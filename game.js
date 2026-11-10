@@ -48,7 +48,7 @@ import { buildBestWaveRecord, buildRunProgressEvents } from './src/profile-progr
 import { CAMPAIGN_MISSIONS, CAMPAIGN_MISSION_BY_ID, buildMissionCompletion } from './src/campaign.js';
 import { buildMissionMasteryProgress, missionMasteryResultText } from './src/mission-mastery.js';
 import { ENEMY_INTEL, enemyIntelFor, firstEncounterIntel } from './src/enemy-intel.js';
-import { buildEnemyBriefingView, filterEnemyGuide as filterEnemyGuideCards, renderEnemyBriefing, renderEnemyGuide } from './src/enemy-guide-ui.js';
+import { buildEnemyBriefingView, closeEnemyGuide, filterEnemyGuide as filterEnemyGuideCards, renderEnemyBriefing, renderEnemyGuide } from './src/enemy-guide-ui.js';
 import { buildPlacementHintView, renderPlacementHint } from './src/placement-ui.js';
 import { placementPreviewRange as calculatePlacementPreviewRange } from './src/placement-preview.js';
 import { applyGuidanceVisibility, resolveGuidanceOwner, guidanceVisibility } from './src/guidance-arbitration.js';
@@ -198,6 +198,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const RUN_BACKUP_KEY = 'pollen-guard.run.backup.v1';
   let pauseRunHistoryPlayback=()=>{};
   let journalReturnFocus=null;
+  let enemyGuideReturnFocus=null;
   const highContrastEnemyColors = { mite:'#d55e00',zip:'#f0e442',armored:'#0072b2',shield:'#56b4e9',splitter:'#009e73',flyer:'#cc79a7',crumb:'#e69f00',boss:'#332288',healer:'#a98b68',carrier:'#008b83',burrower:'#8a5b28' };
   const profileStorage = createProfileStorage(() => localStorage, {
     mapIds: Object.keys(maps), achievementIds: ACHIEVEMENT_DEFINITIONS.map(([id]) => id)
@@ -1005,8 +1006,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const view=buildEnemyBriefingView({targetWave,intro,running:runIsRunning(),terminal:runIsOver()});
     renderEnemyBriefing({panel:byId('enemyBriefing'),text:byId('enemyBriefingText'),guideButton:byId('enemyBriefingGuide'),view,document});
   }
-  function openEnemyGuide(type) {
+  function openEnemyGuide(type, trigger=null) {
     const guide=byId('enemyGuide'),search=byId('enemyGuideSearch');guide.open=true;
+    enemyGuideReturnFocus=trigger||byId('enemyGuide').querySelector('summary');
     if(mobileLayout.matches)setDefenderSheetOpen(true);
     if(!type){search.focus({preventScroll:true});return;}
     search.value='';filterEnemyGuide();const card=byId('enemyGuideList').querySelector(`[data-enemy-guide="${type}"]`);
@@ -1017,11 +1019,12 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     matrix.open=true;row?.scrollIntoView({block:'center'});row?.focus({preventScroll:true});
   }
   byId('enemyGuideSearch').addEventListener('input',filterEnemyGuide);
+  byId('enemyGuideCloseBtn').onclick=()=>{const target=closeEnemyGuide({guide:byId('enemyGuide'),trigger:enemyGuideReturnFocus,fallback:byId('enemyGuide').querySelector('summary')});enemyGuideReturnFocus=target;requestAnimationFrame(()=>target?.focus({preventScroll:true}));};
   byId('enemyGuideList').addEventListener('click',event=>{const type=event.target.closest('[data-enemy-resistance]')?.dataset.enemyResistance;if(type)openEnemyResistance(type);});
-  byId('enemyBriefingGuide').addEventListener('click',()=>openEnemyGuide(byId('enemyBriefing').dataset.enemyIntel));
-  byId('waveTimeline').addEventListener('click',event=>{const type=event.target.closest('[data-enemy-intel]')?.dataset.enemyIntel;if(type)openEnemyGuide(type);});
-  byId('enemyPreview').addEventListener('click',event=>{const type=event.target.closest('[data-enemy-intel]')?.dataset.enemyIntel;if(type)openEnemyGuide(type);});
-  byId('upcomingThreat').addEventListener('click',event=>{const type=event.target.closest('[data-enemy-intel]')?.dataset.enemyIntel;if(type)openEnemyGuide(type);});
+  byId('enemyBriefingGuide').addEventListener('click',()=>openEnemyGuide(byId('enemyBriefing').dataset.enemyIntel,byId('enemyBriefingGuide')));
+  byId('waveTimeline').addEventListener('click',event=>{const button=event.target.closest('[data-enemy-intel]');if(button)openEnemyGuide(button.dataset.enemyIntel,button);});
+  byId('enemyPreview').addEventListener('click',event=>{const button=event.target.closest('[data-enemy-intel]');if(button)openEnemyGuide(button.dataset.enemyIntel,button);});
+  byId('upcomingThreat').addEventListener('click',event=>{const button=event.target.closest('[data-enemy-intel]');if(button)openEnemyGuide(button.dataset.enemyIntel,button);});
   function updatePreview() {
     const view=buildWavePreviewView({
       terminal:runIsOver(),won:runState.basePhase==='won',running:runIsRunning(),wave,
