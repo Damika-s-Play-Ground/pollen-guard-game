@@ -712,25 +712,26 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const choreography=enemy.boss?bossChoreoForEnemy(enemy):null;
     if(choreography){const cueScale=enemyStrokeScale;ctx.save();ctx.globalAlpha=choreography.alpha??1;ctx.beginPath();ctx.arc(point.x,bodyY,radius+17,0,Math.PI*2);ctx.setLineDash(choreography.kind==='danger'?[2/cueScale,3/cueScale]:[]);ctx.strokeStyle=choreography.kind==='danger'?'#ff745f':'#b8f28a';ctx.lineWidth=3/cueScale;ctx.stroke();ctx.setLineDash([]);ctx.font=`bold ${9/cueScale}px system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle=choreography.kind==='danger'?'#ff9b82':'#c9f59c';ctx.fillText(choreography.kind==='danger'?'DANGER':'RECOVERY',point.x,bodyY+radius+19/cueScale);ctx.restore();}
     if (enemy.bossTelegraphTimer > 0 && enemy.bossTelegraph) {
-      ctx.font = 'bold 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      const name = enemy.bossName || 'Bramble boss', labelWidth = Math.min(240, Math.max(ctx.measureText(name).width, ctx.measureText(enemy.bossTelegraph).width) + 12);
-      const preferredX = Math.max(labelWidth / 2 + 4, Math.min(width - labelWidth / 2 - 4, point.x));
-      const preferredTop = Math.max(4, bodyY - radius - 41);
+      const warningScale=1/(Number.isFinite(displayScale)&&displayScale>0?displayScale:1),warningHeight=34*warningScale,warningGap=4*warningScale;
+      ctx.font = `bold ${10*warningScale}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      const name = enemy.bossName || 'Bramble boss', labelWidth = Math.min(240*warningScale, Math.max(ctx.measureText(name).width, ctx.measureText(enemy.bossTelegraph).width) + 12*warningScale);
+      const preferredX = Math.max(labelWidth / 2 + warningGap, Math.min(width - labelWidth / 2 - warningGap, point.x));
+      const preferredTop = Math.max(warningGap, bodyY - radius - 41*warningScale);
       const overlaps = (x,top) => {
-        const warningCollision=bossWarningBoxes.some(box=>Math.abs(box.x-x)<(box.width+labelWidth)/2+4&&Math.abs(box.top-top)<38);
-        const left=x-labelWidth/2-2,right=x+labelWidth/2+2,bottom=top+34;
-        const terrainCollision=terrainLabelBoxes.some(box=>left<box.right+4&&right>box.left-4&&top<box.bottom+4&&bottom>box.top-4);
+        const warningCollision=bossWarningBoxes.some(box=>Math.abs(box.x-x)<(box.width+labelWidth)/2+warningGap&&Math.abs(box.top-top)<warningHeight+warningGap);
+        const left=x-labelWidth/2-warningGap/2,right=x+labelWidth/2+warningGap/2,bottom=top+warningHeight;
+        const terrainCollision=terrainLabelBoxes.some(box=>left<box.right+warningGap&&right>box.left-warningGap&&top<box.bottom+warningGap&&bottom>box.top-warningGap);
         const threatCollision=enemyVisuals.some(center=>{
           const nearestX=Math.max(left,Math.min(right,center.x)),nearestY=Math.max(top,Math.min(bottom,center.y));
-          const dx=center.x-nearestX,dy=center.y-nearestY,radius=center.overlapRadius+3;
+          const dx=center.x-nearestX,dy=center.y-nearestY,radius=center.overlapRadius+3*warningScale;
           return dx*dx+dy*dy<radius*radius;
         });
         return warningCollision||terrainCollision||threatCollision;
       };
       const candidates=[];
-      for(let column=-4;column<=4;column++)for(let row=-Math.ceil(height/38);row<=Math.ceil(height/38);row++){
-        const x=preferredX+column*(labelWidth+10),top=preferredTop+row*38;
-        if(x>=labelWidth/2+4&&x<=width-labelWidth/2-4&&top>=4&&top<=height-38)
+      for(let column=-4;column<=4;column++)for(let row=-Math.ceil(height/(warningHeight+warningGap));row<=Math.ceil(height/(warningHeight+warningGap));row++){
+        const x=preferredX+column*(labelWidth+2*warningGap),top=preferredTop+row*(warningHeight+warningGap);
+        if(x>=labelWidth/2+warningGap&&x<=width-labelWidth/2-warningGap&&top>=warningGap&&top<=height-warningHeight-warningGap)
           candidates.push({x,top,score:(x-preferredX)**2+(top-preferredTop)**2});
       }
       candidates.sort((a,b)=>a.score-b.score);
@@ -760,14 +761,16 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   }
   // Draw connectors first, then opaque cards last so later enemies and placement previews cannot cover threat text.
   bossWarnings.forEach(({x,bodyY,radius,labelX,labelTop})=>{
-    ctx.beginPath(); ctx.moveTo(x, bodyY-radius); ctx.lineTo(labelX,labelTop+34);
+    const warningScale=1/(Number.isFinite(displayScale)&&displayScale>0?displayScale:1);
+    ctx.beginPath(); ctx.moveTo(x, bodyY-radius); ctx.lineTo(labelX,labelTop+34*warningScale);
     ctx.strokeStyle = '#ffe8a6'; ctx.lineWidth = 1; ctx.stroke();
   });
   bossWarnings.forEach(({labelX,labelTop,labelWidth,name,cue})=>{
-    ctx.font = 'bold 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    ctx.fillStyle = '#20271fee'; ctx.fillRect(labelX - labelWidth / 2, labelTop, labelWidth, 34);
-    ctx.fillStyle = '#fff4d2'; ctx.fillText(name, labelX, labelTop + 13, labelWidth - 8);
-    ctx.fillStyle = '#ffe8a6'; ctx.fillText(cue, labelX, labelTop + 28, labelWidth - 8);
+    const warningScale=1/(Number.isFinite(displayScale)&&displayScale>0?displayScale:1);
+    ctx.font = `bold ${10*warningScale}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = '#20271fee'; ctx.fillRect(labelX - labelWidth / 2, labelTop, labelWidth, 34*warningScale);
+    ctx.fillStyle = '#fff4d2'; ctx.fillText(name, labelX, labelTop + 13*warningScale, labelWidth - 8*warningScale);
+    ctx.fillStyle = '#ffe8a6'; ctx.fillText(cue, labelX, labelTop + 28*warningScale, labelWidth - 8*warningScale);
   });
 }
 
