@@ -153,7 +153,7 @@ export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote,
   waveThreat.className = `wave-threat ${preview.threat === 'high' || preview.threat === 'extreme' ? 'high' : ''} ${boss ? 'boss' : ''}`;
   waveThreat.textContent = `Encounter rating · ${preview.threat}${boss ? ' · BOSS WAVE' : ''}`;
   mapNote.classList.toggle('boss-callout', boss);
-  const note=view.seedRecovery?'Green → cache · amber ← return. Marked ground pests steal one seed; defeat them to recover it.':view.airRouteEnabled?'Cyan dashes: sky route · gold: anti-air reach':boss?'Prepare for a heavy wave':'Place defenders beside the winding trail';
+  const note=view.seedRecovery?'Marked pests carry seeds; defeat them to recover. Green: cache; amber: return.':view.airRouteEnabled?'Cyan dashes: sky route · gold: anti-air reach':boss?'Prepare for a heavy wave':'Place defenders beside the winding trail';
   setMapNote(document, mapNote, boss ? (view.bossName || 'Bramble boss').toUpperCase() : view.mapLabel, note);
   waveInfo.textContent = view.waveInfo;
 }
