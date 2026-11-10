@@ -95,7 +95,8 @@ import { aimedSpellTargets, buildSpellPreview, DEFAULT_SPELL_LOADOUT, normalizeS
 import { previewTowerCombinations } from './src/tower-combinations.js';
 import { visibleSpellIdsForRun } from './src/starter-abilities.js';
 import { terrainBonusForTower, terrainZoneAt } from './src/terrain.js';
-import { advanceDroppedSeeds, createSeedObjective, SEED_RECOVERY_RULE, seedObjectiveTally } from './src/seed-objective.js';
+import { advanceDroppedSeeds, createSeedObjective, SEED_RECOVERY_RULE, seedObjectiveResultText, seedObjectiveTally } from './src/seed-objective.js';
+import { describeLeakFeedback } from './src/leak-feedback.js';
 import { boardChallengeForRun, CHALLENGE_SPELL_LOADOUT, importChallengeCode, recordChallengeBest } from './src/challenge-board.js';
 import { renderChallengeBoard } from './src/challenge-board-ui.js';
 import { ENDLESS_CHOICES, endlessChoiceDue, endlessChoiceRequired } from './src/endless-mode.js';
@@ -333,9 +334,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       byId('resultsText').textContent+=` ${mission.name}: ${mission.objective} ${won?(record?.objectiveMet?'Objective met.':'Mission cleared; objective not met this run.'):'Mission incomplete.'}`;
     }
     if(seedObjective){
-      const tally=seedObjectiveTally(seedObjective),objectiveMet=tally.safe>=2;
-      const seedResult=won?(objectiveMet?'Seed objective met.':'Garden cleared; seed objective not met.'):(objectiveMet?'Seed condition met, but the garden was lost.':'Run ended before recovering enough seeds.');
-      byId('resultsText').textContent+=` Seed Recovery: ${tally.safe}/${tally.total} seeds safe (${tally.recovered} recovered, ${tally.escaped} escaped). ${seedResult}`;
+      byId('resultsText').textContent+=` ${seedObjectiveResultText(seedObjective,won)}`;
     }
     if(maps[selectedMap]?.customMap){
       const objective=maps[selectedMap].customObjective;
@@ -1228,6 +1227,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     gameTime+=dt;simulationTick++;
     if(!runIsRunning()&&!runIsOver()&&intermission>0){intermission=Math.max(0,intermission-dt);updateHud();}
     if(runIsRunning()&&!runIsOver()){
+      const livesBefore=lives;
       const state={running:runIsRunning(),gameOver:runIsOver(),spawnQueue,spawnClock,wave,cash,lives,popped,bloomCharge,towers,enemies,shots,nextEntityId,challenge,difficulty,challengeRules,selectedMap,terrainRulesVersion,waveScheduleVersion,rewardRulesVersion,intermission,performance:combatPerformance,rejuvenationField,seedObjective,researchLoadout,relicLoadout};
       const visuals={defeated:[],leaked:[],statusTicks:[],impacts:[]};
       const result=stepCombat(state,dt,{pathLength:routeGeometry.pathLengthFor,positionOf:enemyPosition,
@@ -1242,7 +1242,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
         onBossRecovery:(enemy,phase)=>{if(enemy.bossVariant?.startsWith('meadow'))bossChoreoCues.set(enemy.id,{kind:'recovery',phase,time:gameTime});}});
       ({spawnQueue,spawnClock,cash,lives,popped,bloomCharge,towers,enemies,shots,nextEntityId,intermission,rejuvenationField,seedObjective}=state);
       visuals.defeated.forEach(showEnemyDefeat);
-      const leakAlert=visuals.leaked.length?`${visuals.leaked.length} leak${visuals.leaked.length===1?'':'s'} · ${visuals.leaked.map(enemy=>enemy.type==='flyer'?'Sky gnat':enemy.type==='boss'?enemy.bossName||'Bramble boss':enemy.type==='zip'?'Zip mite':'enemy').join(', ')} reached the goal · ${lives} seed${lives===1?'':'s'} remain.`:'';
+      const leakAlert=describeLeakFeedback({leaked:visuals.leaked,livesBefore,livesAfter:lives,seedObjective});
       visuals.leaked.forEach(enemy=>{const p=enemyPosition(enemy);burst(p.x,p.y,'#fff0ad',8);});
       visuals.statusTicks.forEach(([enemy,ticks])=>{if(ticks.some(tick=>tick.channel==='heat')){const p=enemyPosition(enemy);burst(p.x,p.y,'#ff9b4d',1);}});
       visuals.impacts.forEach(([shot,position])=>burst(position.x,position.y,shot.color,shot.splash?8:3,shot.splitProjectile?'split':shot.sourceTowerType,shot.splash||0));

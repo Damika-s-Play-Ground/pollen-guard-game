@@ -15,6 +15,12 @@ export function seedObjectiveTally(objective) {
   return {...counts,total:objective?.total??0,safe:counts.available+counts.recovered};
 }
 
+export function seedObjectiveResultText(objective, won) {
+  const tally=seedObjectiveTally(objective),objectiveMet=tally.safe>=2;
+  const result=won?(objectiveMet?'Seed objective met.':'Garden cleared; seed objective not met.'):(objectiveMet?'Seed condition met, but the garden was lost.':'Run ended before recovering enough seeds.');
+  return `Seed Recovery: ${tally.safe}/${tally.total} seeds safe (${tally.recovered} recovered, ${tally.escaped} escaped). ${result}`;
+}
+
 export function claimSeedForCarrier(objective, carrierId) {
   if(!objective||!Number.isSafeInteger(carrierId)||carrierId<=0)return null;
   const seed=objective.seeds.find(item=>item.state==='available');
