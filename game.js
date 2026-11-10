@@ -1033,7 +1033,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     });
     airRoutePreviewed=Boolean(view.preview?.counts?.flyer);
     view.airRouteEnabled=Boolean(view.airRouteEnabled&&(airRoutePreviewed||enemies.some(enemy=>enemy.flying)||uiSettings.showAirRoute||(selectedTower&&towersDef[selectedTower.type]?.antiAir)));
-    renderWavePreview({document,enemyPreview:byId('enemyPreview'),waveThreat:byId('waveThreat'),mapNote:byId('mapNote'),waveInfo:byId('waveInfo'),upcomingThreat:byId('upcomingThreat'),view});
+    renderWavePreview({document,enemyPreview:byId('enemyPreview'),waveThreat:byId('waveThreat'),mapNote:byId('mapNote'),waveInfo:byId('waveInfo'),upcomingThreat:byId('upcomingThreat'),sheetThreatSummary:byId('sheetThreatSummary'),view});
     const revealCue=byId('specialistRevealCue');
     const revealSchedules=waveSchedulesForMap(selectedMap,waveScheduleVersion);
     const revealWaveIndex=view.preview?((view.preview.wave-1)%revealSchedules.length):0;
