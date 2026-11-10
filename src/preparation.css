@@ -9,16 +9,23 @@
 .campaign-map-panel{margin:9px 0;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#17241b;color:var(--ink)}
 .campaign-map-panel>summary{cursor:pointer;font-weight:800;color:var(--mint)}
 .campaign-map-nodes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:10px}
-.campaign-chapter{padding:9px;border:1px solid #354838;border-radius:10px;background:#1b2a20}
-.campaign-chapter h3{margin:0 0 7px;font-size:calc(12px * var(--ui-text-scale));color:var(--gold)}
-.campaign-mission{padding:7px 0;border-top:1px solid #354838}
+.campaign-chapter{position:relative;padding:9px;border:1px solid #354838;border-radius:10px;background:#1b2a20}
+.campaign-chapter:not(:last-child)::after{position:absolute;z-index:1;top:22px;right:-12px;width:14px;border-top:2px dashed #9db76d;content:""}
+.campaign-chapter h3{display:flex;align-items:center;gap:6px;margin:0 0 7px;font-size:calc(12px * var(--ui-text-scale));color:var(--gold)}
+.campaign-chapter-emblem{display:grid;place-items:center;width:25px;height:25px;border:1px solid #647a4f;border-radius:50%;background:#243926;font-size:15px}
+.campaign-mission{position:relative;margin-left:5px;padding:7px 0 7px 10px;border-top:1px solid #354838;border-left:2px solid #62784c}
+.campaign-mission::before{position:absolute;top:17px;left:-5px;width:7px;height:7px;border:1px solid #a4b980;border-radius:50%;background:#263b2c;content:""}
+.campaign-mission[data-route-state=cleared]::before{background:#e4c976;box-shadow:0 0 0 2px #1b2a20}
+.campaign-mission[data-route-state=next]::before{background:#9dcf88;box-shadow:0 0 0 2px #1b2a20}
+.campaign-mission[data-route-state=locked]::before{background:#5c6255}
+.campaign-mission:last-child{border-left-color:transparent}
 .campaign-mission-select{width:100%;padding:7px;text-align:left;font-size:calc(12px * var(--ui-text-scale));font-weight:750}
 .campaign-mission-select[aria-current=true]{outline:2px solid var(--mint);outline-offset:1px}
 .campaign-mission-select:disabled{opacity:.62;cursor:not-allowed}
 .campaign-mission p,.campaign-progress{margin:5px 0 0;color:var(--muted);font-size:calc(12px * var(--ui-text-scale));line-height:1.4}
 .campaign-mission .mission-mastery{color:#d3e5b7;font-weight:650}.campaign-mission .mission-mastery-challenge{font-size:calc(11px * var(--ui-text-scale))}
 .campaign-progress{margin:0 0 2px;font-weight:750;color:var(--ink)}
-@media(max-width:760px){.campaign-map-nodes{grid-template-columns:1fr}.campaign-map-panel{margin-inline:0}}
+@media(max-width:760px){.campaign-map-nodes{grid-template-columns:1fr}.campaign-map-panel{margin-inline:0}.campaign-chapter:not(:last-child)::after{top:auto;right:auto;bottom:-12px;left:20px;width:0;height:14px;border-top:0;border-left:2px dashed #9db76d}}
 
 .challenge-board{display:grid;gap:9px}.challenge-board-card{display:grid;gap:6px;padding:10px;border:1px solid #405a43;border-radius:10px;background:#17251b}.challenge-board-card h4{margin:0;color:#d5f295}.challenge-board-card p{margin:0;line-height:1.35}.challenge-board-card small,.challenge-local-note{color:var(--muted);font-size:12px;line-height:1.4}.challenge-board-card button,.challenge-board>button,.challenge-import-label+button{min-height:40px}.challenge-board-card label,.challenge-import-label{display:grid;gap:5px;color:#dcebd2;font-size:12px}.challenge-board-card input,.challenge-import-label input{width:100%;min-width:0;padding:8px;border:1px solid #496247;border-radius:7px;background:#101a13;color:#eff7e8;font:11px ui-monospace,monospace}.challenge-local-note{padding:9px;border-left:3px solid #c9ef9b;background:#17251b}.challenge-import-label{margin-top:10px}
 

@@ -49,12 +49,15 @@ export function renderCampaignMap({ document, root, missions, profile, selectedM
     const group=document.createElement('section');group.className='campaign-chapter';
     const heading=document.createElement('h3');
     heading.textContent=missions.find(mission=>mission.chapter===chapter)?.chapterName||`Chapter ${chapter}`;
+    const emblem=document.createElement('span');emblem.className='campaign-chapter-emblem';emblem.setAttribute('aria-hidden','true');
+    emblem.textContent=['🌱','💧','⛰️'][chapter-1];heading.prepend(emblem);
     group.append(heading);
     for(const mission of missions.filter(item=>item.chapter===chapter)){
       const card=document.createElement('article');card.className='campaign-mission';
       const button=document.createElement('button');button.type='button';button.className='campaign-mission-select';
       button.dataset.campaignMission=mission.mapId;
       const unlocked=(profile.unlockedMissions||[]).includes(mission.id)||mission.id==='meadow';
+      card.dataset.routeState=completed.has(mission.id)?'cleared':unlocked?'next':'locked';
       button.disabled=!unlocked;
       if(mission.mapId===selectedMap)button.setAttribute('aria-current','true');
       const status=completed.has(mission.id)?(profile.missionRecords?.[mission.id]?.objectiveMet?'Cleared · objective met':'Cleared'):
