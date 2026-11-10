@@ -124,6 +124,8 @@ export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote,
   }
 
   const { preview, boss } = view;
+  const sheetSummary=document.getElementById('sheetThreatSummary');
+  if(sheetSummary)sheetSummary.textContent=view.upcomingThreat?`Next: ${view.upcomingThreat.name} · Counter: ${view.upcomingThreat.counter}`:'';
   if (threatStrip) {
     threatStrip.hidden = !view.upcomingThreat;
     if (view.upcomingThreat) {
