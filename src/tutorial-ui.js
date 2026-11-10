@@ -53,8 +53,8 @@ export function buildTutorialCoachView({active,task}) {
 
 export function buildFirstActionCoachView({visible,selectedType='sprout',selectedName='Sprout'}) {
   const text=selectedType
-    ? `Place ${selectedName} beside the trail, then launch wave 1.`
-    : 'Choose a defender, place it beside the trail, then launch wave 1.';
+    ? `Place ${selectedName} where its range ring covers the first bend, then launch.`
+    : 'Choose a defender, cover the first bend with its range ring, then launch.';
   return visible
     ? {visible:true,text,focusSelector:null,focusMap:false}
     : {visible:false,text:'',focusSelector:null,focusMap:false};
