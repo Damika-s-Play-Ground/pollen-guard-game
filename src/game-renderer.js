@@ -179,8 +179,11 @@ function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath
     ctx.globalAlpha = .9; ctx.fillStyle = ['#fff0bd', '#f4b8a5', '#e7f4d0'][i % 3]; ctx.beginPath(); ctx.arc((i * 137 + 21) % width, (i * 71 + 15) % height, 1.7, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  for(const zone of map.buildZones||[]){ctx.fillStyle='#d4f3a466';ctx.fillRect(zone.x,zone.y,zone.width,zone.height);ctx.strokeStyle='#34683dcc';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.strokeRect(zone.x,zone.y,zone.width,zone.height);ctx.setLineDash([]);ctx.fillStyle='#1d3828';ctx.font=`700 ${Math.max(9,10/displayScale)}px sans-serif`;ctx.fillText('BUILD ZONE',zone.x+4,zone.y+12);}
+  for(const zone of map.buildZones||[]){ctx.fillStyle='#d4f3a42a';ctx.fillRect(zone.x,zone.y,zone.width,zone.height);ctx.strokeStyle='#34683c88';ctx.lineWidth=1.5;ctx.setLineDash([8,6]);ctx.strokeRect(zone.x,zone.y,zone.width,zone.height);ctx.setLineDash([]);ctx.fillStyle='#294630';ctx.font=`700 ${Math.max(9,10/displayScale)}px sans-serif`;ctx.fillText('BUILD ZONE',zone.x+4,zone.y+12);}
   drawTerrainZones(ctx,map,displayScale);
+  // A single down-right cast shadow gives the route a raised edge against the
+  // garden while remaining below all moving enemies and placement feedback.
+  tracePath(ctx,path.map(([x,y])=>[x+3,y+7]));ctx.strokeStyle='#35463c';ctx.globalAlpha=.22;ctx.lineWidth=48;ctx.stroke();ctx.globalAlpha=1;
   tracePath(ctx, path); ctx.strokeStyle = map.edge; ctx.lineWidth = 44; ctx.stroke();
   tracePath(ctx, path); ctx.strokeStyle = map.trail; ctx.lineWidth = 34; ctx.stroke();
   tracePath(ctx, path); ctx.setLineDash([4, 9]); ctx.strokeStyle = '#af9f6c'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
