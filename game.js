@@ -54,7 +54,7 @@ import { resolveGuidanceOwner, guidanceVisibility } from './src/guidance-arbitra
 import { pathCoveragePercent } from './src/route-coverage.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
 import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutorialPracticeState, finishTutorialPracticeState, resetTutorialPracticeState } from './src/tutorial-progress.js';
-import { buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, mountTutorialCoach, renderTutorialCoach, renderTutorialStep } from './src/tutorial-ui.js';
+import { buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, mountTutorialCoach, renderTutorialCoach, renderTutorialStep, shouldShowFirstActionCoach } from './src/tutorial-ui.js';
 import { DEFAULT_KEY_BINDINGS, bindKey, keyCodeLabel } from './src/keyboard-bindings.js';
 import { keyboardActionLabels as buildKeyboardActionLabels, renderKeyboardBindings as presentKeyboardBindings } from './src/keyboard-bindings-ui.js';
 import { shouldEmitParticles } from './src/visual-preferences.js';
@@ -1490,7 +1490,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   else if(selectRecoverableRun(startupPrimaryRaw,startupBackupRaw,maps,modes).source==='backup')setToast('The main save is invalid. Resume will recover the previous autosave.',0);
   if(uiSettings.tutorialInProgress){
     tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun);tutorialStep=3;updateTutorial();byId('tutorialText').textContent='Your practice restarts from step one after a reload. The saved garden remains protected.';byId('tutorialDialog').showModal();transitionRun({type:'DIALOG_OPEN'});
-  }else if(!uiSettings.tutorialSeen&&!startupPrimaryRaw&&!startupBackupRaw){firstActionCoachVisible=true;updateTutorialCoach();updatePlacementHint();if(mobileLayout.matches)setDefenderSheetOpen(true);}
+  }else if(shouldShowFirstActionCoach({tutorialSeen:uiSettings.tutorialSeen,tutorialInProgress:uiSettings.tutorialInProgress,hasSavedRun:Boolean(startupPrimaryRaw||startupBackupRaw)})){firstActionCoachVisible=true;updateTutorialCoach();updatePlacementHint();if(mobileLayout.matches)setDefenderSheetOpen(true);}
   registerOfflineSupport({canApplyUpdate:()=>runIsOver()||(!wave&&!towers.length&&!enemies.length)});
   gameLoop.start();
 })();

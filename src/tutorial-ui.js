@@ -5,6 +5,10 @@ export const TUTORIAL_STEPS = Object.freeze([
   Object.freeze(['Inspect and specialize', 'Select a placed tower to change its target priority, choose an upgrade branch, and use its ability.'])
 ]);
 
+export function shouldShowFirstActionCoach({ tutorialSeen = false, tutorialInProgress = false, hasSavedRun = false } = {}) {
+  return !tutorialSeen && !tutorialInProgress && !hasSavedRun;
+}
+
 export function buildTutorialStepView(step) {
   const index = Number.isInteger(step) ? Math.max(0, Math.min(TUTORIAL_STEPS.length - 1, step)) : 0;
   const [title, description] = TUTORIAL_STEPS[index];
