@@ -1,4 +1,5 @@
 import { formatMapUnits } from './game-core.js';
+import { petalAmountMarkup } from './ui-icons.js';
 
 export const STARTER_TOWER_TYPES=Object.freeze(['sprout','dew','puff']);
 export const STARTER_TOWER_ROLE_LABELS=Object.freeze({sprout:'Attack',dew:'Slow',puff:'Area'});
@@ -76,7 +77,7 @@ export function renderTowerCatalog({ document, root, towersDef, towerRoles, sele
       const conditional=document.createElement('small');conditional.className='tower-income-conditional';conditional.textContent='Separate: shared wave rewards, Golden Harvest, and Golden Seeds haste for nearby Sprouts.';
       copy.append(forecast,conditional);
     }
-    const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = `${tower.cost} ✿`;
+    const cost = document.createElement('span'); cost.className = 'cost'; cost.innerHTML = petalAmountMarkup(tower.cost);
     const shortage=document.createElement('small');shortage.className='affordability-shortfall';shortage.dataset.cost=String(tower.cost);shortage.hidden=shortfall===0;shortage.textContent=shortfall?`Need ${shortfall} more`:'';cost.append(shortage);
     button.append(icon, copy, cost);
     return button;

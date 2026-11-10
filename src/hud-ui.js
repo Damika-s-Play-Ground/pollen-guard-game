@@ -1,3 +1,5 @@
+import { uiIconSvg } from './ui-icons.js';
+
 export function buildHudView({
   cash, lives, popped, wave, lifeCapacity, limit, mapName, challengeLabel,
   running, paused, gameOver, selectedTower, roster, previousTowerKey, nextTowerKey,
@@ -22,7 +24,7 @@ export function buildHudView({
     battlefieldLabel: `${mapName} battlefield. Wave ${wave}, garden health ${lives} of ${lifeCapacity}, ${cashValue} spendable petals. ${selectedDescription} With a selected build, arrows aim; hold Shift for larger moves; Enter previews, arrows adjust, and Enter again places; Escape cancels.`,
     buttons: {
       startBtn: { disabled: running || paused || finished || (tutorialActive && tutorialTask !== 4), text: finished ? (lives > 0 ? 'Garden saved' : 'Meadow over') : paused ? 'Game paused' : running ? 'Wave in progress…' : `Launch wave ${wave + 1}  ↗` },
-      pauseBtn: { text: paused ? '▶' : 'Ⅱ', label: paused ? 'Resume game (Space)' : 'Pause game (Space)', pressed: paused },
+      pauseBtn: { text: paused ? 'play' : 'pause', label: paused ? 'Resume game (Space)' : 'Pause game (Space)', pressed: paused },
       bloomBtn: { text: `✦ Bloom pulse · ${bloomCharge} / 100`, disabled: bloomCharge < 100 || !hasEnemies || gameOver || tutorialActive },
       snareBtn: { disabled: cash < 45 || !hasEnemies || gameOver || (tutorialActive && tutorialTask !== 5) },
       speedBtn: { text: `${speed}× speed`, shortLabel: `${speed}×`, label: `Game speed ${speed}×`, active: speed > 1 }
@@ -51,7 +53,10 @@ export function renderHud(document, view) {
 
   for (const [id, button] of Object.entries(view.buttons)) {
     const element = byId(id);
-    if (button.text !== undefined) element.textContent = button.text;
+    if (button.text !== undefined) {
+      if(id==='pauseBtn')element.innerHTML=uiIconSvg(button.text,'ui-icon pause-icon');
+      else element.textContent = button.text;
+    }
     if (button.disabled !== undefined && element.disabled !== button.disabled) element.disabled = button.disabled;
     if (button.label !== undefined) element.setAttribute('aria-label', button.label);
     if (button.pressed !== undefined) element.setAttribute('aria-pressed', String(button.pressed));

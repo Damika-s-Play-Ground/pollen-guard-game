@@ -1,3 +1,4 @@
+import { petalAmountMarkup, uiIconSvg } from './ui-icons.js';
 import { renderBranchPreview } from './branch-preview.js';
 
 function appendBranchPreview(document, parent, option, motion) {
@@ -35,7 +36,8 @@ export function renderTowerInspector({ document, canvasHost, view }) {
   byId('selectedName').textContent = view.name;
   byId('selectedLevel').textContent = view.levelLabel;
   byId('upgradeDesc').textContent = view.upgradeDescription;
-  byId('towerRange').textContent = view.range;
+  byId('towerRange').innerHTML = uiIconSvg('range');
+  byId('towerRange').append(document.createTextNode(view.range));
   byId('towerImpact').textContent = view.impact;
   byId('towerInterval').textContent = view.interval;
   byId('towerTargets').textContent = view.targets;
@@ -56,7 +58,7 @@ export function renderTowerInspector({ document, canvasHost, view }) {
       const description = document.createElement('small'); description.textContent = option.description; details.append(description);
       const comparison = document.createElement('small'); comparison.textContent = `Next · ${option.changes}`; details.append(comparison);
       const ability = document.createElement('small'); ability.textContent = option.abilityText; details.append(ability);
-      const price = document.createElement('span'); price.textContent = `${option.cost} ✿`;
+      const price = document.createElement('span'); price.innerHTML = petalAmountMarkup(option.cost);
       const shortage=document.createElement('small');shortage.className='affordability-shortfall';shortage.dataset.cost=String(option.cost);shortage.hidden=!option.shortfall;shortage.textContent=option.shortfall?`Need ${option.shortfall} more`:'';price.append(shortage);
       button.append(details, price); button.onclick = () => view.onChooseBranch(index);
       return button;
@@ -70,7 +72,7 @@ export function renderTowerInspector({ document, canvasHost, view }) {
     button.setAttribute('aria-pressed', String(view.selectedBranch === index));
     if(option.portrait){const portrait=document.createElement('span');portrait.className='branch-evolution-preview';portrait.setAttribute('aria-hidden','true');portrait.innerHTML=option.portrait;button.append(portrait);}
     button.append(document.createTextNode(option.name));
-    const cost = document.createElement('small'); cost.textContent = `${option.cost} ✿`;
+    const cost = document.createElement('small'); cost.innerHTML = petalAmountMarkup(option.cost);
     const shortage=document.createElement('small');shortage.className='affordability-shortfall';shortage.dataset.cost=String(option.cost);shortage.hidden=!option.shortfall;shortage.textContent=option.shortfall?`Need ${option.shortfall} more`:'';cost.append(shortage);
     button.append(cost); button.onclick = () => view.onChooseBranch(index);
     return button;
