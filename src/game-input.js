@@ -3,9 +3,14 @@ import { cancelInteractionCommand } from './interaction-mode.js';
 
 export function canvasPoint(event, canvas) {
   const rect = canvas.getBoundingClientRect();
+  if (![rect.left,rect.top,rect.width,rect.height,canvas.width,canvas.height].every(Number.isFinite)
+    || rect.width <= 0 || rect.height <= 0 || canvas.width <= 0 || canvas.height <= 0) return null;
+  const x = (event.clientX - rect.left) * canvas.width / rect.width;
+  const y = (event.clientY - rect.top) * canvas.height / rect.height;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   return {
-    x: (event.clientX - rect.left) * canvas.width / rect.width,
-    y: (event.clientY - rect.top) * canvas.height / rect.height
+    x,
+    y
   };
 }
 export function findTowerAtPoint(towers, point, radius = 20) {
@@ -13,11 +18,14 @@ export function findTowerAtPoint(towers, point, radius = 20) {
 }
 
 export function findTowersAtPoint(towers, point, radius = 20) {
+  if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y) || !Number.isFinite(radius) || radius <= 0) return [];
   return [...towers].reverse().filter(tower => Math.hypot(tower.x - point.x, tower.y - point.y) < radius);
 }
 
 export function worldRadiusForCssPixels(cssPixels, canvas) {
   const rect = canvas.getBoundingClientRect();
+  if (!Number.isFinite(cssPixels) || cssPixels <= 0 || !Number.isFinite(canvas.width) || canvas.width <= 0
+    || !Number.isFinite(rect.width) || rect.width <= 0) return 0;
   return cssPixels * canvas.width / Math.max(1, rect.width);
 }
 
@@ -35,7 +43,7 @@ export function movePlacementCursor(point, direction, width, height, step = 18, 
 export function bindCanvasPointerInput(canvas, handlers) {
   let touchStart = null;
   const activeTouchIds = new Set();
-  const onMove = event => handlers.move(canvasPoint(event, canvas), event);
+  const onMove = event => { const point=canvasPoint(event,canvas);if(point)handlers.move(point,event);else handlers.leave(event); };
   const onLeave = event => handlers.leave(event);
   const onDown = event => {
     if (event.pointerType === 'touch') {
@@ -46,18 +54,27 @@ export function bindCanvasPointerInput(canvas, handlers) {
         handlers.cancelGesture?.();
         return;
       }
+      if (!canvasPoint(event,canvas)) {
+        touchStart = null;
+        handlers.cancelGesture?.();
+        return;
+      }
       touchStart = { pointerId, x: event.clientX, y: event.clientY };
       return;
     }
-    handlers.press(canvasPoint(event, canvas), event);
+    const point=canvasPoint(event,canvas);
+    if(point)handlers.press(point,event);
+    else handlers.cancelGesture?.();
   };
   const onUp = event => {
     const pointerId = event.pointerId ?? 0;
     if (!activeTouchIds.has(pointerId)) return;
     const start = touchStart;
     if (start?.pointerId === pointerId && activeTouchIds.size === 1) {
-      if (Math.hypot(event.clientX - start.x, event.clientY - start.y) <= 10) handlers.press(canvasPoint(event, canvas), event);
-      else handlers.cancelGesture?.();
+      if (Math.hypot(event.clientX - start.x, event.clientY - start.y) <= 10) {
+        const point=canvasPoint(event,canvas);
+        if(point)handlers.press(point,event);else handlers.cancelGesture?.();
+      } else handlers.cancelGesture?.();
     }
     if (start?.pointerId === pointerId) touchStart = null;
     activeTouchIds.delete(pointerId);

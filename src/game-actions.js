@@ -21,6 +21,7 @@ import { endlessChoiceRequired, isEndlessChoice } from './endless-mode.js';
 import { LEGACY_WAVE_REWARD_RULES_VERSION, waveLaunchBonus } from './wave-rewards.js';
 
 export function validateTowerPlacement(state, type, point, { path, width = 900, height = 500, map } = {}) {
+  if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return 'Choose a visible spot on the battlefield.';
   if (!towersDef[type]) return 'Choose a defender from the catalog first.';
   const def = towersDef[type];
   if ((state.challenge === 'thrifty' || state.challengeRules?.includes('noSunflowers')) && type === 'sunflower') return 'Sunflowers are disabled by the selected rules.';
