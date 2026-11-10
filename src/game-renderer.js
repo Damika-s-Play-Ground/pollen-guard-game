@@ -118,16 +118,32 @@ function drawTerrainZones(ctx,map,displayScale=1) {
   for(const zone of zones){
     const terrain=TERRAIN_TYPES[zone.type],{x,y,radius}=zone;
     ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fillStyle=terrain.color+'22';ctx.fill();
-    ctx.setLineDash([7,5]);ctx.strokeStyle=terrain.color;ctx.lineWidth=Math.max(2,1.3/scale);ctx.stroke();ctx.setLineDash([]);
     if(zone.type==='fertile'){
-      ctx.fillStyle='#e8d66caa';for(const [dx,dy] of [[-22,-16],[20,-12],[-11,20],[24,17]]){ctx.beginPath();ctx.ellipse(x+dx,y+dy,4,2.2,-.6,0,Math.PI*2);ctx.fill();}
+      // Distinct cultivated beds make the benefit read as worked soil, while
+      // the outer ring continues to show the exact circular rules boundary.
+      for(const [dx,dy,angle] of [[-20,-13,-.18],[18,-10,.16],[-10,17,-.12],[22,17,.2]]){
+        ctx.beginPath();ctx.ellipse(x+dx,y+dy,18,8,angle,0,Math.PI*2);ctx.fillStyle='#79573d99';ctx.fill();
+        ctx.strokeStyle='#e8d99a';ctx.lineWidth=Math.max(1.2,1/scale);
+        for(const offset of [-3,2]){ctx.beginPath();ctx.moveTo(x+dx-12,y+dy+offset);ctx.lineTo(x+dx+12,y+dy+offset);ctx.stroke();}
+        ctx.fillStyle='#91b86e';ctx.beginPath();ctx.arc(x+dx,y+dy-5,2.2,0,Math.PI*2);ctx.fill();
+      }
     }else if(zone.type==='waterEdge'){
-      ctx.strokeStyle='#d5ffffbb';ctx.lineWidth=Math.max(1.5,1/scale);
-      for(let row=-1;row<=1;row++){ctx.beginPath();for(let step=-22;step<=22;step+=4){const py=y+row*12+Math.sin(step/5)*2.5;step===-22?ctx.moveTo(x+step,py):ctx.lineTo(x+step,py);}ctx.stroke();}
+      ctx.beginPath();ctx.moveTo(x-42,y-10);ctx.bezierCurveTo(x-24,y-25,x-7,y-1,x+6,y-13);ctx.bezierCurveTo(x+22,y-28,x+31,y-4,x+43,y-10);
+      ctx.lineTo(x+40,y+17);ctx.bezierCurveTo(x+21,y+28,x+10,y+8,x-5,y+22);ctx.bezierCurveTo(x-20,y+34,x-29,y+10,x-42,y+20);ctx.closePath();
+      ctx.fillStyle='#438e91b8';ctx.fill();ctx.strokeStyle='#b4e5d0';ctx.lineWidth=Math.max(1.5,1/scale);ctx.stroke();
+      ctx.strokeStyle='#d5ffffdd';ctx.lineWidth=Math.max(1.5,1/scale);
+      for(const [dx,dy,width] of [[-25,-5,13],[8,-2,16],[-4,12,11],[28,10,7]]){
+        ctx.beginPath();ctx.moveTo(x+dx-width/2,y+dy);ctx.quadraticCurveTo(x+dx,y+dy-2,x+dx+width/2,y+dy);ctx.stroke();
+      }
     }else if(zone.type==='elevated'){
-      ctx.strokeStyle='#f4fbffc4';ctx.lineWidth=Math.max(1.5,1/scale);
-      for(const inset of [0,10,20]){ctx.beginPath();ctx.moveTo(x-28+inset,y+17-inset*.35);ctx.lineTo(x,y-19+inset*.45);ctx.lineTo(x+28-inset,y+17-inset*.35);ctx.stroke();}
+      ctx.beginPath();ctx.moveTo(x-38,y+20);ctx.lineTo(x-27,y-2);ctx.lineTo(x-12,y-11);ctx.lineTo(x-3,y-31);ctx.lineTo(x+12,y-17);
+      ctx.lineTo(x+25,y-13);ctx.lineTo(x+39,y+20);ctx.closePath();ctx.fillStyle='#89999a';ctx.fill();ctx.strokeStyle='#e8f0dc';ctx.lineWidth=Math.max(1.5,1/scale);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x-26,y+13);ctx.lineTo(x-17,y-2);ctx.lineTo(x-7,y-7);ctx.lineTo(x-1,y-20);ctx.lineTo(x+9,y-9);
+      ctx.lineTo(x+22,y-4);ctx.lineTo(x+31,y+13);ctx.closePath();ctx.fillStyle='#aebbb0';ctx.fill();
+      ctx.strokeStyle='#667d7b';ctx.lineWidth=Math.max(1.2,1/scale);
+      for(const [ax,ay,bx,by] of [[-20,1,-13,5],[8,-9,15,-4],[17,7,24,10]]){ctx.beginPath();ctx.moveTo(x+ax,y+ay);ctx.lineTo(x+bx,y+by);ctx.stroke();}
     }
+    ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.setLineDash([7,5]);ctx.strokeStyle=terrain.color;ctx.lineWidth=Math.max(2,1.3/scale);ctx.stroke();ctx.setLineDash([]);
   }
   ctx.setLineDash([]);ctx.globalAlpha=1;
 }
