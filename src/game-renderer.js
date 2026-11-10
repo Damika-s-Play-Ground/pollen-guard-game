@@ -555,9 +555,9 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     }
     if (enemy.burrowTelegraphTimer > 0) {
       ctx.beginPath(); ctx.arc(point.x, point.y, enemy.radius + 8, 0, Math.PI * 2);
-      ctx.strokeStyle = '#e0b878'; ctx.lineWidth = 2.6; ctx.setLineDash([3, 2]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = '#e0b878'; ctx.lineWidth = 2.6/enemyStrokeScale; ctx.setLineDash([3/enemyStrokeScale, 2/enemyStrokeScale]); ctx.stroke(); ctx.setLineDash([]);
       for (const [dx,dy] of [[-5,-enemy.radius-5],[0,-enemy.radius-9],[5,-enemy.radius-5]]) {
-        ctx.beginPath(); ctx.arc(point.x+dx,point.y+dy,2.2,0,Math.PI*2); ctx.fillStyle='#c99453'; ctx.fill();
+        ctx.beginPath(); ctx.arc(point.x+dx/enemyStrokeScale,point.y+Math.sign(dy)*enemy.radius+dy/enemyStrokeScale,2.2/enemyStrokeScale,0,Math.PI*2); ctx.fillStyle='#c99453'; ctx.fill();
       }
     }
     const burrowed=isBurrowed(enemy);
