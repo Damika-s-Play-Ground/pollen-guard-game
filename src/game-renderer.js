@@ -451,14 +451,20 @@ export function shotRecoil(animation, now, launchedAt, duration = .075) {
   return Math.max(0, Math.min(1, 1 - Math.max(0, now - launchedAt) / duration));
 }
 
-function drawCosmeticParticle(ctx, particle) {
+export function cosmeticParticleScreenRadius(particle, displayScale = 1) {
+  const scale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
+  return particle.impactKind?Math.max(particle.r*1.5,2/scale):Math.max(particle.r,1/scale);
+}
+
+function drawCosmeticParticle(ctx, particle, displayScale = 1) {
   const alpha=Math.max(0,particle.life/particle.maxLife);
+  const radius=cosmeticParticleScreenRadius(particle,displayScale);
   if(particle.impactKind){
     const mark=['kill','armoredKill','bossKill'].includes(particle.impactKind)?particle.impactKind:projectileStyleForTower(particle.impactKind).mark;
-    drawImpactMark(ctx,mark,particle.x,particle.y,particle.r*1.5,alpha);
+    drawImpactMark(ctx,mark,particle.x,particle.y,radius,alpha);
     if(particle.splashRadius)drawSplashBoundary(ctx,particle.x,particle.y,particle.splashRadius,alpha);
   }else{
-    ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=particle.color;ctx.beginPath();ctx.arc(particle.x,particle.y,particle.r,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=particle.color;ctx.beginPath();ctx.arc(particle.x,particle.y,radius,0,Math.PI*2);ctx.fill();ctx.restore();
   }
 }
 
@@ -597,7 +603,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   healerLinks.forEach(link=>{if(!link?.from||!link?.to)return;ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);ctx.setLineDash([6/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash([]);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();});
   // Threat silhouettes follow projectiles and particles; health and warning overlays follow the bodies.
   shots.forEach(shot=>drawProjectile(ctx,shot,shotPosition(shot,renderAlpha),shotAngle(shot,renderAlpha),displayScale));
-  particles.forEach(particle=>drawCosmeticParticle(ctx,particle));
+  particles.forEach(particle=>drawCosmeticParticle(ctx,particle,displayScale));
   const enemyVisuals = enemyVisualScratch;
   enemyVisuals.length = enemies.length;
   for (let index = 0; index < enemies.length; index++) {
