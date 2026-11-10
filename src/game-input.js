@@ -112,7 +112,7 @@ export function resolveKeyboardCommand(event, { dialogOpen = false, placementAct
   if (guardianMoveActive && event.key === 'Enter') return { type: 'commit-guardian-move', preventDefault: true };
   if (event.key === 'Escape'&&interactionMode) {const cancel=cancelInteractionCommand(interactionMode);return cancel?{type:cancel,preventDefault:true}:null;}
   if (event.key === 'Escape') return placementActive ? { type: 'cancel-placement', preventDefault: true } : null;
-  if (placementActive && /^Arrow(Up|Down|Left|Right)$/.test(event.key)) return { type: 'move-placement-cursor', direction: event.key.slice(5), preventDefault: true };
+  if (placementActive && /^Arrow(Up|Down|Left|Right)$/.test(event.key)) return { type: 'move-placement-cursor', direction: event.key.slice(5), ...(event.shiftKey ? { step: 90 } : {}), preventDefault: true };
   if (placementActive && event.key === 'Enter') return { type: 'keyboard-placement', preventDefault: true };
 
   const action = Object.entries(bindings).find(([, code]) => code === event.code)?.[0];

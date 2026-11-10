@@ -18,8 +18,8 @@ export function buildHudView({
     life: { percent: lifePercent, value: lives, max:lifeCapacity },
     bloom: { percent: bloomCharge },
     waveLimit: limit === Infinity ? '· ∞' : `/ ${limit}`,
-    battlefieldSummary: `${mapName}, ${challengeLabel} rules. Wave ${wave} of ${limit === Infinity ? 'unlimited' : limit}; ${runStatus}. ${cashValue} spendable petals. Garden health: ${lives} of ${lifeCapacity}. ${roster.length} defenders: ${rosterText} ${selectedDescription} With a selected build, use arrow keys to aim. Press Enter to preview, arrows to adjust, then Enter again to place. Escape cancels. Cycle placed defenders with ${previousTowerKey} and ${nextTowerKey}.`,
-    battlefieldLabel: `${mapName} battlefield. Wave ${wave}, garden health ${lives} of ${lifeCapacity}, ${cashValue} spendable petals. ${selectedDescription} With a selected build, arrows aim; Enter previews, arrows adjust, and Enter again places; Escape cancels.`,
+    battlefieldSummary: `${mapName}, ${challengeLabel} rules. Wave ${wave} of ${limit === Infinity ? 'unlimited' : limit}; ${runStatus}. ${cashValue} spendable petals. Garden health: ${lives} of ${lifeCapacity}. ${roster.length} defenders: ${rosterText} ${selectedDescription} With a selected build, use arrow keys to aim; hold Shift with an arrow for a larger move. Press Enter to preview, arrows to adjust, then Enter again to place. Escape cancels. Cycle placed defenders with ${previousTowerKey} and ${nextTowerKey}.`,
+    battlefieldLabel: `${mapName} battlefield. Wave ${wave}, garden health ${lives} of ${lifeCapacity}, ${cashValue} spendable petals. ${selectedDescription} With a selected build, arrows aim; hold Shift for larger moves; Enter previews, arrows adjust, and Enter again places; Escape cancels.`,
     buttons: {
       startBtn: { disabled: running || paused || finished || (tutorialActive && tutorialTask !== 4), text: finished ? (lives > 0 ? 'Garden saved' : 'Meadow over') : paused ? 'Game paused' : running ? 'Wave in progress…' : `Launch wave ${wave + 1}  ↗` },
       pauseBtn: { text: paused ? '▶' : 'Ⅱ', label: paused ? 'Resume game (Space)' : 'Pause game (Space)', pressed: paused },

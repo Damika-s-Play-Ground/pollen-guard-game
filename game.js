@@ -1478,7 +1478,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     else if(command.type==='cancel-interaction')cancelCurrentInteraction();
     else if(command.type==='cancel-placement')cancelCurrentInteraction();
     else if(command.type==='move-placement-cursor'){
-      const moved=movePlacementCursor(pointer,command.direction,canvas.width,canvas.height,18,placementCandidate);pointer=moved.pointer;placementCandidate=moved.candidate;updatePlacementHint(pointer);draw();
+      const moved=movePlacementCursor(pointer,command.direction,canvas.width,canvas.height,command.step??18,placementCandidate);pointer=moved.pointer;placementCandidate=moved.candidate;updatePlacementHint(pointer);draw();
       announceKeyboardStatus(byId('placementHint').textContent);
     }
     else if(command.type==='cancel-guardian-move')endGuardianMove();
