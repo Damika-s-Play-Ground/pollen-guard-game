@@ -61,7 +61,7 @@ import { shouldEmitParticles } from './src/visual-preferences.js';
 import { createGameAudio } from './src/game-audio.js';
 import { appendCosmeticParticles } from './src/effect-budget.js';
 import { createRewardFeedbackQueue } from './src/reward-feedback.js';
-import { plantingSettleExpired, plantingDustParticles } from './src/planting-effects.js';
+import { plantingSettleExpired, plantingDustParticles, advancePlantingParticle } from './src/planting-effects.js';
 import { ATTACK_ANTICIPATION_SECONDS, attackAnticipation } from './src/attack-anticipation.js';
 import { defeatResponseParticles } from './src/defeat-effects.js';
 import { activeArmorFeedback, armorImpactFeedback } from './src/armor-feedback.js';
@@ -1082,7 +1082,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(tutorialPractice.active&&(tutorialPractice.task!==0||selectedType!=='sprout')){setToast('Practice placement uses one Sprout Slinger first.');return;}
     const def=towersDef[selectedType];if(!def)return;const error=placementError(point);if(error){setToast(error);updatePlacementHint({...point,inside:true});return;}
     const result=performPlayerAction('placeTower',{towerId:nextEntityId,towerType:selectedType,x:point.x,y:point.y});if(!result.ok){setToast(result.reason);return;}
-    towerPlantingAt.set(result.tower.id,gameTime);if(shouldEmitParticles(uiSettings))particles=appendCosmeticParticles(particles,plantingDustParticles(result.tower.x,result.tower.y));selectedTower=repeatBuild?null:result.tower;placementCandidate=null;byId('placementConfirm').hidden=true;if(!repeatBuild)selectedType=null;if(mobileLayout.matches)setDefenderSheetOpen(false);canvas.focus({preventScroll:true});playCue('place');if(towers.length>=8)unlock('builder');setToast(`${def.name} planted.`);if(firstActionCoachVisible){firstActionCoachVisible=false;uiSettings.tutorialSeen=true;saveUiSettings();updateTutorialCoach();}advanceTutorialPractice('place',{towerId:result.tower.id,type:result.tower.type});updateHud();renderTowerOptions();renderSelected();updatePlacementHint();if(!mobileLayout.matches&&selectedTower)revealSelectedTower();saveRun();draw();
+    const plantedAt=performance.now()/1000;towerPlantingAt.set(result.tower.id,plantedAt);if(shouldEmitParticles(uiSettings))particles=appendCosmeticParticles(particles,plantingDustParticles(result.tower.x,result.tower.y,plantedAt));selectedTower=repeatBuild?null:result.tower;placementCandidate=null;byId('placementConfirm').hidden=true;if(!repeatBuild)selectedType=null;if(mobileLayout.matches)setDefenderSheetOpen(false);canvas.focus({preventScroll:true});playCue('place');if(towers.length>=8)unlock('builder');setToast(`${def.name} planted.`);if(firstActionCoachVisible){firstActionCoachVisible=false;uiSettings.tutorialSeen=true;saveUiSettings();updateTutorialCoach();}advanceTutorialPractice('place',{towerId:result.tower.id,type:result.tower.type});updateHud();renderTowerOptions();renderSelected();updatePlacementHint();if(!mobileLayout.matches&&selectedTower)revealSelectedTower();saveRun();draw();
     });
   }
   function drawMapMagnifier() {
@@ -1121,10 +1121,13 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     ctx.restore();
   }
   function draw(renderAlpha=1) {
+    const visualNow=performance.now()/1000;
     criticalWarningActive=renderBossWarnings(byId('bossWarnings'),enemies,bossChoreoCues,gameTime);
     syncGuidanceVisibility(criticalWarningActive);
     for(const [id,launch] of towerRecoilAt)if(gameTime-launch.time>.1)towerRecoilAt.delete(id);
-    for(const [id,plantedAt] of towerPlantingAt)if(plantingSettleExpired(gameTime,plantedAt))towerPlantingAt.delete(id);
+    for(const [id,plantedAt] of towerPlantingAt)if(plantingSettleExpired(visualNow,plantedAt))towerPlantingAt.delete(id);
+    particles=particles.filter(p=>!p.wallClock||!plantingSettleExpired(visualNow,p.startedAt));
+    const renderParticles=particles.map(p=>p.wallClock?advancePlantingParticle(p,visualNow):p);
     for(const [id,cue] of armorImpactCues)if(gameTime-cue.time>=.8)armorImpactCues.delete(id);
     for(const [id,cue] of impactCausalityCues)if(gameTime-cue.time>=.32||!enemies.some(enemy=>enemy.id===id))impactCausalityCues.delete(id);
     const liveEnemyIds=new Set(enemies.map(enemy=>enemy.id));for(const id of armorFeedbackSeen.keys())if(!liveEnemyIds.has(id))armorFeedbackSeen.delete(id);
@@ -1143,13 +1146,13 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       placementPreviewRange,abilityPreview:liveAbilityPreview,
       placementComboPreviews(type,point){return previewTowerCombinations({id:'placement-preview',type,x:point.x,y:point.y},towers,towersLinked);},
       enemies,enemyPosition:enemy=>renderSnapshots.enemyPosition(enemy,routeGeometry.pathFor,renderAlpha),shots,shotPosition:shot=>renderSnapshots.shotPosition(shot,renderAlpha),
-      shotAngle(shot,alpha){const from=renderSnapshots.shotPosition(shot,alpha),target=shot.target;if(!target)return 0;const point=renderSnapshots.enemyPosition(target,routeGeometry.pathFor,alpha);return Math.atan2(point.y-(target.flying?target.radius*.85:0)-from.y,point.x-from.x);},particles,selectedType,pointer,
+      shotAngle(shot,alpha){const from=renderSnapshots.shotPosition(shot,alpha),target=shot.target;if(!target)return 0;const point=renderSnapshots.enemyPosition(target,routeGeometry.pathFor,alpha);return Math.atan2(point.y-(target.flying?target.radius*.85:0)-from.y,point.x-from.x);},particles:renderParticles,selectedType,pointer,
       placementError,palette:uiSettings.palette,highContrastEnemyColors,selectedTargetId:targetId,
       visualTime:uiSettings.animation==='full'?gameTime:0,enemyHitFlash:enemy=>renderSnapshots.hitFlash(enemy.id),
       impactCausalityForEnemy:enemy=>{const cue=impactCausalityCues.get(enemy.id);if(!cue||uiSettings.animation==='off')return null;const age=gameTime-cue.time;return age<0||age>=.32?null:{from:cue.from,color:cue.color,alpha:1-age/.32};},
       recoilForTower:id=>shotRecoil(uiSettings.animation,gameTime,towerRecoilAt.get(id)?.time),
       attackCueForTower:tower=>{if(uiSettings.animation!=='full'||tower.cooldown<=0||tower.cooldown>ATTACK_ANTICIPATION_SECONDS)return null;const def=towersDef[tower.type];if(!def||def.income||def.supportStructure)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other)),stats=getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def),candidates=enemies.filter(enemy=>canHitTarget({canHitAir:def.antiAir},enemy)&&Math.hypot(tower.x-enemyPosition(enemy).x,tower.y-enemyPosition(enemy).y)<=stats.range),target=chooseTargetForTower(tower,candidates,enemyPosition);return target?attackAnticipation(uiSettings.animation,tower,enemyPosition(target)) : null;},
-      plantingForTower:id=>plantingSettle(uiSettings.animation,gameTime,towerPlantingAt.get(id)),
+      plantingForTower:id=>plantingSettle(uiSettings.animation,visualNow,towerPlantingAt.get(id)),
       armorFeedbackForEnemy:enemy=>activeArmorFeedback(armorImpactCues.get(enemy.id),gameTime),
       healerLinks,healerFeedbackForEnemy:enemy=>{const pulse=healerPulses.get(enemy.id);return pulse?{amount:pulse.amount,alpha:Math.max(.25,1-(gameTime-pulse.time)/.5)}:null;},
       burrowEmergenceForEnemy:enemy=>{const time=burrowEmergenceCues.get(enemy.id);return time===undefined?null:{alpha:Math.max(.25,1-(gameTime-time)/.5)};},
@@ -1234,7 +1237,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     }
     else if(!runIsOver())advanceDroppedSeeds(seedObjective,dt);
     if(guardianMode==='guardian'&&!runIsOver()){advanceMeadowGuardian(guardian,dt,{path,width:canvas.width,height:canvas.height,enemies,enemyPosition});if(guardian.downTimer>0||guardian.pulseCooldown>0)updateGuardianControls();}
-    particles=particles.filter(p=>p.life>0);particles.forEach(p=>{p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.95;p.vy*=.95;});
+    particles=particles.filter(p=>p.wallClock||p.life>0);particles.forEach(p=>{if(p.wallClock)return;p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.95;p.vy*=.95;});
     saveClock+=dt;if(saveClock>=1){saveClock=0;if(wave||towers.length||guardianMode!=='none')saveRun();}
   }
   function resetRun() {
