@@ -66,7 +66,7 @@ import { ATTACK_ANTICIPATION_SECONDS, attackAnticipation } from './src/attack-an
 import { defeatResponseParticles } from './src/defeat-effects.js';
 import { activeArmorFeedback, armorImpactFeedback } from './src/armor-feedback.js';
 import { buildWavePreviewView, buildWaveTimelineView, renderWavePreview, renderWaveTimeline, wavePreviewNeedsSelectionRefresh } from './src/wave-ui.js';
-import { renderTowerCatalog, syncTowerCatalogSelection, SPECIALIST_TOWER_TYPES, specialistEncounterHint, STARTER_TOWER_TYPES } from './src/tower-catalog-ui.js';
+import { renderTowerCatalog, syncTowerCatalogSelection, SPECIALIST_TOWER_TYPES, specialistEncounterHint, specialistTypesForEncounter, STARTER_TOWER_TYPES } from './src/tower-catalog-ui.js';
 import { renderTowerInspector, renderTowerUpgradePreview, renderTowerTargetStatus } from './src/tower-inspector-ui.js';
 import { renderTowerAbilityDock } from './src/tower-ability-dock-ui.js';
 import { buildHudView, renderHud } from './src/hud-ui.js';
@@ -228,7 +228,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   let healerInterventionObserved=false;
   const renderSnapshots=createRenderSnapshots();
   const resumedFirstActionCoach=firstActionCoachProgress(uiSettings.firstActionCoachPhase);
-  let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, firstActionCoachPlaced=resumedFirstActionCoach.placed, firstActionCoachLaunched=resumedFirstActionCoach.launched, firstActionCoachPhase=resumedFirstActionCoach.phase, tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
+  let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', specialistCounterTypes=[], tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, firstActionCoachPlaced=resumedFirstActionCoach.placed, firstActionCoachLaunched=resumedFirstActionCoach.launched, firstActionCoachPhase=resumedFirstActionCoach.phase, tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
   const aimedSpellControls=new Map();
   let runState=createRunState();
   let combatPerformance=createCombatPerformance();
@@ -819,7 +819,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const catalogArgs={document,towersDef,towerRoles,selectedType,filter:'all',challenge,challengeRules,researchLoadout,relicLoadout,cash,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg};
     renderTowerCatalog({...catalogArgs,root:byId('towerList'),types:STARTER_TOWER_TYPES});
     renderTowerCatalog({...catalogArgs,root:byId('advancedTowerList'),filter:towerFilter,types:SPECIALIST_TOWER_TYPES});
-    document.querySelectorAll('.tower-option').forEach(button=>button.addEventListener('click',()=>{if(guardianMoveActive)endGuardianMove();if(aimedSpellId)cancelAimedSpell();applyInteractionTransition('build',button.dataset.type);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});renderTowerOptions();renderSelected();updatePlacementHint();if(firstActionCoachVisible)updateTutorialCoach();draw();canvas.focus({preventScroll:true});}));
+    renderCounterPicks();
     document.querySelectorAll('.tower-filter').forEach(button=>{button.classList.toggle('active',button.dataset.filter===towerFilter);button.setAttribute('aria-pressed',String(button.dataset.filter===towerFilter));});
     byId('cancelPlacementBtn').style.display=selectedType?'block':'none';
     const chosen=selectedType&&towersDef[selectedType];
@@ -827,6 +827,22 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const supportDetail=chosen?.supportStructure==='beacon'?`buffs up to 3 eligible attackers within ${Math.round(chosenStats.range)} map units with ${Math.round((1-chosenStats.buffMultiplier)*100)}% shorter attack interval, once each; 48-unit footprint.`:chosen?.supportStructure==='trap'?`slows the first ${Math.max(0,chosen.triggerLimit-(researchLoadout.includes('compost-lattice')?1:0))} unique ground pests to enter its ${Math.round(chosenStats.range)} map units ring for ${chosen.slowDuration}s, then expires; footprint ${chosen.footprint} units.`:chosen?.role;
     byId('towerDetail').textContent=chosen?`${chosen.name} · ${chosen.supportStructure?supportDetail:chosen.income?`+${chosenStats.income} petals/wave`:`${chosenStats.damage} damage/hit · ${(1/chosenStats.rate).toFixed(1)} attacks/s · range ${Math.round(chosenStats.range)} map units`}`:'';
     updatePlacementHint();
+  }
+  function renderCounterPicks() {
+    const panel=byId('counterPicks'),root=byId('counterPickList');
+    panel.hidden=!specialistCounterTypes.length;
+    byId('counterPicksTitle').textContent=runIsRunning()?'Counter for this encounter':'Ready for the next threat';
+    const catalogArgs={document,towersDef,towerRoles,selectedType,filter:'all',challenge,challengeRules,researchLoadout,relicLoadout,cash,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg};
+    renderTowerCatalog({...catalogArgs,root,types:specialistCounterTypes});
+  }
+  function selectTowerType(type) {
+    if(guardianMoveActive)endGuardianMove();
+    if(aimedSpellId)cancelAimedSpell();
+    applyInteractionTransition('build',type);
+    hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});
+    renderTowerOptions();renderSelected();updatePlacementHint();
+    if(firstActionCoachVisible)updateTutorialCoach();
+    draw();canvas.focus({preventScroll:true});
   }
   function selectedUpgradeCost(tower) { return towerUpgradeQuote(tower,towersDef[tower.type]).cost; }
   function updateUpgradePreview() {
@@ -1008,8 +1024,10 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const revealCue=byId('specialistRevealCue');
     const revealSchedules=waveSchedulesForMap(selectedMap,waveScheduleVersion);
     const revealWaveIndex=view.preview?((view.preview.wave-1)%revealSchedules.length):0;
-    const upcomingGroups=!runIsRunning()&&view.preview?revealSchedules[revealWaveIndex]?.groups||[]:[];
+    const upcomingGroups=view.preview?revealSchedules[revealWaveIndex]?.groups||[]:[];
     const revealHint=specialistEncounterHint(upcomingGroups);
+    specialistCounterTypes=specialistTypesForEncounter(upcomingGroups);
+    renderCounterPicks();
     revealCue.hidden=!revealHint;revealCue.textContent=revealHint;
     if(maps[selectedMap]?.customMap){const objective=maps[selectedMap].customObjective;byId('mapNote').textContent=`${maps[selectedMap].name} · ${objective.brief} Minimum ${objective.minLives} seeds must remain. Ground and sky routes share this custom trail.`;}
     if(!wave&&!runIsRunning())byId('waveInfo').textContent+=guardianMode==='guardian'?' Optional kit: move your Meadow Guardian across safe grass; Pollen Pulse slows nearby ground pests, but a pest can knock it down briefly.':guardianMode==='ward'?' Optional kit: Pollen Ward grants two extra starting seeds instead of an active unit.':' Optional kit: choose a Meadow Guardian or Pollen Ward in mission settings; neither is required.';
@@ -1418,6 +1436,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('resumeBtn').onclick=restoreRun;
   bindRunTransferControls({exportButton:byId('exportRunBtn'),importButton:byId('importRunBtn'),fileInput:byId('runImportInput'),onExport:exportRunFile,onImport:importRunFile});
   document.querySelectorAll('.tower-filter').forEach(button=>button.onclick=()=>{towerFilter=button.dataset.filter;renderTowerOptions();});
+  byId('defenderCard').addEventListener('click',event=>{const option=event.target.closest?.('.tower-option');if(option)selectTowerType(option.dataset.type);});
   byId('cancelPlacementBtn').onclick=cancelCurrentInteraction;
   byId('cancelPreviewBtn').textContent='Cancel action';byId('towerAbilityCancel').textContent='Cancel action';
   byId('confirmPlacementBtn').onclick=()=>{if(placementCandidate)placeTower(placementCandidate);};

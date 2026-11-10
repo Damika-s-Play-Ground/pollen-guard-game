@@ -67,6 +67,20 @@
   gap: 8px;
 }
 
+.counter-picks { margin-top: 8px; }
+.counter-picks[hidden] { display: none !important; }
+.counter-picks h3 { margin: 0 0 5px; color: var(--mint); font-size: calc(12px * var(--ui-text-scale)); }
+.counter-pick-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.counter-pick-list .tower-option { min-height: 64px; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 5px; padding: 5px; }
+.counter-pick-list .tower-icon { width: 30px; height: 30px; }
+.counter-pick-list .tower-copy { min-width: 0; }
+.counter-pick-list .tower-copy b { overflow-wrap: anywhere; font-size: calc(11px * var(--ui-text-scale)); }
+.counter-pick-list .cost { font-size: calc(11px * var(--ui-text-scale)); white-space: nowrap; }
+
+@media (max-width: 350px) {
+  .counter-pick-list { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 700px) {
   .starter-tower-list .tower-option { min-height: 56px; padding: 6px; }
   .specialist-roster { margin-top: 7px; }

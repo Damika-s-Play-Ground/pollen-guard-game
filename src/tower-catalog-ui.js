@@ -13,6 +13,14 @@ export function specialistEncounterHint(groups=[]) {
   return '';
 }
 
+export function specialistTypesForEncounter(groups=[]) {
+  const present=new Set(groups.map(group=>group.type));
+  if(present.has('flyer'))return ['thorn','gust'];
+  if(present.has('armored'))return ['thorn'];
+  if(present.has('splitter'))return ['briar'];
+  return [];
+}
+
 export function sunflowerPurchaseForecast({ cost, income }) {
   if(!Number.isFinite(cost)||cost<=0||!Number.isFinite(income)||income<=0)return null;
   return `Next clear: +${income} base petals · about ${Math.ceil(cost/income)} clears to repay ${cost} petals from harvest alone.`;
