@@ -9,6 +9,12 @@ export function shouldShowFirstActionCoach({ tutorialSeen = false, tutorialInPro
   return !tutorialSeen && !tutorialInProgress && !hasSavedRun;
 }
 
+export function advanceFirstActionCoach(state={},action) {
+  const placed=Boolean(state.placed||action==='place'),launched=Boolean(state.launched||action==='launch');
+  const visible=Boolean(state.visible)&&!(placed&&launched);
+  return {visible,placed,launched,phase:placed?(launched?'complete':'launch'):(launched?'place-during-wave':'place')};
+}
+
 export function buildTutorialStepView(step) {
   const index = Number.isInteger(step) ? Math.max(0, Math.min(TUTORIAL_STEPS.length - 1, step)) : 0;
   const [title, description] = TUTORIAL_STEPS[index];
@@ -55,10 +61,14 @@ export function buildTutorialCoachView({active,task}) {
   return {visible:true,text:current?.text||'Practice complete.',focusSelector:current?.focusSelector||null,focusMap:Boolean(current?.focusMap)};
 }
 
-export function buildFirstActionCoachView({visible,selectedType='sprout',selectedName='Sprout'}) {
-  const text=selectedType
-    ? `Place ${selectedName} with the first bend in range, then launch.`
-    : 'Choose a defender; keep the first bend in its range, then launch.';
+export function buildFirstActionCoachView({visible,phase='place',selectedType='sprout',selectedName='Sprout'}) {
+  const text=phase==='launch'
+    ? 'Defender planted. Launch wave 1 when ready.'
+    : phase==='place-during-wave'
+      ? 'Wave 1 is underway. Plant a defender on open grass.'
+      : selectedType
+        ? `Place ${selectedName} with the first bend in range, then launch.`
+        : 'Choose a defender; keep the first bend in its range, then launch.';
   return visible
     ? {visible:true,text,focusSelector:null,focusMap:false}
     : {visible:false,text:'',focusSelector:null,focusMap:false};

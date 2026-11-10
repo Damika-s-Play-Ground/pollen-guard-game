@@ -54,7 +54,7 @@ import { resolveGuidanceOwner, guidanceVisibility } from './src/guidance-arbitra
 import { pathCoveragePercent } from './src/route-coverage.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
 import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutorialPracticeState, finishTutorialPracticeState, resetTutorialPracticeState } from './src/tutorial-progress.js';
-import { buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, mountTutorialCoach, renderTutorialCoach, renderTutorialStep, shouldShowFirstActionCoach } from './src/tutorial-ui.js';
+import { advanceFirstActionCoach, buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, mountTutorialCoach, renderTutorialCoach, renderTutorialStep, shouldShowFirstActionCoach } from './src/tutorial-ui.js';
 import { DEFAULT_KEY_BINDINGS, bindKey, keyCodeLabel } from './src/keyboard-bindings.js';
 import { keyboardActionLabels as buildKeyboardActionLabels, renderKeyboardBindings as presentKeyboardBindings } from './src/keyboard-bindings-ui.js';
 import { shouldEmitParticles } from './src/visual-preferences.js';
@@ -222,7 +222,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const healerPulses=new Map(),burrowEmergenceCues=new Map(),bossChoreoCues=new Map();
   let healerInterventionObserved=false;
   const renderSnapshots=createRenderSnapshots();
-  let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
+  let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, firstActionCoachPlaced=false, firstActionCoachLaunched=false, firstActionCoachPhase='place', tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
   const aimedSpellControls=new Map();
   let runState=createRunState();
   let combatPerformance=createCombatPerformance();
@@ -362,10 +362,16 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function updateTutorialCoach() {
     const active=tutorialPractice.active;
-    tutorialCoachView=active?buildTutorialCoachView({active:true,task:tutorialPractice.task}):buildFirstActionCoachView({visible:firstActionCoachVisible,selectedType,selectedName:towersDef[selectedType]?.name||'a defender'});
+    tutorialCoachView=active?buildTutorialCoachView({active:true,task:tutorialPractice.task}):buildFirstActionCoachView({visible:firstActionCoachVisible,phase:firstActionCoachPhase,selectedType,selectedName:towersDef[selectedType]?.name||'a defender'});
     const exit=byId('tutorialExitBtn');
     exit.textContent=active?'End practice':'Dismiss';
     syncGuidanceVisibility();
+  }
+  function recordFirstActionCoachAction(action) {
+    const next=advanceFirstActionCoach({visible:firstActionCoachVisible,placed:firstActionCoachPlaced,launched:firstActionCoachLaunched},action);
+    firstActionCoachVisible=next.visible;firstActionCoachPlaced=next.placed;firstActionCoachLaunched=next.launched;firstActionCoachPhase=next.phase;
+    if(action==='place'||!next.visible){uiSettings.tutorialSeen=true;saveUiSettings();}
+    updateTutorialCoach();updatePlacementHint();
   }
   function syncGuidanceVisibility(criticalWarning=criticalWarningActive,placementError=currentPlacementError){
     const mapNoteGuidance=byId('mapNote').querySelector('.map-note-guidance');
@@ -1002,7 +1008,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function startWave(automatic=false) {
     if(tutorialPractice.active&&tutorialPractice.task!==4){setToast('Complete the practice steps before starting the wave.');return;}
     if(runIsRunning()||runIsPaused()||runIsOver()||wave>=config().limit)return;
-    const result=performPlayerAction('startWave',{wave:wave+1,early:false,bonus:0});if(!result.ok){setToast(result.reason);return;}if(result.bonus>0)queueRewardFeedback([{amount:result.bonus,x:canvas.width*.5,y:canvas.height*.35}]);
+    const result=performPlayerAction('startWave',{wave:wave+1,early:false,bonus:0});if(!result.ok){setToast(result.reason);return;}if(firstActionCoachVisible)recordFirstActionCoachAction('launch');if(result.bonus>0)queueRewardFeedback([{amount:result.bonus,x:canvas.width*.5,y:canvas.height*.35}]);
     closeMissionPreparation(byId('missionPreparation'));
     if(!automatic&&uiSettings.autoStartHold){uiSettings.autoStartHold=false;saveUiSettings();}
     if(tutorialPractice.active)cash=Math.max(cash,45);
@@ -1082,7 +1088,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(tutorialPractice.active&&(tutorialPractice.task!==0||selectedType!=='sprout')){setToast('Practice placement uses one Sprout Slinger first.');return;}
     const def=towersDef[selectedType];if(!def)return;const error=placementError(point);if(error){setToast(error);updatePlacementHint({...point,inside:true});return;}
     const result=performPlayerAction('placeTower',{towerId:nextEntityId,towerType:selectedType,x:point.x,y:point.y});if(!result.ok){setToast(result.reason);return;}
-    const plantedAt=performance.now()/1000;towerPlantingAt.set(result.tower.id,plantedAt);if(shouldEmitParticles(uiSettings))particles=appendCosmeticParticles(particles,plantingDustParticles(result.tower.x,result.tower.y,plantedAt));selectedTower=repeatBuild?null:result.tower;placementCandidate=null;byId('placementConfirm').hidden=true;if(!repeatBuild)selectedType=null;if(mobileLayout.matches)setDefenderSheetOpen(false);canvas.focus({preventScroll:true});playCue('place');if(towers.length>=8)unlock('builder');setToast(`${def.name} planted.`);if(firstActionCoachVisible){firstActionCoachVisible=false;uiSettings.tutorialSeen=true;saveUiSettings();updateTutorialCoach();}advanceTutorialPractice('place',{towerId:result.tower.id,type:result.tower.type});updateHud();renderTowerOptions();renderSelected();updatePlacementHint();if(!mobileLayout.matches&&selectedTower)revealSelectedTower();saveRun();draw();
+    const plantedAt=performance.now()/1000;towerPlantingAt.set(result.tower.id,plantedAt);if(shouldEmitParticles(uiSettings))particles=appendCosmeticParticles(particles,plantingDustParticles(result.tower.x,result.tower.y,plantedAt));selectedTower=repeatBuild?null:result.tower;placementCandidate=null;byId('placementConfirm').hidden=true;if(!repeatBuild)selectedType=null;if(mobileLayout.matches)setDefenderSheetOpen(false);canvas.focus({preventScroll:true});playCue('place');if(towers.length>=8)unlock('builder');setToast(`${def.name} planted.`);if(firstActionCoachVisible)recordFirstActionCoachAction('place');advanceTutorialPractice('place',{towerId:result.tower.id,type:result.tower.type});updateHud();renderTowerOptions();renderSelected();updatePlacementHint();if(!mobileLayout.matches&&selectedTower)revealSelectedTower();saveRun();draw();
     });
   }
   function drawMapMagnifier() {
