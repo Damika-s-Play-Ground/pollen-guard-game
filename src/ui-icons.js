@@ -13,3 +13,8 @@ export function uiIconSvg(name,className='ui-icon'){
 }
 
 export function petalAmountMarkup(amount){return `${amount} <span class="petal-amount-icon">${uiIconSvg('petal')}</span>`;}
+
+export function petalTextMarkup(text){
+  const escaped=String(text).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  return escaped.replaceAll('✿',`<span class="petal-amount-icon">${uiIconSvg('petal')}</span>`);
+}

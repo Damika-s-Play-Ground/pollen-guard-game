@@ -1,3 +1,5 @@
+import { petalTextMarkup } from './ui-icons.js';
+
 function canRestoreFocus(target) {
   return Boolean(target?.isConnected && !target.disabled && target.getClientRects().length);
 }
@@ -21,7 +23,7 @@ export function createConfirmationFlow({ dialog, title, message, accept, documen
       pendingAction = action;
       title.textContent = nextTitle;
       message.textContent = nextMessage;
-      accept.textContent = acceptLabel;
+      accept.innerHTML = petalTextMarkup(acceptLabel);
       dialog.showModal();
       onOpen?.();
     },

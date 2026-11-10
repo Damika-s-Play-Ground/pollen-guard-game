@@ -1,3 +1,5 @@
+import { petalTextMarkup } from './ui-icons.js';
+
 export function refreshPurchaseAffordability({ document, cash, selectedUpgrade = null }) {
   document.querySelectorAll('.tower-option').forEach(button => {
     const cost=Number(button.dataset.purchaseCost),shortfall=Math.max(0,cost-cash),label=button.querySelector('.affordability-shortfall');
@@ -14,9 +16,9 @@ export function refreshPurchaseAffordability({ document, cash, selectedUpgrade =
     const shortfall=Math.max(0,selectedUpgrade.cost-cash);
     const title=`Upgrade ${selectedUpgrade.name} · Cost ${selectedUpgrade.cost} petals${shortfall?` · Need ${shortfall} more`:''}.`;
     document.getElementById('upgradeBtn').title=title;
-    document.getElementById('upgradeBtn').textContent=`Upgrade · ${selectedUpgrade.cost} ✿${shortfall?` · Need ${shortfall} more`:''}`;
+    document.getElementById('upgradeBtn').innerHTML=petalTextMarkup(`Upgrade · ${selectedUpgrade.cost} ✿${shortfall?` · Need ${shortfall} more`:''}`);
     const quickButton=document.getElementById('contextUpgradeBtn');
     quickButton.title=title;
-    quickButton.textContent=shortfall?`Upgrade · ${selectedUpgrade.cost} ✿ · Need ${shortfall} more`:`Upgrade · ${selectedUpgrade.cost} ✿`;
+    quickButton.innerHTML=petalTextMarkup(shortfall?`Upgrade · ${selectedUpgrade.cost} ✿ · Need ${shortfall} more`:`Upgrade · ${selectedUpgrade.cost} ✿`);
   }
 }

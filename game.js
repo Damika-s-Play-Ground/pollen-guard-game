@@ -1,4 +1,5 @@
 import { renderBossWarnings } from './src/boss-warning-ui.js';
+import { petalTextMarkup } from './src/ui-icons.js';
 import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, towerUpgradeQuote, getEffectiveTowerStats, towersAreLinked, isUnsupportedRunVersion, RUN_SAVE_VERSION, assignRunEntityIds } from './src/game-core.js';
 import { DEFAULT_GAME_SPEED, toggleGameSpeed } from './src/simulation-speed.js';
 import { createGameLoop, shouldRenderBattleFrame } from './src/game-loop.js';
@@ -246,7 +247,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(!rewardSpriteLayer){done();return;}
     const node=document.createElement('span'),canvasRect=canvas.getBoundingClientRect(),cashRect=byId('cash').getBoundingClientRect();
     const fromX=canvasRect.left+packet.x*canvasRect.width/canvas.width,fromY=canvasRect.top+packet.y*canvasRect.height/canvas.height,toX=cashRect.left+cashRect.width/2,toY=cashRect.top+cashRect.height/2;
-    node.className='reward-flyout';node.textContent=`+${packet.amount} ✿`;node.setAttribute('aria-hidden','true');rewardSpriteLayer.append(node);
+    node.className='reward-flyout';node.innerHTML=petalTextMarkup(`+${packet.amount} ✿`);node.setAttribute('aria-hidden','true');rewardSpriteLayer.append(node);
     const remove=()=>node.remove();
     if(uiSettings.animation!=='full'||typeof node.animate!=='function'){
       node.style.left=`${toX}px`;node.style.top=`${toY}px`;node.classList.add('reward-flyout-static','reward-flyout-reduced');window.setTimeout(()=>{remove();done();},650);
@@ -823,7 +824,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     }
   }
   function renderTowerOptions() {
-    byId('prospectiveLabel').textContent=selectedType?`Building · ${towersDef[selectedType].icon} ${towersDef[selectedType].name} · ${towersDef[selectedType].cost} petals`:'No build pick · choose a defender to place';
+  byId('prospectiveLabel').textContent=selectedType?`Building · ${towersDef[selectedType].name} · ${towersDef[selectedType].cost} petals`:'No build pick · choose a defender to place';
     const specialistRoster=byId('specialistRoster');
     if(maps[selectedMap]?.customMap||SPECIALIST_TOWER_TYPES.includes(selectedType))specialistRoster.open=true;
     const catalogArgs={document,towersDef,towerRoles,selectedType,filter:'all',challenge,challengeRules,researchLoadout,relicLoadout,cash,keyBindings,keyCodeLabel,getEffectiveTowerStats,towerArtSvg};

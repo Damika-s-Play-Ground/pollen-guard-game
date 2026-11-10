@@ -1,4 +1,4 @@
-import { petalAmountMarkup, uiIconSvg } from './ui-icons.js';
+import { petalAmountMarkup, petalTextMarkup, uiIconSvg } from './ui-icons.js';
 import { renderBranchPreview } from './branch-preview.js';
 
 function appendBranchPreview(document, parent, option, motion) {
@@ -87,13 +87,13 @@ export function renderTowerInspector({ document, canvasHost, view }) {
     button.setAttribute('aria-pressed', String(selected));
   }
 
-  byId('upgradeBtn').textContent = view.upgradeText;
+  byId('upgradeBtn').innerHTML = petalTextMarkup(view.upgradeText);
   byId('upgradeBtn').title = view.upgradeTitle;
   byId('upgradeBtn').disabled = view.upgradeDisabled&&!view.upgradeFocusable;
   byId('upgradeBtn').setAttribute('aria-disabled',String(Boolean(view.upgradeDisabled)));
   byId('contextUpgradeBtn').disabled = view.upgradeDisabled&&!view.upgradeFocusable;
   byId('contextUpgradeBtn').setAttribute('aria-disabled',String(Boolean(view.upgradeDisabled)));
-  byId('contextUpgradeBtn').textContent = view.contextUpgradeText;
+  byId('contextUpgradeBtn').innerHTML = petalTextMarkup(view.contextUpgradeText);
   byId('contextUpgradeBtn').title = view.upgradeTitle;
   byId('targetModeSelect').value = view.targetMode;
   byId('targetModeSelect').disabled = view.targetModeDisabled;
