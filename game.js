@@ -78,6 +78,7 @@ import { buildResultRecord, renderResultsScreen } from './src/results-ui.js';
 import { createConfirmationFlow } from './src/confirmation-flow.js';
 import { activateUpgrade, branchCommitConfirmation, createUpgradeActivationGate } from './src/upgrade-interaction.js';
 import { createActionFeedbackMetrics } from './src/action-feedback-metrics.js';
+import { createFirstActionStudyMetrics } from './src/first-action-study-metrics.js';
 import { createWaveTransitionController, waveTransitionPhase } from './src/wave-controller.js';
 import { mountBattleSupport } from './src/battle-layout-ui.js';
 import { ACHIEVEMENT_DEFINITIONS, renderAchievements as renderProfileAchievements, renderMapOptions as renderProfileMapOptions, renderCampaignMap as renderProfileCampaignMap, renderResearchTree as renderProfileResearchTree, renderRelicLoadout as renderProfileRelicLoadout } from './src/profile-ui.js';
@@ -118,8 +119,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const ctx = canvas.getContext('2d');
   const feedbackTimingEnabled=new URLSearchParams(window.location.search).get('feedbackTiming')==='1';
   const actionFeedbackMetrics=feedbackTimingEnabled?createActionFeedbackMetrics():null;
+  const firstActionStudyEnabled=new URLSearchParams(window.location.search).get('firstActionStudy')==='1';
+  const firstActionStudyMetrics=firstActionStudyEnabled?createFirstActionStudyMetrics():null;
   const playtestRecorder=createPlaytestRecorder(localStorage);
   if(actionFeedbackMetrics){window.__pollenGuardActionFeedback=()=>actionFeedbackMetrics.summary();window.__pollenGuardActionFeedbackDiagnostics=()=>actionFeedbackMetrics.diagnostics();}
+  if(firstActionStudyMetrics)window.__pollenGuardFirstActionStudy=()=>firstActionStudyMetrics.summary();
   function measureActionFeedback(action,callback){
     const finish=actionFeedbackMetrics?.begin(action);
     try{return callback();}finally{finish?.();}
@@ -1008,7 +1012,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function startWave(automatic=false) {
     if(tutorialPractice.active&&tutorialPractice.task!==4){setToast('Complete the practice steps before starting the wave.');return;}
     if(runIsRunning()||runIsPaused()||runIsOver()||wave>=config().limit)return;
-    const result=performPlayerAction('startWave',{wave:wave+1,early:false,bonus:0});if(!result.ok){setToast(result.reason);return;}if(firstActionCoachVisible)recordFirstActionCoachAction('launch');if(result.bonus>0)queueRewardFeedback([{amount:result.bonus,x:canvas.width*.5,y:canvas.height*.35}]);
+    const result=performPlayerAction('startWave',{wave:wave+1,early:false,bonus:0});if(!result.ok){setToast(result.reason);return;}firstActionStudyMetrics?.record('launch');if(firstActionCoachVisible)recordFirstActionCoachAction('launch');if(result.bonus>0)queueRewardFeedback([{amount:result.bonus,x:canvas.width*.5,y:canvas.height*.35}]);
     closeMissionPreparation(byId('missionPreparation'));
     if(!automatic&&uiSettings.autoStartHold){uiSettings.autoStartHold=false;saveUiSettings();}
     if(tutorialPractice.active)cash=Math.max(cash,45);
@@ -1088,6 +1092,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(tutorialPractice.active&&(tutorialPractice.task!==0||selectedType!=='sprout')){setToast('Practice placement uses one Sprout Slinger first.');return;}
     const def=towersDef[selectedType];if(!def)return;const error=placementError(point);if(error){setToast(error);updatePlacementHint({...point,inside:true});return;}
     const result=performPlayerAction('placeTower',{towerId:nextEntityId,towerType:selectedType,x:point.x,y:point.y});if(!result.ok){setToast(result.reason);return;}
+    firstActionStudyMetrics?.record('placement');
     const plantedAt=performance.now()/1000;towerPlantingAt.set(result.tower.id,plantedAt);if(shouldEmitParticles(uiSettings))particles=appendCosmeticParticles(particles,plantingDustParticles(result.tower.x,result.tower.y,plantedAt));selectedTower=repeatBuild?null:result.tower;placementCandidate=null;byId('placementConfirm').hidden=true;if(!repeatBuild)selectedType=null;if(mobileLayout.matches)setDefenderSheetOpen(false);canvas.focus({preventScroll:true});playCue('place');if(towers.length>=8)unlock('builder');setToast(`${def.name} planted.`);if(firstActionCoachVisible)recordFirstActionCoachAction('place');advanceTutorialPractice('place',{towerId:result.tower.id,type:result.tower.type});updateHud();renderTowerOptions();renderSelected();updatePlacementHint();if(!mobileLayout.matches&&selectedTower)revealSelectedTower();saveRun();draw();
     });
   }
@@ -1524,7 +1529,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   else if(selectRecoverableRun(startupPrimaryRaw,startupBackupRaw,maps,modes).source==='backup')setToast('The main save is invalid. Resume will recover the previous autosave.',0);
   if(uiSettings.tutorialInProgress){
     tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun);tutorialStep=3;updateTutorial();byId('tutorialText').textContent='Your practice restarts from step one after a reload. The saved garden remains protected.';byId('tutorialDialog').showModal();transitionRun({type:'DIALOG_OPEN'});
-  }else if(shouldShowFirstActionCoach({tutorialSeen:uiSettings.tutorialSeen,tutorialInProgress:uiSettings.tutorialInProgress,hasSavedRun:Boolean(startupPrimaryRaw||startupBackupRaw)})){firstActionCoachVisible=true;updateTutorialCoach();updatePlacementHint();if(mobileLayout.matches)setDefenderSheetOpen(true);}
+  }else if(shouldShowFirstActionCoach({tutorialSeen:uiSettings.tutorialSeen,tutorialInProgress:uiSettings.tutorialInProgress,hasSavedRun:Boolean(startupPrimaryRaw||startupBackupRaw)})){firstActionCoachVisible=true;updateTutorialCoach();updatePlacementHint();if(mobileLayout.matches)setDefenderSheetOpen(true);if(firstActionStudyMetrics)requestAnimationFrame(()=>requestAnimationFrame(()=>firstActionStudyMetrics.markReady()));}
   registerOfflineSupport({canApplyUpdate:()=>runIsOver()||(!wave&&!towers.length&&!enemies.length)});
   gameLoop.start();
 })();

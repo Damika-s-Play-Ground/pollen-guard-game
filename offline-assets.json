@@ -36,6 +36,7 @@
   "./src/enemy-guide-ui.js",
   "./src/enemy-intel.js",
   "./src/enemy-silhouette.js",
+  "./src/first-action-study-metrics.js",
   "./src/game-actions.js",
   "./src/game-audio.js",
   "./src/game-core.js",
