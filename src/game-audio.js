@@ -9,6 +9,7 @@ export const AMBIENT_MUSIC_STATES = Object.freeze({
   resolve:Object.freeze([130.81,164.81,196])
 });
 export const AMBIENT_MUSIC_GLIDE_SECONDS = .72;
+export const AUDIO_CUE_RATE_LIMIT_SECONDS = .045;
 export const CRITICAL_AUDIO_RESERVED_VOICES = 2;
 export const CRITICAL_AUDIO_PRIORITY = 3;
 export const AUDIO_CUE_PRIORITIES = Object.freeze({
@@ -16,6 +17,7 @@ export const AUDIO_CUE_PRIORITIES = Object.freeze({
   ability:2, snare:2, bloom:2, waveStart:2, waveClear:2, upgrade:2,
   place:1, select:1, enemyDefeat:1, achievement:1, soundOn:1
 });
+const RATE_LIMITED_AUDIO_CUES = new Set(['attackImpact']);
 
 export const AUDIO_CUE_PROFILES = Object.freeze({
   place: Object.freeze([{ start:540, end:820, duration:.09, type:'triangle' }]),
@@ -53,6 +55,7 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
   let musicState='calm';
   const activeVoices = new Set();
   const voiceMeta = new Map();
+  const lastCueAt = new Map();
   const voiceLimit=Number.isFinite(maxVoices)?Math.max(1,Math.floor(maxVoices)):MAX_AUDIO_VOICES;
   const reservedVoices=Math.min(CRITICAL_AUDIO_RESERVED_VOICES,Math.max(0,voiceLimit-1));
   let criticalUntil=0;
@@ -131,7 +134,7 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
     return true;
   }
 
-  function startNotes(notes, volume, priority=1) {
+  function startNotes(notes, volume, priority=1, pan=0) {
     if (!notes?.length) return 0;
     const audio = ensureContext();
     if (!audio) return 0;
@@ -144,6 +147,8 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
       while(activeVoices.size>=voiceLimit&&priority>=CRITICAL_AUDIO_PRIORITY){if(!stealVoice(priority))break;}
       if(activeVoices.size>=voiceLimit)break;
       const oscillator = audio.createOscillator(), gain = audio.createGain();
+      const panner=pan&&typeof audio.createStereoPanner==='function'?audio.createStereoPanner():null;
+      if(panner){panner.pan.value=pan;panner.connect(effectsBus);}
       const startAt = audio.currentTime + (note.delay || 0), duration = note.duration;
       const attack=Math.min(duration*.5,Math.max(.001,note.attack??.003));
       oscillator.type = note.type;
@@ -152,8 +157,8 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
       gain.gain.setValueAtTime(.001, startAt);
       gain.gain.exponentialRampToValueAtTime(volume * (note.level ?? 1), startAt + attack);
       gain.gain.exponentialRampToValueAtTime(.001, startAt + duration);
-      oscillator.connect(gain); gain.connect(effectsBus);
-      oscillator.onended = () => { activeVoices.delete(oscillator);voiceMeta.delete(oscillator);sync(); };
+      oscillator.connect(gain); gain.connect(panner||effectsBus);
+      oscillator.onended = () => { activeVoices.delete(oscillator);voiceMeta.delete(oscillator);panner?.disconnect?.();sync(); };
       activeVoices.add(oscillator);
       voiceMeta.set(oscillator,{gain,priority,category:'effect',startedAt:audio.currentTime});
       oscillator.start(startAt); oscillator.stop(startAt + duration + .005);
@@ -199,7 +204,7 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
     } catch { /* Browser audio may be unavailable or blocked; gameplay remains unaffected. */ }
   }
 
-  function play(cue, variant = null) {
+  function play(cue, variant = null, spatial = null) {
     const settings = getSettings();
     if (!settings.soundEnabled || !settings.masterVolume || !settings.effectsVolume) return 0;
     let notes = AUDIO_CUE_PROFILES[cue];
@@ -212,12 +217,24 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
     }
     if (!notes) return 0;
     const priority=cue==='attackLaunch'?1:cue==='attackImpact'?2:(AUDIO_CUE_PRIORITIES[cue]??1);
+    try { if(!context&&!ensureContext())return 0; }
+    catch { return 0; }
+    const now=context.currentTime,rateKey=RATE_LIMITED_AUDIO_CUES.has(cue)?`${cue}:${variant??'default'}`:null;
+    if(rateKey&&now-(lastCueAt.get(rateKey)??-Infinity)<AUDIO_CUE_RATE_LIMIT_SECONDS)return 0;
+    let pan=0;
+    if(priority<CRITICAL_AUDIO_PRIORITY&&spatial&&Number.isFinite(spatial.x)&&Number.isFinite(spatial.width)&&spatial.width>0){
+      pan=Math.max(-.35,Math.min(.35,((spatial.x/spatial.width)-.5)*.7));
+    }
     if(priority>=CRITICAL_AUDIO_PRIORITY){
       const duration=Math.max(...notes.map(note=>(note.delay||0)+note.duration));
       if(!context)ensureContext();
       duckAmbient(duration);
     }
-    try { return startNotes(notes, MAX_EFFECT_VOICE_GAIN,priority); }
+    try {
+      const started=startNotes(notes,MAX_EFFECT_VOICE_GAIN,priority,pan);
+      if(rateKey&&started)lastCueAt.set(rateKey,now);
+      return started;
+    }
     catch { return 0; }
   }
 

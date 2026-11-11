@@ -688,7 +688,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     byId('contextSellBtn').focus({preventScroll:true});
     announceKeyboardStatus(`${byId('selectedName').textContent}: focus is on the inspector actions. Press Escape to return to the battlefield.`);
   }
-  const playCue=(cue,variant)=>gameAudio.play(cue,variant);
+  const playCue=(cue,variant,spatial)=>gameAudio.play(cue,variant,spatial);
   function unlock(id) { if(maps[selectedMap]?.customMap)return;if(!profile.achievements.includes(id)){profile.achievements.push(id);persistProfile();renderAchievements();setToast(`Milestone earned: ${ACHIEVEMENT_DEFINITIONS.find(a=>a[0]===id)?.[1]||id}`);playCue('achievement');} }
   function checkProgress() {
     if(challengeBoardId||maps[selectedMap]?.customMap)return;
@@ -1310,8 +1310,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       const result=stepCombat(state,dt,{pathLength:routeGeometry.pathLengthFor,positionOf:enemyPosition,
         onDefeat:enemy=>visuals.defeated.push(enemy),onLeak:enemy=>{if(!visuals.leaked.length)playCue('leak');visuals.leaked.push(enemy);},
         onStatusTick:(enemy,ticks)=>visuals.statusTicks.push([enemy,ticks]),
-        onShot:shot=>{if(shot.sourceTowerId!=null&&!shot.splitProjectile){const target=shot.target,point=target?enemyPosition(target):null;towerRecoilAt.set(shot.sourceTowerId,{time:gameTime,angle:point?Math.atan2(point.y-(target.flying?target.radius*.85:0)-shot.y,point.x-shot.x):0});}playCue('attackLaunch',shot.sourceTowerType);},
-        onImpact:(shot,position,impact)=>{visuals.impacts.push([shot,position]);let primaryArmorCue=null;for(const result of impact.results){const cue=armorImpactFeedback(shot,result);if(result.enemy.id===shot.targetId)primaryArmorCue=cue;if(cue){let seen=armorFeedbackSeen.get(result.enemy.id);if(!seen){seen=new Set();armorFeedbackSeen.set(result.enemy.id,seen);}if(!seen.has(cue.kind)){seen.add(cue.kind);armorImpactCues.set(result.enemy.id,{...cue,time:gameTime});}}}const target=primaryImpactCausalityTarget(shot,impact.results,getSelectedTargetId()),source=towers.find(tower=>tower.id===shot.sourceTowerId);if(target&&source){impactCausalityCues.set(target.id,{from:{x:source.x,y:source.y},color:primaryArmorCue?.kind==='blocked'?'#ff9a82':primaryArmorCue?.kind==='bypassed'?'#b8ef83':'#fff0a8',time:gameTime});}playCue('attackImpact',shot.sourceTowerType);},
+        onShot:shot=>{if(shot.sourceTowerId!=null&&!shot.splitProjectile){const target=shot.target,point=target?enemyPosition(target):null;towerRecoilAt.set(shot.sourceTowerId,{time:gameTime,angle:point?Math.atan2(point.y-(target.flying?target.radius*.85:0)-shot.y,point.x-shot.x):0});}playCue('attackLaunch',shot.sourceTowerType,{x:shot.x,width:canvas.width});},
+        onImpact:(shot,position,impact)=>{visuals.impacts.push([shot,position]);let primaryArmorCue=null;for(const result of impact.results){const cue=armorImpactFeedback(shot,result);if(result.enemy.id===shot.targetId)primaryArmorCue=cue;if(cue){let seen=armorFeedbackSeen.get(result.enemy.id);if(!seen){seen=new Set();armorFeedbackSeen.set(result.enemy.id,seen);}if(!seen.has(cue.kind)){seen.add(cue.kind);armorImpactCues.set(result.enemy.id,{...cue,time:gameTime});}}}const target=primaryImpactCausalityTarget(shot,impact.results,getSelectedTargetId()),source=towers.find(tower=>tower.id===shot.sourceTowerId);if(target&&source){impactCausalityCues.set(target.id,{from:{x:source.x,y:source.y},color:primaryArmorCue?.kind==='blocked'?'#ff9a82':primaryArmorCue?.kind==='bypassed'?'#b8ef83':'#fff0a8',time:gameTime});}playCue('attackImpact',shot.sourceTowerType,{x:position.x,width:canvas.width});},
         onHealerHeal:(healer,target,amount)=>{healerInterventionObserved=true;healerPulses.set(target.id,{healerId:healer.id,targetId:target.id,amount,time:gameTime});},
         onBurrowEmerge:enemy=>burrowEmergenceCues.set(enemy.id,gameTime),
         onBossTelegraph:()=>playCue('bossWarning'),
