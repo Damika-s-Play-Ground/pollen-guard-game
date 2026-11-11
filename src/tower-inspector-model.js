@@ -1,4 +1,4 @@
-import { getEffectiveTowerStats, describeTowerStatChanges, formatMapUnits, towerUpgradeQuote, saleRefund, towersAreLinked } from './game-core.js';
+import { getEffectiveTowerStats, describeTowerStatChanges, formatMapUnits, towerUpgradeQuote, saleRefund, saleRefundRate, towersAreLinked } from './game-core.js';
 import { TOWER_COMBINATIONS } from './tower-combinations.js';
 import { DOT_TICK_RULES, canTowerHitTarget, isPointInTowerRange } from './combat-rules.js';
 import { chooseTargetForTower, targetPriorityInfo } from './targeting.js';
@@ -30,13 +30,13 @@ function combinationStatuses(tower, towers, researchLoadout=[],relicLoadout=[]) 
     .join(' · ');
 }
 
-export function buildTowerUpgradePreview({ tower, towers = [tower], challenge, challengeRules = [], linked, cash, terrain = 'ground', researchLoadout=[],relicLoadout=[] }) {
+export function buildTowerUpgradePreview({ tower, towers = [tower], challenge, challengeRules = [], linked, cash, wave=1, terrain = 'ground', researchLoadout=[],relicLoadout=[] }) {
   if (!tower) return '';
   if (towersDef[tower.type]?.supportStructure) return `${towersDef[tower.type].name} is a fixed support structure; it has no upgrades.`;
   if (tower.level === 3) return 'Fully grown · no further upgrade.';
   if (tower.level === 1 && tower.branchChoice == null) return 'Choose a branch to see its exact next stats.';
 
-  const def = towersDef[tower.type], quote = towerUpgradeQuote(tower, def);
+  const def = towersDef[tower.type], quote = towerUpgradeQuote(tower, def, saleRefundRate(wave));
   const current = applyBeaconInterval(getEffectiveTowerStats(tower, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), tower, towers,researchLoadout,relicLoadout);
   const next = applyBeaconInterval(getEffectiveTowerStats({ ...tower, level: tower.level + 1, branch: quote.branch }, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), tower, towers,researchLoadout,relicLoadout);
   const changes = describeTowerStatChanges(current, next);
@@ -68,7 +68,7 @@ export function buildTowerTargetStatus({ tower, enemies = [], challenge, challen
   return isRunning ? 'No target in range · waiting for an enemy.' : 'No current target · start a wave to preview targets.';
 }
 
-export function buildTowerInspectorModel({ selectedTower, towers = [], challenge, challengeRules = [], linked, cash, wave, gameTime, terrain = 'ground', researchLoadout=[],relicLoadout=[], performance=null, animation='full', tutorialActive = false, tutorialTask = 0, tutorialTowerId = null, supportTargetingAvailable = false, onChooseBranch }) {
+export function buildTowerInspectorModel({ selectedTower, towers = [], challenge, challengeRules = [], linked, cash, wave=1, gameTime, terrain = 'ground', researchLoadout=[],relicLoadout=[], performance=null, animation='full', tutorialActive = false, tutorialTask = 0, tutorialTowerId = null, supportTargetingAvailable = false, onChooseBranch }) {
   if (!selectedTower) return { empty: true };
 
   const def = towersDef[selectedTower.type], level = selectedTower.level, branch = selectedTower.branch;
@@ -91,7 +91,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
       upgradeDescription:details, range:formatMapUnits(supportRange),
       impact:selectedTower.type === 'compostTrap' ? `${trapRemaining} triggers remain` : 'No direct damage',
       interval:'Support effect · no attack cycle', targets:'Support only · cannot target or attack', effects:`${details} · ${terrainBonusForTower(terrain,selectedTower.type)}`,
-      investment:`${selectedTower.invested || def.cost} invested · sell returns ${saleRefund(selectedTower.invested || def.cost, def.cost)}`,
+      investment:`${selectedTower.invested || def.cost} invested · sell returns ${saleRefund(selectedTower.invested || def.cost, def.cost, saleRefundRate(wave))}${wave===0?' · full refund before first wave':''}`,
       showBranches:false, branchOptions:null, selectedBranch:null, onChooseBranch,
       upgradeText:'NO UPGRADES', upgradeTitle:`${def.name} has a fixed support effect.`, upgradeDisabled:true,
       contextUpgradeText:'No upgrades', targetMode:selectedTower.targetMode || 'First', targetModeDisabled:true,airTargetingAvailable:selectedTower.targetMode==='AirFirst',supportTargetingAvailable:selectedTower.targetMode==='Support',
@@ -101,7 +101,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
   const stats = applyBeaconInterval(getEffectiveTowerStats(selectedTower, { challenge, challengeRules, linked, terrain,researchLoadout,relicLoadout }, def), selectedTower, towers,researchLoadout,relicLoadout);
   const chosenBranch = level === 1 ? selectedTower.branchChoice : branch;
   const hasBranchChoice = chosenBranch != null;
-  const quote = towerUpgradeQuote(selectedTower, def);
+  const quote = towerUpgradeQuote(selectedTower, def, saleRefundRate(wave));
   const cost = level === 3 || !hasBranchChoice ? 0 : quote.cost;
   const shortage = Math.max(0, cost - cash);
   const tutorialBlocksUpgrade=tutorialActive&&(tutorialTask!==3||selectedTower.id!==tutorialTowerId);
@@ -158,7 +158,7 @@ export function buildTowerInspectorModel({ selectedTower, towers = [], challenge
     interval: def.income ? 'Economy defender' : `Every ${stats.rate.toFixed(2)} seconds`,
     targets: `${def.income ? `Golden Seeds radius · ${stats.allyLinkRadius} map units` : def.antiAir ? 'Ground + air' : 'Ground only'}${pairing ? ` · ${pairing}` : ''}`,
     effects: `${effect} · ${terrainBonusForTower(terrain,selectedTower.type)}${comboContribution ? ` · This run: ${comboContribution}` : ''}`,
-    investment: `${investment} invested · sell returns ${saleRefund(investment, def.cost)}${payback ? ` · simple payback ${payback} cleared ${payback === 1 ? 'wave' : 'waves'} at +${stats.income}/wave` : ''}`,
+    investment: `${investment} invested · sell returns ${saleRefund(investment, def.cost, saleRefundRate(wave))}${wave===0?' · full refund before first wave':''}${payback ? ` · simple payback ${payback} cleared ${payback === 1 ? 'wave' : 'waves'} at +${stats.income}/wave` : ''}`,
     showBranches: level === 1,
     branchOptions,
     previewMotion:animation,

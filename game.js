@@ -1,6 +1,6 @@
 import { renderBossWarnings } from './src/boss-warning-ui.js';
 import { petalTextMarkup } from './src/ui-icons.js';
-import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, towerUpgradeQuote, getEffectiveTowerStats, towersAreLinked, isUnsupportedRunVersion, RUN_SAVE_VERSION, assignRunEntityIds } from './src/game-core.js';
+import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, saleRefundRate, towerUpgradeQuote, getEffectiveTowerStats, towersAreLinked, isUnsupportedRunVersion, RUN_SAVE_VERSION, assignRunEntityIds } from './src/game-core.js';
 import { DEFAULT_GAME_SPEED, toggleGameSpeed } from './src/simulation-speed.js';
 import { createGameLoop, shouldRenderBattleFrame } from './src/game-loop.js';
 import { createRenderGate, createRenderSignature } from './src/render-gate.js';
@@ -139,7 +139,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   let canvasDisplayScale = 1;
   const syncCanvasDisplayScale = () => {
     cameraView=normalizeCameraView(cameraView,canvas.clientWidth,canvas.clientHeight);
-    canvas.style.transformOrigin='center center';canvas.style.transform=cameraTransform(cameraView);
+    const portrait=mobileLayout.matches;
+    canvas.parentElement.classList.toggle('portrait-map',portrait);
+    canvas.style.transformOrigin='center center';canvas.style.transform=portrait?`translate(-50%,-50%) ${cameraTransform(cameraView)} rotate(90deg)`:cameraTransform(cameraView);
     const scale = canvas.clientWidth / canvas.width;
     canvasDisplayScale = Number.isFinite(scale) && scale > 0 ? scale*cameraView.zoom : 1;
     canvas.parentElement.classList.toggle('camera-pan-mode',cameraView.panMode);
@@ -469,6 +471,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     syncGuidanceVisibility(criticalWarningActive,currentPlacementError);
   }
   function selectPlacedTower(tower) {
+    if(selectedTower?.id===tower.id){selectedTower=null;renderSelected();updateHud();draw();return;}
     measureActionFeedback('selection',()=>{const previewNeedsRefresh=wavePreviewNeedsSelectionRefresh(selectedTower,tower,towersDef);applyInteractionTransition('inspect',tower);hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});syncTowerCatalogSelection(document.querySelectorAll('.tower-option'));byId('prospectiveLabel').textContent='No build pick · choose a defender to place';byId('cancelPlacementBtn').style.display='none';byId('towerDetail').textContent='';if(maps[selectedMap]?.customMap)byId('specialistRoster').open=true;renderSelected();updateHud();if(previewNeedsRefresh)updatePreview();revealSelectedTower();updatePlacementHint();draw();canvas.focus({preventScroll:true});announceTowerSelection(tower);advanceTutorialPractice('select',{towerId:tower.id});});
   }
   function showSelectionChooser(candidates) {
@@ -869,7 +872,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function selectedUpgradeCost(tower) { return towerUpgradeQuote(tower,towersDef[tower.type]).cost; }
   function updateUpgradePreview() {
     const linked=isTowerLinkedToAnother(selectedTower,towers,towersLinked);
-    const text=buildTowerUpgradePreview({tower:selectedTower,towers,challenge,challengeRules,linked,cash,terrain:terrainAt(selectedTower),researchLoadout,relicLoadout});
+    const text=buildTowerUpgradePreview({tower:selectedTower,towers,challenge,challengeRules,linked,cash,wave,terrain:terrainAt(selectedTower),researchLoadout,relicLoadout});
     if(upgradePreviewRenderGate.shouldRender(text))renderTowerUpgradePreview({document,text});
   }
   function updateTargetIndicator() {
@@ -1477,7 +1480,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('towerAbilityBtn').onclick=previewTowerAbility;byId('towerAbilityConfirm').onclick=runTowerAbility;byId('towerAbilityCancel').onclick=cancelCurrentInteraction;byId('bloomBtn').onclick=useBloom;byId('snareBtn').onclick=useSnare;
   byId('guardianMoveBtn').onclick=()=>guardianMoveActive?endGuardianMove():beginGuardianMove();byId('guardianPulseBtn').onclick=useGuardianPulse;
   byId('guardianMoveBtn').onclick=()=>guardianMoveActive?endGuardianMove():beginGuardianMove();byId('guardianPulseBtn').onclick=useGuardianPulse;
-  byId('sellBtn').onclick=()=>{if(!selectedTower)return;const tower=selectedTower,refund=saleRefund(tower.invested,towersDef[tower.type].cost);requestConfirmation('Sell this defender?',`Sell ${towersDef[tower.type].name}? Investment: ${tower.invested} petals · refund: ${refund} petals.`,()=>{const result=performPlayerAction('sellTower',{towerId:tower.id,refund});if(!result.ok){setToast(result.reason);return;}queueRewardFeedback([{amount:result.refund,x:tower.x,y:tower.y}]);selectedTower=null;renderSelected();updateHud();if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}saveRun();draw();},`Sell · +${refund} ✿`);};
+  byId('sellBtn').onclick=()=>{if(!selectedTower)return;const tower=selectedTower,refund=saleRefund(tower.invested,towersDef[tower.type].cost,saleRefundRate(wave));requestConfirmation('Sell this defender?',`Sell ${towersDef[tower.type].name}? Investment: ${tower.invested} petals · refund: ${refund} petals.${wave===0?' Full refund before the first wave; 68% after it begins.':''}`,()=>{const result=performPlayerAction('sellTower',{towerId:tower.id,refund});if(!result.ok){setToast(result.reason);return;}queueRewardFeedback([{amount:result.refund,x:tower.x,y:tower.y}]);selectedTower=null;renderSelected();updateHud();if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}saveRun();draw();},`Sell · +${refund} ✿`);};
   byId('contextUpgradeBtn').onclick=()=>byId('upgradeBtn').click();
   byId('contextSellBtn').onclick=()=>byId('sellBtn').click();
   byId('mapSelect').onchange=event=>{const previous=selectedMap,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the trail',()=>{selectedMap=next;challengeBoardId=null;path=maps[selectedMap].path;calcPath();renderMapOptions();updatePlayOptionsLabel();applyChallenge();renderChallenges();explainFreshGarden(`${maps[selectedMap].name} selected.`);markStudyMapReady(next);});};

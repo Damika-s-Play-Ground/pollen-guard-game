@@ -1,9 +1,9 @@
 export const DEFAULT_DIFFICULTY = 'standard';
 
 export const DIFFICULTIES = Object.freeze({
-  story: Object.freeze({ label: 'Story', cashDelta: 40, livesDelta: 5, pressure: 0.85, spawnRate: 1.15 }),
-  standard: Object.freeze({ label: 'Standard', cashDelta: 0, livesDelta: 0, pressure: 1, spawnRate: 1 }),
-  veteran: Object.freeze({ label: 'Veteran', cashDelta: -35, livesDelta: -4, pressure: 1.15, spawnRate: 0.92 })
+  story: Object.freeze({ label: 'Easy', cashDelta: 40, livesDelta: 5, pressure: 0.85, spawnRate: 1.15 }),
+  standard: Object.freeze({ label: 'Medium', cashDelta: 0, livesDelta: 0, pressure: 1, spawnRate: 1 }),
+  veteran: Object.freeze({ label: 'Hard', cashDelta: -35, livesDelta: -4, pressure: 1.15, spawnRate: 0.92 })
 });
 
 export const CHALLENGE_RULES = Object.freeze({

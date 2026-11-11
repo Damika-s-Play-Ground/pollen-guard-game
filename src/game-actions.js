@@ -1,6 +1,6 @@
 import { maps, modes, towersDef, targetModes } from './game-data.js';
 import { buildWaveQueue, LEGACY_WAVE_SCHEDULE_VERSION, PRE_BOSS_WAVE_SCHEDULE_VERSION, PRE_TACTICAL_ENEMY_SCHEDULE_VERSION, PRE_RIDGE_BALANCE_SCHEDULE_VERSION, WAVE_SCHEDULE_VERSION, waveSchedulesForMap } from './waves.js';
-import { canActivateTowerAbility, saleRefund, towerUpgradeCost } from './game-core.js';
+import { canActivateTowerAbility, saleRefund, saleRefundRate, towerUpgradeCost } from './game-core.js';
 import { normalizeGameSpeed } from './simulation-speed.js';
 import { resolveGlobalCombatAbility, resolveTowerAbility, TOWER_ABILITY_COOLDOWN_SECONDS } from './combat-actions.js';
 import { defeatCombatEnemy, stepCombat } from './combat-simulation.js';
@@ -114,7 +114,7 @@ export function applyPlayerAction(state, action, context = {}) {
     case 'sellTower': {
       const tower = findTower(state, payload.towerId);
       if (!tower) return rejected('Tower is no longer available to sell.');
-      const refund = saleRefund(tower.invested, towersDef[tower.type].cost);
+      const refund = saleRefund(tower.invested, towersDef[tower.type].cost, saleRefundRate(state.wave));
       if (payload.refund !== refund) return rejected('Sale refund does not match the tower investment.');
       state.cash += refund;
       state.towers.splice(state.towers.indexOf(tower), 1);

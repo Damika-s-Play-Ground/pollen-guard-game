@@ -5,8 +5,9 @@ export function canvasPoint(event, canvas) {
   const rect = canvas.getBoundingClientRect();
   if (![rect.left,rect.top,rect.width,rect.height,canvas.width,canvas.height].every(Number.isFinite)
     || rect.width <= 0 || rect.height <= 0 || canvas.width <= 0 || canvas.height <= 0) return null;
-  const x = (event.clientX - rect.left) * canvas.width / rect.width;
-  const y = (event.clientY - rect.top) * canvas.height / rect.height;
+  const portrait=canvas.parentElement?.classList.contains('portrait-map');
+  const x = portrait ? (event.clientY - rect.top) * canvas.width / rect.height : (event.clientX - rect.left) * canvas.width / rect.width;
+  const y = portrait ? (rect.right - event.clientX) * canvas.height / rect.width : (event.clientY - rect.top) * canvas.height / rect.height;
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   return {
     x,

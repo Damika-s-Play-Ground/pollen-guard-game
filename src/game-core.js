@@ -51,9 +51,13 @@ export function canActivateTowerAbility({ running, enemyCount, gameOver, cooldow
   return Boolean(running && enemyCount > 0 && !gameOver && cooldownReady && !usedThisWave);
 }
 
-export function saleRefund(invested, baseCost) {
+export function saleRefundRate(wave=1) {
+  return wave===0 ? 1 : 0.68;
+}
+
+export function saleRefund(invested, baseCost, rate=0.68) {
   const amount = Number.isFinite(invested) && invested >= 0 ? invested : baseCost;
-  return Math.floor(amount * 0.68);
+  return Math.floor(amount * rate);
 }
 
 export function towerUpgradeCost(def, level, branch) {
@@ -62,12 +66,12 @@ export function towerUpgradeCost(def, level, branch) {
   return branchCost + (level === 2 ? 65 : 0);
 }
 
-export function towerUpgradeQuote(tower, def) {
+export function towerUpgradeQuote(tower, def, refundRate=0.68) {
   const branch = tower.level === 1 ? tower.branchChoice : tower.branch;
   const cost = towerUpgradeCost(def, tower.level, branch);
   const investment = tower.invested || def.cost;
   const investedAfter = investment + cost;
-  return { branch, cost, investment, investedAfter, refundAfter: saleRefund(investedAfter, def.cost) };
+  return { branch, cost, investment, investedAfter, refundAfter: saleRefund(investedAfter, def.cost, refundRate) };
 }
 
 export function getEffectiveTowerStats(tower, { challenge = 'classic', challengeRules = [], linked = false, terrain = 'ground', researchLoadout = [], relicLoadout=[] } = {}, def) {

@@ -27,7 +27,7 @@ export function buildHudView({
       pauseBtn: { text: paused ? 'play' : 'pause', label: paused ? 'Resume game (Space)' : 'Pause game (Space)', pressed: paused },
       bloomBtn: { text: `✦ Bloom pulse · ${bloomCharge} / 100`, disabled: bloomCharge < 100 || !hasEnemies || gameOver || tutorialActive },
       snareBtn: { disabled: cash < 45 || !hasEnemies || gameOver || (tutorialActive && tutorialTask !== 5) },
-      speedBtn: { text: `${speed}× speed`, shortLabel: `${speed}×`, label: `Game speed ${speed}×`, active: speed > 1 }
+      speedBtn: { text: `${speed}×`, shortLabel: `${speed}×`, label: `Game speed ${speed}×. Activate to cycle 1×, 1.5×, 2×, and 2.5×.`, active: speed > 1 }
     },
     waveTag: running ? 'DEFEND THE POD' : finished ? 'RUN COMPLETE' : intermission > 0 ? `PREP ${Math.ceil(intermission)}s` : `WAVE ${wave + 1} INCOMING`,
     bloomStatus: gameOver ? 'Run ended.' : !hasEnemies ? 'Wait for enemies on the trail.' : bloomCharge < 100 ? `Charge by popping enemies · ${100 - bloomCharge} more needed.` : 'Ready · affects every enemy on the trail.',

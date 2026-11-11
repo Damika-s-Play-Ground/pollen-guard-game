@@ -1,4 +1,4 @@
-export const GAME_SPEEDS = Object.freeze([1, 2]);
+export const GAME_SPEEDS = Object.freeze([1, 1.5, 2, 2.5]);
 export const DEFAULT_GAME_SPEED = GAME_SPEEDS[0];
 export const LEGACY_GAME_SPEED = 1.7;
 
@@ -8,5 +8,6 @@ export function normalizeGameSpeed(value) {
 }
 
 export function toggleGameSpeed(currentSpeed) {
-  return normalizeGameSpeed(currentSpeed) === GAME_SPEEDS[0] ? GAME_SPEEDS[1] : GAME_SPEEDS[0];
+  const current=normalizeGameSpeed(currentSpeed),index=GAME_SPEEDS.indexOf(current);
+  return GAME_SPEEDS[(index+1)%GAME_SPEEDS.length];
 }
