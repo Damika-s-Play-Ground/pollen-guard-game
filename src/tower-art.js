@@ -5,7 +5,7 @@ const line = (points, stroke = '#263b2c', width = 1.4) => ({ kind: 'line', point
 export const CORE_TOWER_TYPES=Object.freeze(['sprout','dew','puff','thorn']);
 // Core defenders need a stronger silhouette at phone canvas scale. This is a
 // presentation-only transform; placement, collision and combat radii stay put.
-export function towerArtScale(type) { return CORE_TOWER_TYPES.includes(type)?1.5:1; }
+export function towerArtScale(type) { return CORE_TOWER_TYPES.includes(type)?1.75:1; }
 
 // Original, small-scale meadow forms. Coordinates share one 32px viewBox so the
 // catalog, inspector and battlefield all render the same authored shapes.
@@ -25,7 +25,7 @@ export const TOWER_ART_MANIFEST = Object.freeze({
 
 const branchArt = Object.freeze({
   sprout: [[polygon([[16,10],[4,3],[6,12],[13,16]], '#b5e878'), polygon([[16,10],[28,3],[26,12],[19,16]], '#b5e878')], [circle(5,10,4,'#f2d987'), circle(27,10,4,'#f2d987')]],
-  dew: [[polygon([[16,-2],[23,7],[16,17],[9,7]], '#e6ffff')], [polygon([[4,12],[1,18],[5,25],[10,18]], '#9de7e0'), polygon([[28,12],[31,18],[27,25],[22,18]], '#9de7e0')]],
+  dew: [[polygon([[16,-6],[23,7],[16,17],[9,7]], '#e6ffff')], [polygon([[4,12],[1,18],[5,25],[10,18]], '#9de7e0'), polygon([[28,12],[31,18],[27,25],[22,18]], '#9de7e0')]],
   puff: [[polygon([[2,10],[5,2],[13,8],[11,14]], '#f4dfbb'), polygon([[30,10],[27,2],[19,8],[21,14]], '#f4dfbb')], [circle(5,10,4,'#f6eabf'), circle(27,10,4,'#f6eabf')]],
   thorn: [[polygon([[16,-3],[9,13],[16,8],[23,13]], '#e3efba')], [polygon([[15,4],[2,12],[9,12],[16,10]], '#dce9a9'), polygon([[17,4],[30,12],[23,12],[16,10]], '#dce9a9')]],
   sunflower: [[circle(16,8,4,'#f8e49b'), circle(8,14,3,'#f8e49b'), circle(24,14,3,'#f8e49b'), circle(5,14,2.5,'#f8e49b'), circle(27,14,2.5,'#f8e49b')], [polygon([[16,-2],[22,6],[29,4],[25,12],[16,8],[7,12],[3,4],[10,6]], '#fff0a6')]],
