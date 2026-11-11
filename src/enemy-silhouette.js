@@ -1,8 +1,8 @@
 const PROFILES=Object.freeze({
   zip:Object.freeze({scale:.95,gaitRate:14,gaitAmplitude:3.4,floatAmplitude:0}),
-  armored:Object.freeze({scale:1.12,gaitRate:3.5,gaitAmplitude:.8,floatAmplitude:0}),
-  flyer:Object.freeze({scale:1.08,gaitRate:12,gaitAmplitude:3,floatAmplitude:0}),
-  healer:Object.freeze({scale:1.08,gaitRate:5,gaitAmplitude:1,floatAmplitude:1.35}),
+  armored:Object.freeze({scale:1.12,gaitRate:3.5,gaitAmplitude:10,floatAmplitude:0}),
+  flyer:Object.freeze({scale:1.08,gaitRate:8,gaitAmplitude:3.8,floatAmplitude:0}),
+  healer:Object.freeze({scale:1.08,gaitRate:5,gaitAmplitude:1,floatAmplitude:4}),
   boss:Object.freeze({scale:1.22,gaitRate:3,gaitAmplitude:.45,floatAmplitude:0})
 });
 const DEFAULT_PROFILE=Object.freeze({scale:1,gaitRate:7,gaitAmplitude:2,floatAmplitude:0});
