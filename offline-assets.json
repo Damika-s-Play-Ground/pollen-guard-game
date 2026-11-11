@@ -65,6 +65,7 @@
   "./src/keyboard-bindings.js",
   "./src/keyboard-inspector.js",
   "./src/leak-feedback.js",
+  "./src/learning-transfer-study-metrics.js",
   "./src/map-editor-ui.js",
   "./src/map-editor.js",
   "./src/meadow-guardian.js",

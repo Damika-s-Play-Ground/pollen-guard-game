@@ -283,18 +283,27 @@ export function traceEnemyShape(ctx, enemy, x, y, radius) {
   }
 }
 
+function drawStatusMark(ctx, mark, x, y) {
+  ctx.beginPath();
+  if (mark === 'burn') { ctx.moveTo(x, y - 4); ctx.lineTo(x + 3, y); ctx.lineTo(x, y + 3); ctx.lineTo(x - 2, y + 1); ctx.closePath(); ctx.fill(); }
+  else if (mark === 'poison') { ctx.arc(x - 2, y, 1.4, 0, Math.PI * 2); ctx.arc(x + 2, y, 1.4, 0, Math.PI * 2); ctx.fill(); }
+  else if (mark === 'slow') { ctx.moveTo(x - 3, y); ctx.lineTo(x + 3, y); ctx.moveTo(x, y - 3); ctx.lineTo(x, y + 3); }
+  else if (mark === 'stun') { ctx.moveTo(x - 2, y - 3); ctx.lineTo(x - 2, y + 3); ctx.moveTo(x + 2, y - 3); ctx.lineTo(x + 2, y + 3); }
+  else { ctx.moveTo(x - 3, y + 3); ctx.lineTo(x, y - 3); ctx.lineTo(x + 3, y + 3); }
+  ctx.stroke();
+}
+
 function drawStatusMarks(ctx, enemy, x, y) {
-  const marks = [enemy.burn > 0 && 'burn', enemy.poison > 0 && 'poison', enemy.slow > 0 && 'slow', enemy.stun > 0 && 'stun', enemy.armorBreak > 0 && 'break'].filter(Boolean);
-  marks.forEach((mark, index) => {
-    const cx = x + (index - (marks.length - 1) / 2) * 9, cy = y;
-    ctx.beginPath(); ctx.strokeStyle = '#fff'; ctx.fillStyle = '#172019'; ctx.lineWidth = 1.4;
-    if (mark === 'burn') { ctx.moveTo(cx, cy - 4); ctx.lineTo(cx + 3, cy); ctx.lineTo(cx, cy + 3); ctx.lineTo(cx - 2, cy + 1); ctx.closePath(); ctx.fill(); }
-    else if (mark === 'poison') { ctx.arc(cx - 2, cy, 1.4, 0, Math.PI * 2); ctx.arc(cx + 2, cy, 1.4, 0, Math.PI * 2); ctx.fill(); }
-    else if (mark === 'slow') { ctx.moveTo(cx - 3, cy); ctx.lineTo(cx + 3, cy); ctx.moveTo(cx, cy - 3); ctx.lineTo(cx, cy + 3); }
-    else if (mark === 'stun') { ctx.moveTo(cx - 2, cy - 3); ctx.lineTo(cx - 2, cy + 3); ctx.moveTo(cx + 2, cy - 3); ctx.lineTo(cx + 2, cy + 3); }
-    else { ctx.moveTo(cx - 3, cy + 3); ctx.lineTo(cx, cy - 3); ctx.lineTo(cx + 3, cy + 3); }
-    if (mark !== 'burn' && mark !== 'poison') ctx.stroke(); else ctx.stroke();
-  });
+  const burn=enemy.burn>0,poison=enemy.poison>0,slow=enemy.slow>0,stun=enemy.stun>0,armorBreak=enemy.armorBreak>0;
+  const count=Number(burn)+Number(poison)+Number(slow)+Number(stun)+Number(armorBreak);
+  if(!count)return;
+  ctx.strokeStyle='#fff';ctx.fillStyle='#172019';ctx.lineWidth=1.4;
+  let index=0;
+  if(burn)drawStatusMark(ctx,'burn',x+(index++-(count-1)/2)*9,y);
+  if(poison)drawStatusMark(ctx,'poison',x+(index++-(count-1)/2)*9,y);
+  if(slow)drawStatusMark(ctx,'slow',x+(index++-(count-1)/2)*9,y);
+  if(stun)drawStatusMark(ctx,'stun',x+(index++-(count-1)/2)*9,y);
+  if(armorBreak)drawStatusMark(ctx,'break',x+(index-(count-1)/2)*9,y);
 }
 
 function drawEnemyDetails(ctx, enemy, x, y, time = 0, displayScale = 1, silhouette = enemySilhouetteMetrics(enemy,time)) {
