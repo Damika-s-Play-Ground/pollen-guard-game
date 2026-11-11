@@ -6,9 +6,16 @@ export function renderRunHistory(container, entries, document, { onVerifyReplay 
   const compareStatus = document.createElement('p'); compareStatus.className='run-history-status'; compareStatus.setAttribute('role','status'); compareStatus.setAttribute('aria-live','polite'); container.append(compareStatus);
   for (const entry of entries) {
     const card=document.createElement('article');card.className='run-history-card';
-    const heading=document.createElement('h4');heading.textContent=`${entry.mapName} · ${{won:'Victory',lost:'Defeat',retired:'Retired'}[entry.outcome]} · wave ${entry.wave}`;card.append(heading);
+    const heading=document.createElement('h4');heading.textContent=`${{won:'Victory',lost:'Defeat',retired:'Retired'}[entry.outcome]} · ${entry.mapName}`;card.append(heading);
+    const topDefender=[...entry.towers].sort((a,b)=>b.level-a.level||String(a.type).localeCompare(String(b.type)))[0];
+    const defenderName=topDefender?topDefender.type.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./,value=>value.toUpperCase()):null;
+    const duration=Number.isSafeInteger(entry.durationSeconds)?`${Math.floor(entry.durationSeconds/60)}m ${entry.durationSeconds%60}s`:null;
+    const story=document.createElement('p');story.className='run-history-summary';
+    story.textContent=`${entry.outcome==='won'?`Cleared ${entry.wave} waves`:entry.outcome==='lost'?`Reached wave ${entry.wave}`:`Retired after wave ${entry.wave}`} · ${entry.lives} seeds left${duration?` · ${duration}`:''}${defenderName?` · Most upgraded: ${defenderName} L${topDefender.level}`:''}`;card.append(story);
+    const technical=document.createElement('details');technical.className='run-history-details';
+    const technicalSummary=document.createElement('summary');technicalSummary.textContent='Run details & verification';technical.append(technicalSummary);
     const towerSummary=entry.towers.map(tower=>{const name=tower.type.replace(/([a-z])([A-Z])/g,'$1 $2');return `${name[0]?.toUpperCase()||''}${name.slice(1)} L${tower.level}${Number.isInteger(tower.branch)?` path ${tower.branch+1}`:''}`;}).join(', ')||'no defenders',milestones=entry.milestones||[];
-    const detail=document.createElement('p');detail.textContent=`${new Date(entry.recordedAt).toLocaleString()} · ${entry.challenge} / ${entry.difficulty}${entry.rules.length?` · ${entry.rules.join(' + ')}`:''} · ${entry.popped} defeated · ${entry.leaks} leaks · ${entry.towers.length} defenders (${towerSummary}) · ${milestones.length} milestones · v${entry.version}`;card.append(detail);
+    const detail=document.createElement('p');detail.className='run-history-detail';detail.textContent=`${new Date(entry.recordedAt).toLocaleString()} · ${entry.challenge} / ${entry.difficulty}${entry.rules.length?` · ${entry.rules.join(' + ')}`:''} · ${entry.popped} defeated · ${entry.leaks} leaks · ${entry.towers.length} defenders (${towerSummary}) · ${milestones.length} milestones · build v${entry.version} · ${entry.actionCount} recorded actions · final hash ${entry.stateHash||'unavailable'}`;technical.append(detail);
     const actions=document.createElement('div');actions.className='run-history-actions';
     const compare=document.createElement('button');compare.type='button';compare.textContent='Select to compare';compare.setAttribute('aria-pressed','false');
     compare.addEventListener('click',()=>{
@@ -23,7 +30,7 @@ export function renderRunHistory(container, entries, document, { onVerifyReplay 
     const resultStatus=document.createElement('span');resultStatus.className='run-history-status';resultStatus.setAttribute('role','status');resultStatus.setAttribute('aria-live','polite');
     verify.addEventListener('click',async()=>{verify.disabled=true;resultStatus.textContent='Checking saved actions against the recorded final hash…';try{const result=await onVerifyReplay(entry);resultStatus.textContent=result?.verified?`Verified on this build · ${result.hash}. Imported files are never awarded a verified score.`:(result?.reason||'Replay could not be verified.');}catch(error){resultStatus.textContent=`Replay check failed: ${error.message}`;}finally{verify.disabled=false;}});
     actions.append(verify);
-    const playbackButton=document.createElement('button');playbackButton.type='button';playbackButton.textContent='Replay';playbackButton.disabled=!entry.actionLogComplete;playbackButton.setAttribute('aria-label',`Replay ${entry.mapName}, wave ${entry.wave}`);actions.append(playbackButton);
+    const playbackButton=document.createElement('button');playbackButton.type='button';playbackButton.textContent='Replay';playbackButton.disabled=!entry.actionLogComplete;playbackButton.setAttribute('aria-label',`Replay ${entry.mapName}, wave ${entry.wave}`);
     const playback=document.createElement('section');playback.className='run-history-playback';playback.hidden=true;playback.setAttribute('aria-label',`Replay playback for ${entry.mapName}`);
     const controls=document.createElement('div');controls.className='run-history-actions';
     const battlefield=document.createElement('canvas');battlefield.className='run-history-battlefield';battlefield.width=900;battlefield.height=540;battlefield.setAttribute('role','img');battlefield.setAttribute('aria-label','Replay battlefield, paused at the beginning.');
@@ -36,7 +43,7 @@ export function renderRunHistory(container, entries, document, { onVerifyReplay 
     const progress=document.createElement('progress');progress.max=Math.max(1,entry.run?.simulationTick||1);progress.value=0;progress.setAttribute('aria-label','Replay progress');
     const playbackStatus=document.createElement('p');playbackStatus.className='run-history-status';playbackStatus.setAttribute('aria-live','off');
     const playbackAnnouncement=document.createElement('p');playbackAnnouncement.className='run-history-status';playbackAnnouncement.setAttribute('role','status');playbackAnnouncement.setAttribute('aria-live','polite');
-    playback.append(battlefield,controls,progress,playbackStatus,playbackAnnouncement);card.append(actions,resultStatus,playback);container.append(card);
+    playback.append(battlefield,controls,progress,playbackStatus,playbackAnnouncement);technical.append(actions,resultStatus);const primaryActions=document.createElement('div');primaryActions.className='run-history-actions';primaryActions.append(playbackButton);card.append(technical,primaryActions,playback);container.append(card);
     let player=null,timer=null;
     const stop=()=>{const wasPlaying=timer!==null;if(wasPlaying){scheduler.clearInterval(timer);timer=null;}play.textContent='Play';if(wasPlaying)playbackAnnouncement.textContent='Playback paused because the journal was closed.';};
     pauseCallbacks.add(stop);

@@ -21,7 +21,7 @@ function validEntry(entry) {
 
 export function normalizeRunHistory(value) {
   if (!isRecord(value) || value.version !== RUN_HISTORY_VERSION || !Array.isArray(value.entries)) return { version: RUN_HISTORY_VERSION, entries: [] };
-  const entries=value.entries.filter(validEntry).slice(0,RUN_HISTORY_LIMIT).map(entry=>({...entry,milestones:Array.isArray(entry.milestones)?entry.milestones.filter(value=>typeof value==='string'&&value.length<=100):[]}));
+  const entries=value.entries.filter(validEntry).slice(0,RUN_HISTORY_LIMIT).map(entry=>({...entry,durationSeconds:Number.isSafeInteger(entry.durationSeconds)&&entry.durationSeconds>=0?entry.durationSeconds:Number.isFinite(entry.run?.gameTime)?Math.max(0,Math.floor(entry.run.gameTime)):null,milestones:Array.isArray(entry.milestones)?entry.milestones.filter(value=>typeof value==='string'&&value.length<=100):[]}));
   while(entries.length&&JSON.stringify({version:RUN_HISTORY_VERSION,entries}).length>RUN_HISTORY_MAX_BYTES)entries.pop();
   return { version: RUN_HISTORY_VERSION, entries };
 }
@@ -36,6 +36,7 @@ export function recordCompletedRun(historyValue, run, { mapName, outcome, leaks 
     rules, gateRoute: run.gateRoute || 'default', outcome, wave: run.wave, popped: run.popped, lives: run.lives, leaks, milestones:[...new Set(milestones)],
     version: run.version, terrainRulesVersion: run.terrainRulesVersion || 0, waveScheduleVersion: run.waveScheduleVersion || 0,
     stateHash: typeof run.stateHash === 'string' ? run.stateHash : '', actionLogComplete: run.actionLogComplete === true,
+    durationSeconds:Number.isFinite(run.gameTime)?Math.max(0,Math.floor(run.gameTime)):null,
     actionCount: Array.isArray(run.actionLog) ? run.actionLog.length : 0,
     towers: Array.isArray(run.towers) ? run.towers.map(tower => ({ type: tower.type, level: tower.level, branch: tower.branch ?? null })) : [],
     run: JSON.parse(JSON.stringify(run)) };
