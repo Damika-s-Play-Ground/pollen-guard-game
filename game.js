@@ -1085,6 +1085,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(tutorialPractice.active&&tutorialPractice.task!==4){setToast('Complete the practice steps before starting the wave.');return;}
     if(runIsRunning()||runIsPaused()||runIsOver()||wave>=config().limit)return;
     const result=performPlayerAction('startWave',{wave:wave+1,early:false,bonus:0});if(!result.ok){setToast(result.reason);return;}firstActionStudyMetrics?.record('launch');if(firstActionCoachVisible)recordFirstActionCoachAction('launch');if(result.bonus>0)queueRewardFeedback([{amount:result.bonus,x:canvas.width*.5,y:canvas.height*.35}]);
+    gameAudio.setMusicState('pressure');
     closeMissionPreparation(byId('missionPreparation'));
     if(!automatic&&uiSettings.autoStartHold){uiSettings.autoStartHold=false;saveUiSettings();}
     if(tutorialPractice.active)cash=Math.max(cash,45);
@@ -1264,6 +1265,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function finishRun(won,{retired=false}={}) {
     if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}
+    gameAudio.setMusicState('resolve');
     const customMap=maps[selectedMap]?.customMap===true;
     if(won&&customMap)won=lives>=maps[selectedMap].customObjective.minLives;
     learningTransferStudyMetrics?.recordOutcome({mapId:selectedMap,won,retired,wave,lives,leaks:combatPerformance.leaks.total});
@@ -1323,6 +1325,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       visuals.impacts.forEach(([shot,position])=>burst(position.x,position.y,shot.color,shot.splash?8:3,shot.splitProjectile?'split':shot.sourceTowerType,shot.splash||0));
       if(result.lost)finishRun(false);
       if(result.waveClear){
+        gameAudio.setMusicState('resolve');
         transitionRun({type:'WAVE_CLEAR'});updateGatePanel();
         const {bonus,income}=result.waveClear,terminalClear=challenge!=='endless'&&wave>=config().limit;
         queueRewardFeedback([{amount:bonus,x:canvas.width*.5,y:canvas.height*.35}]);checkProgress();
@@ -1345,6 +1348,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     saveClock+=dt;if(saveClock>=1){saveClock=0;if(wave||towers.length||guardianMode!=='none')saveRun();}
   }
   function resetRun() {
+    gameAudio.setMusicState('calm');
     byId('pauseMenu').hidden=true;
     const hadRun=Boolean(wave||towers.length||guardianMode!=='none'||hasSavedRun());
     towerPlantingAt.clear();armorImpactCues.clear();armorFeedbackSeen.clear();impactCausalityCues.clear();healerPulses.clear();burrowEmergenceCues.clear();bossChoreoCues.clear();healerInterventionObserved=false;gateRoute=defaultGateRoute(maps[selectedMap]);gateSwitchesRemaining=gateSwitchesForMap(maps[selectedMap]);path=pathForGateRoute(maps[selectedMap],gateRoute);
@@ -1367,6 +1371,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       const wasPaused=runIsPaused();
       transitionRun({type:'TOGGLE_USER_PAUSE'});
       const isPaused=runIsPaused();
+      gameAudio.setMusicState(isPaused?'calm':runIsRunning()?'pressure':'calm');
       playtestRecorder.record(runIsPaused()?'pause':'resume');
       byId('pauseMenu').hidden=!isPaused;
       if(!wasPaused&&isPaused)pauseFocus.enter(document.activeElement);

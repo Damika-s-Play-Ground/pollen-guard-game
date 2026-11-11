@@ -3,6 +3,12 @@ import { masterOutputLevel } from './audio-mix.js';
 export const MAX_AUDIO_VOICES = 8;
 export const MAX_EFFECT_VOICE_GAIN = .045;
 export const AMBIENT_BUS_GAIN = .06;
+export const AMBIENT_MUSIC_STATES = Object.freeze({
+  calm:Object.freeze([110,164.81,220]),
+  pressure:Object.freeze([110,146.83,196]),
+  resolve:Object.freeze([130.81,164.81,196])
+});
+export const AMBIENT_MUSIC_GLIDE_SECONDS = .72;
 export const CRITICAL_AUDIO_RESERVED_VOICES = 2;
 export const CRITICAL_AUDIO_PRIORITY = 3;
 export const AUDIO_CUE_PRIORITIES = Object.freeze({
@@ -44,6 +50,7 @@ export const ATTACK_CUE_PROFILES = Object.freeze({
 
 export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX_AUDIO_VOICES }) {
   let context = null, masterGain = null, effectsBus = null, ambient = null;
+  let musicState='calm';
   const activeVoices = new Set();
   const voiceMeta = new Map();
   const voiceLimit=Number.isFinite(maxVoices)?Math.max(1,Math.floor(maxVoices)):MAX_AUDIO_VOICES;
@@ -113,6 +120,17 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
     ambient.gain.gain.setTargetAtTime(AMBIENT_BUS_GAIN*music,criticalUntil,.04);
   }
 
+  function setMusicState(nextState) {
+    if(!Object.hasOwn(AMBIENT_MUSIC_STATES,nextState)||nextState===musicState)return false;
+    musicState=nextState;
+    if(context&&ambient){
+      const now=context.currentTime;
+      AMBIENT_MUSIC_STATES[musicState].forEach((frequency,index)=>
+        ambient.oscillators[index]?.frequency.setTargetAtTime(frequency,now,AMBIENT_MUSIC_GLIDE_SECONDS));
+    }
+    return true;
+  }
+
   function startNotes(notes, volume, priority=1) {
     if (!notes?.length) return 0;
     const audio = ensureContext();
@@ -163,7 +181,7 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
       }
       if (!ambient && activeVoices.size + 3 <= voiceLimit) {
         const gain = context.createGain(); gain.connect(masterGain);
-        const oscillators = [110, 164.81, 220].map((frequency, index) => {
+        const oscillators = AMBIENT_MUSIC_STATES[musicState].map((frequency, index) => {
           const oscillator = context.createOscillator(), voiceGain = context.createGain();
           oscillator.type = 'sine'; oscillator.frequency.value = frequency; voiceGain.gain.value = [.42, .24, .12][index];
           oscillator.connect(voiceGain); voiceGain.connect(gain); activeVoices.add(oscillator); oscillator.start();
@@ -203,5 +221,5 @@ export function createGameAudio({ AudioContextCtor, getSettings, maxVoices = MAX
     catch { return 0; }
   }
 
-  return { play, sync, activeVoiceCount:() => activeVoices.size };
+  return { play, sync, setMusicState, activeVoiceCount:() => activeVoices.size };
 }
