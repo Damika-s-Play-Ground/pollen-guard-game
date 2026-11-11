@@ -1,3 +1,7 @@
+export function firstRunSaveAcknowledgement() {
+  return 'Garden saved on this device in this browser. Export a run file in Settings for a separate backup.';
+}
+
 export function runSaveFailureMessage(result) {
   if (result.reason === 'backup-write-failed') {
     return 'Current changes were not saved because the recovery backup could not be updated. Your previous run is preserved.';

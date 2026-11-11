@@ -20,7 +20,7 @@ import { parseRunExport, serializeRunExport } from './src/run-transfer.js';
 import { clearRunBackupAfterReset, runHasGameplayProgress, selectRecoverableRun, writeRunWithBackup } from './src/run-storage.js';
 import { createRunSaveSnapshot } from './src/run-save.js';
 import { projectSavedRunToRuntime } from './src/run-restore.js';
-import { runSaveFailureMessage } from './src/run-save-ui.js';
+import { firstRunSaveAcknowledgement, runSaveFailureMessage } from './src/run-save-ui.js';
 import { registerOfflineSupport } from './src/offline-support.js';
 import { compareRunSummaries, normalizeRunHistory, recordCompletedRun, RUN_HISTORY_STORAGE_KEY, verifyRecordedReplay } from './src/run-history.js';
 import { renderRunHistory } from './src/run-history-ui.js';
@@ -263,7 +263,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }});
   function queueRewardFeedback(gains){rewardFeedbackQueue.enqueue(gains);}
   const simulationClock=new FixedStepClock();
-  let nextEntityId=1, storageErrorShown=false, futureSaveProtected=false;
+  let nextEntityId=1, storageErrorShown=false, firstRunAcknowledged=false, futureSaveProtected=false;
   let runSeed=createRunSeed(), simulationTick=0, actionLog=[], actionLogComplete=true, actionLogLimitShown=false;
   const config = () => modes[challenge] || modes.classic;
   const runIsRunning=()=>runState.basePhase==='running'||(runState.basePhase==='user-paused'&&runState.resumePhase==='running');
@@ -495,8 +495,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const gateSetupChanged=gateRoute!==defaultGateRoute(maps[selectedMap])||gateSwitchesRemaining!==gateSwitchesForMap(maps[selectedMap]);
     if (runIsOver() || (!wave && !towers.length && guardianMode==='none'&&!gateSetupChanged)) { try{localStorage.removeItem(RUN_KEY);}catch{} byId('resumeBtn').disabled=hasSavedRun(); return false; }
     const run=createRunSnapshot();
+    const hadSavedGarden=hasSavedRun();
     const result=writeRunWithBackup(localStorage,RUN_KEY,RUN_BACKUP_KEY,JSON.stringify(run),maps,modes);
-    if(result.saved){byId('resumeBtn').disabled=false;storageErrorShown=false;return true;}
+    if(result.saved){byId('resumeBtn').disabled=false;storageErrorShown=false;if(!hadSavedGarden&&!firstRunAcknowledged){setToast(firstRunSaveAcknowledgement());firstRunAcknowledged=true;}return true;}
     if(result.reason==='future-primary'){futureSaveProtected=true;setToast(`This run uses a newer game version; this version ${RUN_SAVE_VERSION} will not overwrite it.`);return false;}
     byId('resumeBtn').disabled=!hasSavedRun();
     if(!storageErrorShown){setToast(runSaveFailureMessage(result));storageErrorShown=true;}
