@@ -100,7 +100,7 @@ import { visibleSpellIdsForRun } from './src/starter-abilities.js';
 import { terrainBonusForTower, terrainZoneAt } from './src/terrain.js';
 import { advanceDroppedSeeds, createSeedObjective, SEED_RECOVERY_RULE, seedObjectiveResultText, seedObjectiveTally } from './src/seed-objective.js';
 import { describeLeakFeedback } from './src/leak-feedback.js';
-import { boardChallengeForRun, CHALLENGE_SPELL_LOADOUT, importChallengeCode, recordChallengeBest } from './src/challenge-board.js';
+import { archivedDailyChallenge, boardChallengeForRun, CHALLENGE_SPELL_LOADOUT, importChallengeCode, recordChallengeBest } from './src/challenge-board.js';
 import { renderChallengeBoard } from './src/challenge-board-ui.js';
 import { ENDLESS_CHOICES, endlessChoiceDue, endlessChoiceRequired } from './src/endless-mode.js';
 import { renderEndlessChoices } from './src/endless-mode-ui.js';
@@ -217,7 +217,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const uiSettings = profileStorage.loadSettings();
   let explicitAnimationPreference=false;try{const saved=JSON.parse(localStorage.getItem(UI_SETTINGS_STORAGE_KEY)||'null');explicitAnimationPreference=['full','reduced','off'].includes(saved?.animation);}catch{}
   if(!explicitAnimationPreference&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){uiSettings.animation='reduced';uiSettings.shake=false;}
-  let selectedMap = 'meadow', gateRoute='default',gateSwitchesRemaining=0,terrainRulesVersion=1, challenge = 'classic', difficulty=DEFAULT_DIFFICULTY, challengeRules=[], challengeBoardId=null, importedBoardChallenge=null, challengeImportPreview=null, path = maps.meadow.path, pathLength = 0, routeGeometry = createEnemyRouteGeometry(maps.meadow,WAVE_SCHEDULE_VERSION);
+  let selectedMap = 'meadow', gateRoute='default',gateSwitchesRemaining=0,terrainRulesVersion=1, challenge = 'classic', difficulty=DEFAULT_DIFFICULTY, challengeRules=[], challengeBoardId=null, importedBoardChallenge=null, challengeImportPreview=null, challengeArchiveDate='', path = maps.meadow.path, pathLength = 0, routeGeometry = createEnemyRouteGeometry(maps.meadow,WAVE_SCHEDULE_VERSION);
   const terrainAt=point=>terrainRulesVersion>=1?terrainZoneAt(selectedMap,point):'ground';
   const placementPreviewRange=(type,point)=>calculatePlacementPreviewRange(type,point,{challenge,challengeRules,researchLoadout,relicLoadout,terrainAt,towersDef,getEffectiveTowerStats});
   const initialResearchStart=researchStartingAdjustment(researchLoadout);
@@ -713,16 +713,19 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const restore= root.contains(active)
       ? active.matches('[data-challenge-code]')?{kind:'challenge',value:active.dataset.challengeCode}
         :active.matches('[data-copy-challenge-code]')?{kind:'copy',value:active.closest('.challenge-board-card')?.querySelector('input')?.value}
-          :active.id==='challengeImportBtn'?{kind:'import-button'}:active.id==='challengeCodeImport'?{kind:'import-input',value:active.value}:null
+          :active.id==='challengeImportBtn'?{kind:'import-button'}:active.id==='challengeCodeImport'?{kind:'import-input',value:active.value}
+            :active.id==='challengeArchiveBtn'?{kind:'archive-button'}:active.id==='challengeArchiveDate'?{kind:'archive-input',value:active.value}:null
       :null;
-    renderChallengeBoard({document,root,bests:profile.challengeBests,now,imported:challengeImportPreview,activeId:challengeBoardId});
+    renderChallengeBoard({document,root,bests:profile.challengeBests,now,imported:challengeImportPreview,activeId:challengeBoardId,archiveDate:challengeArchiveDate});
     if(!restore)return;
     const controls=restore.kind==='challenge'?[...root.querySelectorAll('[data-challenge-code]')]
       :restore.kind==='copy'?[...root.querySelectorAll('[data-copy-challenge-code]')]
-        :restore.kind==='import-button'?[byId('challengeImportBtn')]:[byId('challengeCodeImport')];
+        :restore.kind==='import-button'?[byId('challengeImportBtn')]
+          :restore.kind==='archive-button'?[byId('challengeArchiveBtn')]
+            :restore.kind==='archive-input'?[byId('challengeArchiveDate')]:[byId('challengeCodeImport')];
     const target=restore.kind==='challenge'?controls.find(item=>item.dataset.challengeCode===restore.value)
       :restore.kind==='copy'?controls.find(item=>item.closest('.challenge-board-card')?.querySelector('input')?.value===restore.value):controls[0];
-    if(target&&restore.kind==='import-input')target.value=restore.value;
+    if(target&&['import-input','archive-input'].includes(restore.kind))target.value=restore.value;
     target?.focus({preventScroll:true});
   }
   function activateBoardChallenge(descriptor) {
@@ -1404,10 +1407,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('challengeBoard').addEventListener('click',async event=>{
     const copy=event.target.closest('[data-copy-challenge-code]');
     if(copy){const input=copy.closest('.challenge-board-card')?.querySelector('input');if(!input)return;input.select();input.setSelectionRange(0,input.value.length);try{await navigator.clipboard.writeText(input.value);byId('challengeImportStatus').textContent='Challenge code copied. It contains rules only, not a score.';}catch{byId('challengeImportStatus').textContent='Challenge code selected. Copy it with your device’s copy command.';}return;}
+    if(event.target.closest('#challengeArchiveBtn')){const input=byId('challengeArchiveDate'),result=archivedDailyChallenge(input.value);if(!result.ok){input.setAttribute('aria-invalid','true');byId('challengeArchiveStatus').textContent=result.reason;return;}input.removeAttribute('aria-invalid');challengeArchiveDate=input.value;renderChallenges();byId('challengeArchiveStatus').textContent=`Past garden opened for ${result.challenge.period} UTC. Replay it whenever you like.`;return;}
     const play=event.target.closest('[data-challenge-code]');if(play){const result=importChallengeCode(play.dataset.challengeCode);if(result.ok)activateBoardChallenge(result.challenge);else setToast(result.reason);return;}
     if(event.target.closest('#challengeImportBtn')){const input=byId('challengeCodeImport'),result=importChallengeCode(input.value.trim());if(!result.ok){input.setAttribute('aria-invalid','true');byId('challengeImportStatus').textContent=result.reason;return;}input.removeAttribute('aria-invalid');challengeImportPreview=result.challenge;renderChallenges();byId('challengeImportStatus').textContent=`Challenge code checked for ${result.challenge.period} UTC. It does not verify results.`;}
   });
-  byId('challengeBoard').addEventListener('input',event=>{if(event.target.id!=='challengeCodeImport')return;event.target.removeAttribute('aria-invalid');byId('challengeImportStatus').textContent='';});
+  byId('challengeBoard').addEventListener('input',event=>{if(event.target.id==='challengeCodeImport'){event.target.removeAttribute('aria-invalid');byId('challengeImportStatus').textContent='';return;}if(event.target.id==='challengeArchiveDate'){event.target.removeAttribute('aria-invalid');byId('challengeArchiveStatus').textContent='';challengeArchiveDate=event.target.value;}});
   byId('journalDestinations').addEventListener('click',event=>{const button=event.target.closest('[data-journal-view]');if(button)setJournalDestination(byId('journalDestinations').parentElement,button.dataset.journalView);});
   byId('journalDestinations').addEventListener('keydown',event=>handleJournalNavigationKey(event,byId('journalDestinations').parentElement));
   byId('researchTree').addEventListener('click',event=>{

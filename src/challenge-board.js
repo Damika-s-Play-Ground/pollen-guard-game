@@ -30,6 +30,16 @@ export function challengePeriod(cadence, value = new Date()) {
   return monday.toISOString().slice(0, 10);
 }
 
+export function archivedDailyChallenge(value, now = new Date()) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return { ok:false, reason:'Choose a valid past UTC date.' };
+  try {
+    const period=challengePeriod('daily',`${value}T12:00:00Z`);
+    if(period!==value)return { ok:false, reason:'That calendar date is invalid.' };
+    if(period>=challengePeriod('daily',now))return { ok:false, reason:'Choose a date before today to open a past garden.' };
+    return { ok:true, challenge:generateBoardChallenge('daily',`${period}T12:00:00Z`) };
+  } catch { return { ok:false, reason:'Choose a valid past UTC date.' }; }
+}
+
 function randomFor(seed) {
   let state = seed >>> 0;
   return () => {
