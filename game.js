@@ -626,7 +626,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const priorTower=(type==='upgradeTower'||type==='chooseBranch')?towers.find(tower=>tower.id===payload.towerId):null;
     const state={selectedMap,gateRoute,gateSwitchesRemaining,terrainRulesVersion,waveScheduleVersion,rewardRulesVersion,challenge,difficulty,challengeRules,endlessModifier,endlessChoiceWave,seedObjective,guardianMode,guardian,spellLoadout,rejuvenationField,cash,lives,popped,wave,bloomCharge,towers,enemies,shots,spawnQueue,spawnClock,combatPerformance,running:runIsActivelyRunning(),paused:runState.phase==='user-paused',gameOver:runIsOver(),intermission,gameTime,nextEntityId};
     const result=applyPlayerAction(state,{type,payload},{path,width:canvas.width,height:canvas.height,pathLength,positionOf:enemyPosition,waveLimit:config().limit,selectedMap,map:maps[selectedMap]});
-    if(!result.ok)return result;
+    if(!result.ok){learningTransferStudyMetrics?.recordRejectedAction({mapId:selectedMap,wave:state.wave,action:type,towerType:payload.towerType||priorTower?.type,reason:result.reason,x:payload.x,y:payload.y});return result;}
     ({cash,lives,popped,wave,bloomCharge,towers,enemies,shots,spawnQueue,spawnClock,intermission,gameTime,nextEntityId,guardian,rejuvenationField,gateRoute,gateSwitchesRemaining,endlessModifier,endlessChoiceWave,seedObjective}=state);
     learningTransferStudyMetrics?.recordAction({mapId:selectedMap,wave:state.wave,action:type,towerType:payload.towerType||priorTower?.type||result.tower?.type,level:payload.level||result.tower?.level,branch:payload.branch,x:payload.x,y:payload.y});
     if(type==='switchGate')calcPath();
@@ -1159,10 +1159,14 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(tutorialPractice.active&&tutorialPractice.task!==5){setToast('Start the practice wave before using Ivy Snare.');return;}
     if(cash<45||!enemies.length)return;const result=performPlayerAction('snare');if(!result.ok)return;setToast('Ivy Snare stopped the wave!');playCue('snare');updateHud();saveRun();if(tutorialPractice.active)advanceTutorialPractice('snare');
   }
+  function recordInvalidPlacementAttempt(point,reason) {
+    firstActionStudyMetrics?.recordInvalidPlacement();
+    learningTransferStudyMetrics?.recordRejectedAction({mapId:selectedMap,wave,action:'placeTower',towerType:selectedType,reason,x:point.x,y:point.y});
+  }
   function placeTower(point) {
     return measureActionFeedback('placement',()=>{
     if(tutorialPractice.active&&(tutorialPractice.task!==0||selectedType!=='sprout')){setToast('Practice placement uses one Sprout Slinger first.');return;}
-    const def=towersDef[selectedType];if(!def)return;const error=placementError(point);if(error){firstActionStudyMetrics?.recordInvalidPlacement();setToast(error);updatePlacementHint({...point,inside:true});return;}
+    const def=towersDef[selectedType];if(!def)return;const error=placementError(point);if(error){recordInvalidPlacementAttempt(point,error);setToast(error);updatePlacementHint({...point,inside:true});return;}
     const result=performPlayerAction('placeTower',{towerId:nextEntityId,towerType:selectedType,x:point.x,y:point.y});if(!result.ok){firstActionStudyMetrics?.recordInvalidPlacement();setToast(result.reason);return;}
     firstActionStudyMetrics?.record('placement');
     const plantedAt=performance.now()/1000;towerPlantingAt.set(result.tower.id,plantedAt);if(shouldEmitParticles(uiSettings))particles=appendCosmeticParticles(particles,plantingDustParticles(result.tower.x,result.tower.y,plantedAt));selectedTower=repeatBuild?null:result.tower;placementCandidate=null;byId('placementConfirm').hidden=true;if(!repeatBuild)selectedType=null;if(mobileLayout.matches)setDefenderSheetOpen(false);canvas.focus({preventScroll:true});playCue('place');if(towers.length>=8)unlock('builder');setToast(`${def.name} planted.`);if(firstActionCoachVisible)recordFirstActionCoachAction('place');advanceTutorialPractice('place',{towerId:result.tower.id,type:result.tower.type});updateHud();renderTowerOptions();renderSelected();updatePlacementHint();if(!mobileLayout.matches&&selectedTower)revealSelectedTower();saveRun();draw();
@@ -1187,7 +1191,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       if(hits.length>1){showSelectionChooser(hits);return;}
       if(hits.length===1){selectPlacedTower(hits[0]);return;}
       hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});
-      if(selectedType){if(event?.pointerType==='touch'){placementCandidate=point;pointer={...point,inside:true};updatePlacementHint(pointer);draw();}else placeTower(point);}
+      if(selectedType){if(event?.pointerType==='touch'){placementCandidate=point;pointer={...point,inside:true};const error=placementError(point);if(error)recordInvalidPlacementAttempt(point,error);updatePlacementHint(pointer);draw();}else placeTower(point);}
       else{measureActionFeedback('selection',()=>{selectedTower=null;renderSelected();updateHud();draw();});}
     }
   });

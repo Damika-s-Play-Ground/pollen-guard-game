@@ -34,6 +34,17 @@ export function createLearningTransferStudyMetrics({now=()=>performance.now()}={
     return append('player-action',mapId,details);
   }
 
+  function recordRejectedAction({mapId,wave,action,towerType=null,reason=null,x=null,y=null}={}) {
+    if(!TRACKED_ACTIONS.has(action))return false;
+    const details={action};
+    if(Number.isInteger(wave)&&wave>=0)details.wave=wave;
+    if(typeof towerType==='string'&&towerType)details.towerType=towerType;
+    if(typeof reason==='string'&&reason)details.reason=reason.slice(0,160);
+    if(Number.isFinite(x))details.x=Math.round(x*100)/100;
+    if(Number.isFinite(y))details.y=Math.round(y*100)/100;
+    return append('player-rejected-action',mapId,details);
+  }
+
   function recordCueExposure(mapId,cue) {
     if(!TRACKED_CUES.has(cue))return false;
     if(events.some(event=>event.kind==='cue-exposure'&&event.mapId===mapId&&event.cue===cue))return false;
@@ -58,5 +69,5 @@ export function createLearningTransferStudyMetrics({now=()=>performance.now()}={
     return {enabled:true,storage:'in-memory only; no profile or network writes',eventCount:events.length,droppedEvents,events:events.map(event=>({...event}))};
   }
 
-  return {markMapReady,recordAction,recordCueExposure,recordOutcome,recordUnlock,summary};
+  return {markMapReady,recordAction,recordRejectedAction,recordCueExposure,recordOutcome,recordUnlock,summary};
 }
