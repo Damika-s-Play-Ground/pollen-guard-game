@@ -1046,7 +1046,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(studyNodeVisible(missionBrief))learningTransferStudyMetrics.recordCueExposure(selectedMap,'mission-brief');
     if(studyNodeVisible(byId('tutorialCoach')))learningTransferStudyMetrics.recordCueExposure(selectedMap,'first-action');
     if(studyNodeVisible(byId('waveDetails').querySelector('summary')))learningTransferStudyMetrics.recordCueExposure(selectedMap,'wave-preview');
-    const fullThreat=byId('upcomingThreat'),mobileThreat=byId('sheetThreatSummary');
+    const fullThreat=byId('upcomingThreat'),mobileThreat=byId('launchThreatSummary');
     const threatVisible=studyNodeVisible(fullThreat)||studyNodeVisible(mobileThreat);
     if(threatVisible)learningTransferStudyMetrics.recordCueExposure(selectedMap,'threat-strip');
     if(threatVisible&&/Counter\s*[·:]?/i.test(`${fullThreat.textContent} ${mobileThreat.textContent}`))learningTransferStudyMetrics.recordCueExposure(selectedMap,'counter-hint');
@@ -1066,7 +1066,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     });
     airRoutePreviewed=Boolean(view.preview?.counts?.flyer);
     view.airRouteEnabled=Boolean(view.airRouteEnabled&&(airRoutePreviewed||enemies.some(enemy=>enemy.flying)||uiSettings.showAirRoute||(selectedTower&&towersDef[selectedTower.type]?.antiAir)));
-    renderWavePreview({document,enemyPreview:byId('enemyPreview'),waveThreat:byId('waveThreat'),mapNote:byId('mapNote'),waveInfo:byId('waveInfo'),upcomingThreat:byId('upcomingThreat'),sheetThreatSummary:byId('sheetThreatSummary'),view});
+    renderWavePreview({document,enemyPreview:byId('enemyPreview'),waveThreat:byId('waveThreat'),mapNote:byId('mapNote'),waveInfo:byId('waveInfo'),upcomingThreat:byId('upcomingThreat'),launchThreatSummary:byId('launchThreatSummary'),view});
     const revealCue=byId('specialistRevealCue');
     const revealSchedules=waveSchedulesForMap(selectedMap,waveScheduleVersion);
     const revealWaveIndex=view.preview?((view.preview.wave-1)%revealSchedules.length):0;

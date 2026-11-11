@@ -111,9 +111,9 @@ export function buildWavePreviewView({ terminal, won, running, wave, mapLabel, b
   return { terminal: false, preview, upcomingThreat:upcomingThreat(queue,previewWave,schedules,names,scheduleVersion), boss: Boolean(counts.boss), bossName, mapLabel, airRouteEnabled,seedRecovery, waveInfo };
 }
 
-export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote, waveInfo, upcomingThreat:threatStrip, sheetThreatSummary, view }) {
+export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote, waveInfo, upcomingThreat:threatStrip, launchThreatSummary, view }) {
   if (view.terminal) {
-    if(sheetThreatSummary)sheetThreatSummary.textContent='';
+    if(launchThreatSummary)launchThreatSummary.textContent='';
     if (threatStrip) { threatStrip.hidden = true; threatStrip.replaceChildren(); }
     enemyPreview.replaceChildren();
     waveThreat.className = 'wave-threat';
@@ -125,9 +125,9 @@ export function renderWavePreview({ document, enemyPreview, waveThreat, mapNote,
   }
 
   const { preview, boss } = view;
-  if(sheetThreatSummary){
+  if(launchThreatSummary){
     const threat=view.upcomingThreat;
-    sheetThreatSummary.textContent=threat?`Wave ${threat.wave} · ${threat.icon} ${threat.name} · ${threat.route} · Counter: ${threat.counter}`:'';
+    launchThreatSummary.textContent=threat?`Wave ${threat.wave} · ${threat.icon} ${threat.name} · ${threat.route} · Counter: ${threat.counter}`:'';
   }
   if (threatStrip) {
     threatStrip.hidden = !view.upcomingThreat;
