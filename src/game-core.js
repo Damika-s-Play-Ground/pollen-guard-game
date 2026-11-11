@@ -353,7 +353,13 @@ export function normalizeRunSave(value, maps, modes) {
   const terrainRulesVersion=value.terrainRulesVersion;
   const challenge = value.challenge === undefined ? 'classic' : value.challenge;
   const difficulty=sourceVersion>=12?(value.difficulty??DEFAULT_DIFFICULTY):DEFAULT_DIFFICULTY;
-  const challengeRules=sourceVersion>=12?(value.challengeRules??[]):[];
+  const storedChallengeRules=sourceVersion>=12?(value.challengeRules??[]):[];
+  // Older selections could save a mode and modifier that express the same
+  // effect. Preserve the mode's behavior and migrate the redundant modifier
+  // out before validating the canonical save representation.
+  const challengeRules=Array.isArray(storedChallengeRules)
+    ? [...new Set(storedChallengeRules)].filter(rule=>!(challenge==='fog'&&rule==='shortReach')&&!(challenge==='thrifty'&&rule==='noSunflowers'))
+    : storedChallengeRules;
   const normalizedRules=normalizeChallengeRules(challengeRules,challenge);
   const seedRecoveryEnabled=Boolean(normalizedRules?.includes('seedRecovery'));
   const researchLoadout=sourceVersion>=15?value.researchLoadout:[];
