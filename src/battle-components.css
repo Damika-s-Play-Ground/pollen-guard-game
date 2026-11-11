@@ -238,6 +238,10 @@ body[data-palette="high-contrast"]{--text-cream:#fff;--text-muted:#e4eadf;--reso
 .confirm-dialog::backdrop,.tutorial-dialog::backdrop,.results-dialog::backdrop,.guide-dialog::backdrop{background:color-mix(in srgb,var(--surface-deep) 85%,transparent);backdrop-filter:blur(4px)}
 .motion-reduced :is(.confirm-dialog,.tutorial-dialog,.results-dialog,.guide-dialog)::backdrop,.motion-minimal :is(.confirm-dialog,.tutorial-dialog,.results-dialog,.guide-dialog)::backdrop{backdrop-filter:none}
 @media(prefers-reduced-motion:reduce){.confirm-dialog::backdrop,.tutorial-dialog::backdrop,.results-dialog::backdrop,.guide-dialog::backdrop{backdrop-filter:none}}
+.design-settings .settings-group{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));align-content:start;gap:8px;padding:9px 0;border-top:1px solid var(--control-border)}
+.design-settings .settings-group>h2{grid-column:1/-1;margin:0;color:var(--text-cream);font-size:calc(14px * var(--ui-text-scale))}
+.design-settings .settings-group>.audio-mix,.design-settings .settings-group>.run-transfer,.design-settings .settings-group>.offline-tools{grid-column:1/-1}
+.design-settings .settings-group>.keyboard-settings,.design-settings .settings-group>.playtest-tools{grid-column:1/-1}
 
 @media(orientation:landscape) and (max-height:500px){.battle-support .placement-confirm:not([hidden]){position:fixed;z-index:30;left:50%;right:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,420px);max-width:none;box-shadow:var(--card-shadow)}}
 
