@@ -232,6 +232,13 @@ body[data-palette="high-contrast"]{--text-cream:#fff;--text-muted:#e4eadf;--reso
 
 @media(max-width:700px){.battle-support .placement-confirm:not([hidden]){position:fixed;z-index:30;left:50%;right:auto;top:auto;bottom:calc(112px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,420px);max-width:none;box-shadow:var(--card-shadow)}}
 
+/* Keep primary overlays on one garden-paper surface and make their backdrop
+   treatment disappear with either the in-game or system reduced-motion choice. */
+.confirm-dialog,.tutorial-dialog,.results-dialog,.guide-dialog{border-color:var(--control-border);border-radius:var(--radius-lg);background:var(--surface-panel);color:var(--text-cream)}
+.confirm-dialog::backdrop,.tutorial-dialog::backdrop,.results-dialog::backdrop,.guide-dialog::backdrop{background:color-mix(in srgb,var(--surface-deep) 85%,transparent);backdrop-filter:blur(4px)}
+.motion-reduced :is(.confirm-dialog,.tutorial-dialog,.results-dialog,.guide-dialog)::backdrop,.motion-minimal :is(.confirm-dialog,.tutorial-dialog,.results-dialog,.guide-dialog)::backdrop{backdrop-filter:none}
+@media(prefers-reduced-motion:reduce){.confirm-dialog::backdrop,.tutorial-dialog::backdrop,.results-dialog::backdrop,.guide-dialog::backdrop{backdrop-filter:none}}
+
 @media(orientation:landscape) and (max-height:500px){.battle-support .placement-confirm:not([hidden]){position:fixed;z-index:30;left:50%;right:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,420px);max-width:none;box-shadow:var(--card-shadow)}}
 
 @media(max-width:700px){.canvas-wrap .map-camera-controls{position:static;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:none;padding:5px 8px;line-height:normal;border-top:1px solid var(--line);background:var(--surface-panel)}.canvas-wrap .camera-control{flex:1 1 44px;min-width:44px;min-height:44px;padding:4px;white-space:nowrap;font-size:calc(11px * var(--ui-text-scale))}}
