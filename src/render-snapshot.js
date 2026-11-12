@@ -25,6 +25,7 @@ export function createRenderSnapshots() {
   let previous=createSnapshotBuffer();
   let current=createSnapshotBuffer();
   const enemyHitFlashes = new Map();
+  const liveEnemyIds = new Set();
   const pathSamplers = new WeakMap();
 
   return {
@@ -39,7 +40,9 @@ export function createRenderSnapshots() {
       captureRenderSnapshot(enemies,shots,current);
     },
     updateHitFlashes(enemies, dt) {
+      liveEnemyIds.clear();
       for (const enemy of enemies) {
+        liveEnemyIds.add(enemy.id);
         const before=previous.enemies.get(enemy.id),after=current.enemies.get(enemy.id);
         if (before && after && (after.hp < before.hp || after.shield < before.shield)) enemyHitFlashes.set(enemy.id, .12);
         else if (enemyHitFlashes.has(enemy.id)) {
@@ -48,7 +51,7 @@ export function createRenderSnapshots() {
           else enemyHitFlashes.delete(enemy.id);
         }
       }
-      for (const id of enemyHitFlashes.keys()) if (!enemies.some(enemy => enemy.id === id)) enemyHitFlashes.delete(id);
+      for (const id of enemyHitFlashes.keys()) if (!liveEnemyIds.has(id)) enemyHitFlashes.delete(id);
     },
     reset(enemies, shots) {
       captureRenderSnapshot(enemies,shots,previous);
