@@ -1,0 +1,2 @@
+.brand-title-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-width:0}
+.preview-status{flex:0 0 auto;padding:2px 7px;border:1px solid var(--control-border);border-radius:999px;background:var(--surface-raised);color:var(--action-lime);font:500 calc(9px * var(--ui-text-scale)) 'DM Mono',monospace;letter-spacing:.06em;text-transform:uppercase}

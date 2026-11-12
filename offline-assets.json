@@ -87,6 +87,7 @@
   "./src/profile-storage.js",
   "./src/profile-ui.js",
   "./src/projectile-visuals.js",
+  "./src/release-preview.css",
   "./src/relics.js",
   "./src/render-gate.js",
   "./src/render-snapshot.js",
