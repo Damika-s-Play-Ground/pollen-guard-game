@@ -1591,7 +1591,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     catch{setToast('The practice checkpoint could not be restored from this device.');return;}
     byId('resultsDialog').close();restoreRun();setToast(`Practice retry restored after wave ${checkpoint.wave}. No campaign score or progression is awarded.`);
   };
-  byId('resultsRestart').onclick=()=>{byId('resultsDialog').close();resetRun();explainFreshGarden('Fresh garden. Choose your trail and defenders.');};
+  byId('resultsRestart').onclick=()=>{playtestRecorder.record('reset');byId('resultsDialog').close();resetRun();explainFreshGarden('Fresh garden. Choose your trail and defenders.');};
   byId('tutorialNext').onclick=()=>{if(tutorialStep>=3){beginTutorialPractice();return;}tutorialStep++;updateTutorial();};
   byId('tutorialBack').onclick=()=>{tutorialStep=Math.max(0,tutorialStep-1);updateTutorial();};
   byId('tutorialSkip').onclick=finishTutorial;byId('tutorialReplayBtn').onclick=replayTutorial;
