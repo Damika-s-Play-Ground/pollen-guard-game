@@ -50,6 +50,22 @@ export function towerArtLayers(type, level = 1, branch = null) {
   return layers;
 }
 
+const battlefieldArtLayerCache=Object.create(null);
+function battlefieldArtLayers(type,level,branch) {
+  const art=TOWER_ART_MANIFEST[type];
+  if(!art)return [];
+  const tier=level>=3?3:level>=2?2:1;
+  const branchSlot=tier>=2&&(branch===0||branch===1)?branch+1:0;
+  const typeCache=battlefieldArtLayerCache[type]||(battlefieldArtLayerCache[type]=[]);
+  const tierCache=typeCache[tier]||(typeCache[tier]=[]);
+  if(tierCache[branchSlot])return tierCache[branchSlot];
+  const layers=art.base.slice();
+  if(branchSlot)layers.push(...branchArt[type][branchSlot-1]);
+  if(tier>=3)layers.push(crownArt[type]);
+  tierCache[branchSlot]=Object.freeze(layers);
+  return tierCache[branchSlot];
+}
+
 function pointsAttr(points) { return points.map(point => point.join(',')).join(' '); }
 function layerSvg(layer) {
   const attrs = `fill="${layer.fill || 'none'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.width || 0}" stroke-linecap="round" stroke-linejoin="round"`;
@@ -65,7 +81,7 @@ export function towerArtSvg(type, level = 1, branch = null) {
 }
 
 export function drawTowerArt(ctx, type, x, y, { level = 1, branch = null, color = '#79b85b', scale = 1, scaleX = 1, scaleY = 1, displayScale = 1 } = {}) {
-  const layers = towerArtLayers(type, level, branch);
+  const layers = battlefieldArtLayers(type, level, branch);
   if (!layers.length) return false;
   const artScale=towerArtScale(type),scaledX=scale*artScale*scaleX,scaledY=scale*artScale*scaleY;
   const cssScale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
