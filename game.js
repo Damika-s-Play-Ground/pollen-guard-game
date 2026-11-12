@@ -349,9 +349,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     renderResultsScreen({
       kicker:byId('resultsKicker'), title:byId('resultsTitle'), description:byId('resultsText'),
       wave:byId('resultWave'), popped:byId('resultPopped'), petals:byId('resultPetals'), record:byId('resultRecord'),
-      debrief:byId('runDebrief')
+      debrief:byId('runDebrief'), vignette:byId('resultsVictoryVignette'),continueButton:byId('resultsClose')
     }, {
-      won, retired:runState.basePhase==='retired', wave, popped, petals:Math.floor(cash),
+      won, retired:runState.basePhase==='retired', wave, popped, petals:Math.floor(cash),motion:uiSettings.animation,
       record:buildResultRecord({customMap:Boolean(maps[selectedMap]?.customMap),profileSaved,challengeBoardId,bestWave:profile.bestWave}),
       report:buildRunDebrief(combatPerformance,{mapName:maps[selectedMap].name,challengeLabel:challengeDisplayLabel(),won,retired:runState.basePhase==='retired'})
     }, document);

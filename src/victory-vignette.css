@@ -1,0 +1,14 @@
+.results-victory-vignette{position:relative;height:112px;margin:10px 0 13px;overflow:hidden;isolation:isolate;border:1px solid var(--control-border);border-radius:var(--radius-control);background:linear-gradient(180deg,var(--surface-raised) 0%,var(--surface-panel) 70%,var(--surface-soil) 70%,var(--surface-soil) 100%)}
+.victory-garden-trail{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.victory-garden-trail path{fill:none;stroke:var(--resource-amber);stroke-width:9;stroke-linecap:round;opacity:.38}
+.victory-garden-plant{position:absolute;bottom:15px;width:54px;height:54px;transform-origin:center bottom}
+.victory-garden-plant .tower-art{display:block;width:100%;height:100%}
+.victory-garden-plant--1{left:8%;--bloom-delay:0ms}
+.victory-garden-plant--2{left:30%;--bloom-delay:180ms}
+.victory-garden-plant--3{left:55%;--bloom-delay:360ms}
+.victory-garden-plant--4{right:8%;--bloom-delay:540ms}
+.results-victory-vignette[data-motion="full"] .victory-garden-plant{animation:victory-garden-return .82s cubic-bezier(.18,.78,.27,1) var(--bloom-delay) both}
+@keyframes victory-garden-return{from{opacity:.3;transform:translateY(11px) scale(.72)}to{opacity:1;transform:translateY(0) scale(1)}}
+.motion-reduced .results-victory-vignette .victory-garden-plant,.motion-minimal .results-victory-vignette .victory-garden-plant{animation:none!important}
+@media(prefers-reduced-motion:reduce){.results-victory-vignette .victory-garden-plant{animation:none!important}}
+@media(max-width:400px){.results-victory-vignette{height:100px}.victory-garden-plant{width:48px;height:48px;bottom:13px}}

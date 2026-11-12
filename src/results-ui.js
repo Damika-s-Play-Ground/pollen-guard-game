@@ -1,4 +1,24 @@
+import { towerArtSvg } from './tower-art.js';
+
 const rounded = value => Math.round((Number(value) || 0) * 10) / 10;
+
+const VICTORY_GARDEN_PLANTS = Object.freeze(['sprout','dew','puff','thorn']);
+
+export function renderVictoryGardenVignette(container, { visible=false, motion='full' }={}) {
+  if (!container) return;
+  container.hidden = !visible;
+  container.setAttribute('aria-hidden','true');
+  if (!visible) {
+    container.replaceChildren();
+    return;
+  }
+  container.dataset.motion = motion === 'full' ? 'full' : 'static';
+  // These four SVGs come from the fixed local tower-art manifest, never player data.
+  const plants = VICTORY_GARDEN_PLANTS.map((type,index) =>
+    `<span class="victory-garden-plant victory-garden-plant--${index + 1}">${towerArtSvg(type,2,0)}</span>`
+  ).join('');
+  container.innerHTML = `<svg class="victory-garden-trail" viewBox="0 0 480 112" preserveAspectRatio="none" aria-hidden="true"><path d="M-12 88 C54 69 94 98 157 83 S256 69 311 85 S408 98 492 73"/></svg>${plants}`;
+}
 
 export function buildResultRecord({customMap=false,profileSaved=true,challengeBoardId=null,bestWave={}}={}){
   if(customMap)return 'Custom maps do not award campaign bests or challenge scores.';
@@ -44,6 +64,8 @@ export function renderRunDebrief(container, report, document) {
 }
 
 export function renderResultsScreen(elements, model, document) {
+  renderVictoryGardenVignette(elements.vignette,{visible:Boolean(model.won&&!model.retired),motion:model.motion});
+  if (elements.continueButton) elements.continueButton.textContent = model.won&&!model.retired ? 'Continue' : 'Close';
   elements.kicker.textContent = model.retired ? 'ENDLESS RUN BANKED' : model.won ? 'GARDEN COMPLETE' : 'RUN COMPLETE';
   elements.title.textContent = model.retired ? 'Run retired' : model.won ? 'Garden saved' : 'The trail got through';
   elements.description.textContent = model.retired
