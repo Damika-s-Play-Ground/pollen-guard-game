@@ -36,6 +36,7 @@
   "./src/combat-rules.js",
   "./src/combat-simulation.js",
   "./src/confirmation-flow.js",
+  "./src/custom-practice-retry.js",
   "./src/defeat-effects.js",
   "./src/effect-budget.js",
   "./src/endless-mode-ui.js",

@@ -20,6 +20,7 @@ import { parseRunExport, serializeRunExport } from './src/run-transfer.js';
 import { clearRunBackupAfterReset, runHasGameplayProgress, selectRecoverableRun, writeRunWithBackup } from './src/run-storage.js';
 import { createRunSaveSnapshot } from './src/run-save.js';
 import { projectSavedRunToRuntime } from './src/run-restore.js';
+import { canRetryCustomPracticeCheckpoint, snapshotCustomPracticeCheckpoint } from './src/custom-practice-retry.js';
 import { firstRunSaveAcknowledgement, runSaveFailureMessage } from './src/run-save-ui.js';
 import { registerOfflineSupport } from './src/offline-support.js';
 import { compareRunSummaries, normalizeRunHistory, recordCompletedRun, RUN_HISTORY_STORAGE_KEY, verifyRecordedReplay } from './src/run-history.js';
@@ -128,6 +129,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const learningTransferStudyEnabled=new URLSearchParams(window.location.search).get('learningTransferStudy')==='1';
   const learningTransferStudyMetrics=learningTransferStudyEnabled?createLearningTransferStudyMetrics():null;
   const playtestRecorder=createPlaytestRecorder(localStorage);
+  const mobileLayout=window.matchMedia('(max-width: 800px)');
   if(actionFeedbackMetrics){window.__pollenGuardActionFeedback=()=>actionFeedbackMetrics.summary();window.__pollenGuardActionFeedbackDiagnostics=()=>actionFeedbackMetrics.diagnostics();}
   if(firstActionStudyMetrics)window.__pollenGuardFirstActionStudy=()=>firstActionStudyMetrics.summary();
   if(learningTransferStudyMetrics)window.__pollenGuardLearningTransferStudy=()=>learningTransferStudyMetrics.summary();
@@ -187,7 +189,6 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const magnifierCanvas=byId('mapMagnifier'),magnifierCtx=magnifierCanvas.getContext('2d');
   const defenderSheet=byId('defenderSheet');
   const defenderSheetToggle=byId('defenderSheetToggle');
-  const mobileLayout=window.matchMedia('(max-width: 700px)');
   const mapFooter=byId('mapFooter');
   mountTutorialCoach({coach:byId('tutorialCoach'),dock:mapFooter,anchor:mapFooter.querySelector('.actions')});
   mountBattleSupport({document});
@@ -203,6 +204,20 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   });
   const RUN_KEY = 'pollen-guard.run.v2';
   const RUN_BACKUP_KEY = 'pollen-guard.run.backup.v1';
+  const CUSTOM_RETRY_KEY = 'pollen-guard.custom.retry.v1';
+  let lastCustomCheckpoint=null;
+  try{
+    const parsed=JSON.parse(localStorage.getItem(CUSTOM_RETRY_KEY)||'null');
+    const checkpoint=normalizeRunSave(parsed,maps,modes);
+    if(checkpoint&&maps[checkpoint.selectedMap]?.customMap)lastCustomCheckpoint=checkpoint;
+  }catch{lastCustomCheckpoint=null;}
+  function clearCustomCheckpoint(){lastCustomCheckpoint=null;try{localStorage.removeItem(CUSTOM_RETRY_KEY);}catch{}}
+  function saveCustomCheckpoint(){
+    const checkpoint=snapshotCustomPracticeCheckpoint(createRunSnapshot(),maps);
+    if(!checkpoint)return false;
+    try{localStorage.setItem(CUSTOM_RETRY_KEY,JSON.stringify(checkpoint));lastCustomCheckpoint=checkpoint;return true;}
+    catch{return false;}
+  }
   let pauseRunHistoryPlayback=()=>{};
   let journalReturnFocus=null;
   let enemyGuideReturnFocus=null;
@@ -326,6 +341,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     apply();
   }
   function showResults(won,masteryResult,{profileSaved=true}={}) {
+    const customMap=Boolean(maps[selectedMap]?.customMap);
     renderResultsScreen({
       kicker:byId('resultsKicker'), title:byId('resultsTitle'), description:byId('resultsText'),
       wave:byId('resultWave'), popped:byId('resultPopped'), petals:byId('resultPetals'), record:byId('resultRecord'),
@@ -346,6 +362,10 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     if(seedObjective){
       byId('resultsText').textContent+=` ${seedObjectiveResultText(seedObjective,won)}`;
     }
+    const retryPractice=Boolean(customMap&&!won&&canRetryCustomPracticeCheckpoint(lastCustomCheckpoint,{maps,mapId:selectedMap,failedWave:wave}));
+    byId('resultsRetryCheckpoint').hidden=!retryPractice;
+    byId('resultsPracticeNote').hidden=!customMap;
+    byId('resultsPracticeNote').textContent=customMap?(retryPractice?'Custom-map practice does not award campaign progression or canonical scores. Retry restores the last cleared wave exactly.':'Custom-map play does not award campaign progression or canonical scores.'):'';
     if(maps[selectedMap]?.customMap){
       const objective=maps[selectedMap].customObjective;
       byId('resultsText').textContent+=won
@@ -1338,7 +1358,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
         queueRewardFeedback([{amount:bonus,x:canvas.width*.5,y:canvas.height*.35}]);checkProgress();
         if(terminalClear)finishRun(true);
         else{
-          setToast('Wave bonus harvested!',900);playCue('waveClear');saveRun();updatePreview();
+          setToast('Wave bonus harvested!',900);playCue('waveClear');saveRun();saveCustomCheckpoint();updatePreview();
           byId('waveInfo').textContent=`Wave ${wave} cleared · +${bonus} petals${income?` (${income} from Sunflowers)`:''}. The fixed wave reward is ready for your next plan.`;
         }
       }
@@ -1356,6 +1376,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function resetRun() {
     gameAudio.setMusicState('calm');
+    clearCustomCheckpoint();
     byId('pauseMenu').hidden=true;
     const hadRun=Boolean(wave||towers.length||guardianMode!=='none'||hasSavedRun());
     towerPlantingAt.clear();armorImpactCues.clear();armorFeedbackSeen.clear();impactCausalityCues.clear();healerPulses.clear();burrowEmergenceCues.clear();bossChoreoCues.clear();healerInterventionObserved=false;gateRoute=defaultGateRoute(maps[selectedMap]);gateSwitchesRemaining=gateSwitchesForMap(maps[selectedMap]);path=pathForGateRoute(maps[selectedMap],gateRoute);
@@ -1516,6 +1537,13 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('confirmCancel').onclick=()=>confirmationFlow.cancel();
   byId('confirmAccept').onclick=()=>confirmationFlow.accept();
   byId('resultsClose').onclick=()=>byId('resultsDialog').close();
+  byId('resultsRetryCheckpoint').onclick=()=>{
+    const checkpoint=lastCustomCheckpoint;
+    if(!canRetryCustomPracticeCheckpoint(checkpoint,{maps,mapId:selectedMap,failedWave:wave})){setToast('No custom practice checkpoint is available.');return;}
+    try{localStorage.setItem(RUN_KEY,JSON.stringify(checkpoint));}
+    catch{setToast('The practice checkpoint could not be restored from this device.');return;}
+    byId('resultsDialog').close();restoreRun();setToast(`Practice retry restored after wave ${checkpoint.wave}. No campaign score or progression is awarded.`);
+  };
   byId('resultsRestart').onclick=()=>{byId('resultsDialog').close();resetRun();explainFreshGarden('Fresh garden. Choose your trail and defenders.');};
   byId('tutorialNext').onclick=()=>{if(tutorialStep>=3){beginTutorialPractice();return;}tutorialStep++;updateTutorial();};
   byId('tutorialBack').onclick=()=>{tutorialStep=Math.max(0,tutorialStep-1);updateTutorial();};
