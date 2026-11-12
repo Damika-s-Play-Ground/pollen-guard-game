@@ -21,6 +21,8 @@
   "./src/auto-start.js",
   "./src/battle-components.css",
   "./src/battle-layout-ui.js",
+  "./src/battle-summary.css",
+  "./src/battle-summary.js",
   "./src/boss-encounters.js",
   "./src/boss-warning-ui.js",
   "./src/branch-preview.css",

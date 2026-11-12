@@ -1,0 +1,16 @@
+.battle-summary-panel{position:relative;flex:0 0 auto;color:var(--text-cream);font-size:calc(11px * var(--ui-text-scale))}
+.battle-summary-panel>summary{display:flex;align-items:center;min-height:40px;padding:7px 10px;border:1px solid var(--control-border);border-radius:9px;background:var(--surface-raised);color:var(--text-cream);cursor:pointer;font-weight:600;list-style-position:inside}
+.battle-summary-panel[open]>summary{border-color:var(--action-lime);color:var(--action-lime)}
+.battle-summary-popover{position:fixed;z-index:35;left:12px;bottom:calc(var(--combat-dock-height,80px) + 8px);width:min(520px,calc(100vw - 24px));max-height:min(58vh,520px);overflow:auto;padding:13px 15px;border:1px solid var(--control-border);border-radius:12px;background:var(--surface-panel);color:var(--text-cream);box-shadow:var(--card-shadow)}
+.battle-summary-popover h3{margin:13px 0 5px;color:var(--action-lime);font-size:calc(11px * var(--ui-text-scale));text-transform:uppercase;letter-spacing:.04em}
+.battle-summary-popover p{margin:5px 0;color:var(--text-muted);line-height:1.45}
+.battle-summary-popover ul{display:grid;gap:4px;margin:4px 0 8px;padding-left:21px;color:var(--text-cream);line-height:1.45}
+#battleSummaryDefenderRemainder:empty,#battleSummaryAnnouncement:empty{display:none}
+.battle-summary-popover li button{min-height:38px;padding:6px 9px;text-align:left}
+.battle-summary-popover li button[aria-pressed="true"]{border-color:var(--action-lime);color:var(--action-lime)}
+.battle-summary-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,1.4fr);align-items:center;gap:7px;margin-top:12px;padding-top:10px;border-top:1px solid var(--control-border)}
+.battle-summary-controls label{color:var(--text-cream);font-weight:600}
+.battle-summary-controls select{min-height:40px;max-width:100%;padding:6px;border:1px solid var(--control-border);border-radius:7px;background:var(--surface-soil);color:var(--text-cream)}
+.battle-summary-controls button{grid-column:1/-1;min-height:42px}
+.battle-summary-announcement{margin-top:9px!important;padding:8px 10px;border-left:3px solid var(--resource-amber);background:var(--surface-raised);color:var(--text-cream)!important}
+@media(max-width:700px){.battle-summary-panel{width:max-content;max-width:100%}.battle-summary-controls{grid-template-columns:1fr}.battle-summary-controls button{grid-column:auto}}

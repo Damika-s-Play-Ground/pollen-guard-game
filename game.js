@@ -21,6 +21,7 @@ import { clearRunBackupAfterReset, runHasGameplayProgress, selectRecoverableRun,
 import { createRunSaveSnapshot } from './src/run-save.js';
 import { projectSavedRunToRuntime } from './src/run-restore.js';
 import { canRetryCustomPracticeCheckpoint, snapshotCustomPracticeCheckpoint } from './src/custom-practice-retry.js';
+import { buildBattleSummaryView, createBattleSummaryAnnouncementGate, renderBattleSummary } from './src/battle-summary.js';
 import { firstRunSaveAcknowledgement, runSaveFailureMessage } from './src/run-save-ui.js';
 import { registerOfflineSupport } from './src/offline-support.js';
 import { compareRunSummaries, normalizeRunHistory, recordCompletedRun, RUN_HISTORY_STORAGE_KEY, verifyRecordedReplay } from './src/run-history.js';
@@ -54,7 +55,7 @@ import { buildEnemyBriefingView, closeEnemyGuide, filterEnemyGuide as filterEnem
 import { buildPlacementHintView, renderPlacementHint } from './src/placement-ui.js';
 import { placementPreviewRange as calculatePlacementPreviewRange } from './src/placement-preview.js';
 import { applyGuidanceVisibility, resolveGuidanceOwner, guidanceVisibility } from './src/guidance-arbitration.js';
-import { pathCoveragePercent } from './src/route-coverage.js';
+import { combinedPathCoveragePercent, pathCoveragePercent } from './src/route-coverage.js';
 import { hideTowerSelectionChooser, showTowerSelectionChooser } from './src/selection-chooser-ui.js';
 import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutorialPracticeState, finishTutorialPracticeState, resetTutorialPracticeState } from './src/tutorial-progress.js';
 import { advanceFirstActionCoach, buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, firstActionCoachHasSavedRun, firstActionCoachProgress, mountTutorialCoach, renderTutorialCoach, renderTutorialStep, shouldShowFirstActionCoach } from './src/tutorial-ui.js';
@@ -205,6 +206,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const RUN_KEY = 'pollen-guard.run.v2';
   const RUN_BACKUP_KEY = 'pollen-guard.run.backup.v1';
   const CUSTOM_RETRY_KEY = 'pollen-guard.custom.retry.v1';
+  const battleSummaryPanel=byId('battleSummaryPanel'),battleSummaryCadence=byId('battleSummaryCadence');
+  const battleSummaryAnnouncementGate=createBattleSummaryAnnouncementGate();
+  let lastBattleSummaryRefreshAt=-Infinity;
   let lastCustomCheckpoint=null;
   try{
     const parsed=JSON.parse(localStorage.getItem(CUSTOM_RETRY_KEY)||'null');
@@ -946,6 +950,36 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     updateWaveTimeline,updateEnemyGuide,updateEnemyBriefing,updateEndlessChoices,
     renderAutoStartControls
   });
+  function refreshBattleSummary({force=false,announce=false}={}) {
+    if(!battleSummaryPanel.open)return;
+    if(!force&&document.querySelector('dialog[open]'))return;
+    const now=performance.now();
+    if(!force&&now-lastBattleSummaryRefreshAt<1000)return;
+    lastBattleSummaryRefreshAt=now;
+    const groundPath=routeGeometry.pathFor({flying:false}),skyPath=routeGeometry.pathFor({flying:true});
+    const circlesForRoute=airOnly=>towers.flatMap(tower=>{
+      const definition=towersDef[tower.type];
+      if(!definition||definition.income||definition.supportStructure||!(definition.damage>0)||airOnly&&!definition.antiAir)return[];
+      const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));
+      const stats=getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},definition);
+      return Number.isFinite(stats.range)&&stats.range>0?[{center:{x:tower.x,y:tower.y},radius:stats.range}]:[];
+    });
+    const groundCoveragePercent=combinedPathCoveragePercent(groundPath,circlesForRoute(false));
+    const skyCoveragePercent=skyPath===groundPath?null:combinedPathCoveragePercent(skyPath,circlesForRoute(true));
+    const enemyNames=Object.fromEntries(Object.entries(enemyCombatProfiles).map(([type,profile])=>[type,profile.name]));
+    enemyNames.boss=BOSS_VARIANTS[selectedMap]?.name||enemyCombatProfiles.boss.name;
+    const view=buildBattleSummaryView({
+      mapName:maps[selectedMap].name,wave,waveLimit:config().limit,lives,lifeCapacity:config().lives+(guardianMode==='ward'?2:0),cash,
+      running:runIsRunning(),paused:runIsPaused(),gameOver:runIsOver(),enemies,pathLengthFor:routeGeometry.pathLengthFor,enemyNames,
+      towers,towerDefinitions:towersDef,selectedTowerId:selectedTower?.id??null,fieldWidth:canvas.width,fieldHeight:canvas.height,
+      groundCoveragePercent,skyCoveragePercent
+    });
+    renderBattleSummary(document,view);
+    const cadence=battleSummaryCadence.value;
+    if(battleSummaryAnnouncementGate({cadence,urgentKey:view.urgentKey,summaryKey:view.signature,now,force:announce})){
+      byId('battleSummaryAnnouncement').textContent=announce||cadence!=='urgent'?view.announcement:view.urgentAnnouncement;
+    }
+  }
   function updateHud() {
     const running=runIsRunning(),gameOver=runIsOver(),paused=runIsPaused();
     const upgradeDisabled=selectedTower?selectedTower.level>=3||(selectedTower.level===1&&selectedTower.branchChoice==null)||cash<selectedUpgradeCost(selectedTower)||(tutorialPractice.active&&(tutorialPractice.task!==3||selectedTower.id!==tutorialPractice.towerId)):undefined;
@@ -965,6 +999,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       view,cash,lives,seedObjective,
       selectedUpgrade:selectedTower?{name:towersDef[selectedTower.type].name,cost:selectedUpgradeCost(selectedTower),level:selectedTower.level,branchChoice:selectedTower.branchChoice}:null
     });
+    refreshBattleSummary();
   }
   function autoStartContext(){return {enabled:uiSettings.autoStart,wave,running:runIsRunning(),paused:runIsPaused()||runStateStopsClock(runState),hidden:document.hidden,
     gameOver:runIsOver(),intermission,mandatoryChoice:endlessChoiceRequired({challenge,wave,endlessChoiceWave}),held:uiSettings.autoStartHold,
@@ -1393,6 +1428,18 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('autoStartBtn').onclick=()=>{uiSettings.autoStart=!uiSettings.autoStart;if(!uiSettings.autoStart)uiSettings.autoStartHold=false;saveUiSettings();syncAutoStart();updateHud();};
   byId('holdNextBtn').onclick=()=>{uiSettings.autoStartHold=!uiSettings.autoStartHold;saveUiSettings();syncAutoStart();updateHud();};
   byId('magnifierToggle').onclick=event=>{magnifierEnabled=!magnifierEnabled;event.currentTarget.setAttribute('aria-pressed',String(magnifierEnabled));drawMapMagnifier();};
+  battleSummaryPanel.addEventListener('toggle',()=>refreshBattleSummary({force:true}));
+  battleSummaryCadence.addEventListener('change',()=>{byId('battleSummaryRefresh').textContent=battleSummaryCadence.value==='off'?'Refresh summary':'Read summary now';refreshBattleSummary({force:true});});
+  byId('battleSummaryRefresh').onclick=()=>refreshBattleSummary({force:true,announce:true});
+  byId('battleSummaryDefenders').addEventListener('click',event=>{
+    const button=event.target.closest('[data-summary-defender]');if(!button)return;
+    const tower=towers.find(item=>String(item.id)===button.dataset.summaryDefender);
+    if(!tower||selectedTower?.id===tower.id)return;
+    selectPlacedTower(tower);
+    refreshBattleSummary({force:true});
+    requestAnimationFrame(()=>byId('battleSummaryDefenders').querySelector(`[data-summary-defender="${tower.id}"]`)?.focus({preventScroll:true}));
+  });
+  window.setInterval(()=>refreshBattleSummary(),1000);
 
   function toggleGardenPause(){
     measureActionFeedback('pause',()=>{
