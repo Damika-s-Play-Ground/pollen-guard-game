@@ -22,6 +22,7 @@ const enemyRoleGlyphSprites = new WeakMap();
 // drawBattlefield is synchronous; reuse these per-enemy wrappers between frames
 // instead of allocating one short-lived object per enemy on every render.
 const enemyVisualScratch = [];
+const shotVisualScratch = [];
 const DEFAULT_ROLE_GLYPH_STYLE = Object.freeze({});
 const EXIT_WARNING_GLYPH_STYLE = Object.freeze({ fontWeight:'bold', color:'#fff' });
 
@@ -611,7 +612,16 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   }
   healerLinks.forEach(link=>{if(!link?.from||!link?.to)return;ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);ctx.setLineDash([6/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash([]);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();});
   // Threat silhouettes follow projectiles and particles; health and warning overlays follow the bodies.
-  shots.forEach(shot=>drawProjectile(ctx,shot,shotPosition(shot,renderAlpha),shotAngle(shot,renderAlpha),displayScale));
+  const shotVisuals=shotVisualScratch;
+  shotVisuals.length=shots.length;
+  for(let index=0;index<shots.length;index++){
+    const shot=shots[index],visual=shotVisuals[index]||(shotVisuals[index]={point:null,targetPoint:null});
+    visual.point ||= {x:0,y:0};
+    visual.targetPoint ||= {x:0,y:0};
+    visual.point=shotPosition(shot,renderAlpha,visual.point);
+    const angle=shotAngle(shot,renderAlpha,visual.point,visual.targetPoint);
+    drawProjectile(ctx,shot,visual.point,angle,displayScale);
+  }
   particles.forEach(particle=>drawCosmeticParticle(ctx,particle,displayScale));
   const enemyVisuals = enemyVisualScratch;
   enemyVisuals.length = enemies.length;

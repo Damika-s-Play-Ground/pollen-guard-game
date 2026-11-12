@@ -43,12 +43,16 @@ export function createRenderSnapshots() {
       const key = `enemy:${enemy.id}`, before = previous.get(key), after = current.get(key);
       return samplePath(before && after ? interpolateNumber(before.progress, after.progress, alpha) : enemy.progress,output);
     },
-    shotPosition(shot, alpha) {
+    shotPosition(shot, alpha, output) {
       const key = `shot:${shot.id}`, before = previous.get(key), after = current.get(key);
-      return before && after ? {
-        x: interpolateNumber(before.x, after.x, alpha),
-        y: interpolateNumber(before.y, after.y, alpha)
-      } : { x: shot.x, y: shot.y };
+      const x=before&&after?interpolateNumber(before.x,after.x,alpha):shot.x;
+      const y=before&&after?interpolateNumber(before.y,after.y,alpha):shot.y;
+      if(output&&typeof output==='object'){
+        output.x=x;
+        output.y=y;
+        return output;
+      }
+      return { x, y };
     },
     hitFlash(enemyId) { return enemyHitFlashes.get(enemyId) || 0; }
   };
