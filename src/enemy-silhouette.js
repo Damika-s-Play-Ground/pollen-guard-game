@@ -14,16 +14,19 @@ export function enemySilhouetteProfile(enemy) {
 }
 
 export function enemySilhouetteMetrics(enemy,time=0) {
+  return writeEnemySilhouetteMetrics(enemy,time,{});
+}
+
+export function writeEnemySilhouetteMetrics(enemy,time=0,output={}) {
   const profile=enemySilhouetteProfile(enemy);
   const phase=Number.isFinite(time)?time*profile.gaitRate+(Number.isFinite(enemy?.id)?enemy.id*.73:0):0;
   const radius=(Number.isFinite(enemy?.radius)?enemy.radius:0)*profile.scale;
   const footprintScale=enemy?.flying||enemy?.type==='flyer'?1.45:enemy?.type==='zip'?1.3:1;
-  return {
-    radius,
-    overlapRadius:radius*footprintScale,
-    gait:Math.sin(phase)*profile.gaitAmplitude,
-    float:Math.sin(Number.isFinite(time)?time*3+(Number.isFinite(enemy?.id)?enemy.id*.73:0):0)*profile.floatAmplitude
-  };
+  output.radius=radius;
+  output.overlapRadius=radius*footprintScale;
+  output.gait=Math.sin(phase)*profile.gaitAmplitude;
+  output.float=Math.sin(Number.isFinite(time)?time*3+(Number.isFinite(enemy?.id)?enemy.id*.73:0):0)*profile.floatAmplitude;
+  return output;
 }
 
 export function largestEnemySilhouetteRadius(enemies) {

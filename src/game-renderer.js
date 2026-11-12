@@ -6,7 +6,7 @@ import { PLANTING_SETTLE_SECONDS } from './planting-effects.js';
 import { pathSegmentsWithinRadius } from './route-coverage.js';
 import { guardianDestinationIsSafe, GUARDIAN_PATH_CLEARANCE, GUARDIAN_PULSE_RADIUS } from './meadow-guardian.js';
 import { TERRAIN_TYPES, TERRAIN_ZONES } from './terrain.js';
-import { enemySilhouetteMetrics } from './enemy-silhouette.js';
+import { enemySilhouetteMetrics, writeEnemySilhouetteMetrics } from './enemy-silhouette.js';
 import { canTowerHitTarget, isBurrowed } from './combat-rules.js';
 
 const COMBINATION_LINK_STYLES = Object.freeze({
@@ -619,8 +619,10 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const enemy = enemies[index];
     const visual = enemyVisuals[index] || (enemyVisuals[index] = { enemy:null, point:null, silhouette:null });
     visual.enemy = enemy;
-    visual.point = enemyPosition(enemy,renderAlpha);
-    visual.silhouette = enemySilhouetteMetrics(enemy,visualTime);
+    visual.point ||= { x:0, y:0 };
+    visual.silhouette ||= enemySilhouetteMetrics(enemy,visualTime);
+    visual.point = enemyPosition(enemy,renderAlpha,visual.point);
+    visual.silhouette = writeEnemySilhouetteMetrics(enemy,visualTime,visual.silhouette);
     visual.id = enemy.id;
     visual.radius = visual.silhouette.radius;
     visual.overlapRadius = visual.silhouette.overlapRadius;

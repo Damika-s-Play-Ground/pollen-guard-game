@@ -36,12 +36,12 @@ export function createRenderSnapshots() {
       previous = current;
       enemyHitFlashes.clear();
     },
-    enemyPosition(enemy, path, alpha) {
+    enemyPosition(enemy, path, alpha, output) {
       const enemyPath = typeof path === 'function' ? path(enemy) : path;
       if (!pathSamplers.has(enemyPath)) pathSamplers.set(enemyPath,createPathSampler(enemyPath));
       const samplePath=pathSamplers.get(enemyPath);
       const key = `enemy:${enemy.id}`, before = previous.get(key), after = current.get(key);
-      return samplePath(before && after ? interpolateNumber(before.progress, after.progress, alpha) : enemy.progress);
+      return samplePath(before && after ? interpolateNumber(before.progress, after.progress, alpha) : enemy.progress,output);
     },
     shotPosition(shot, alpha) {
       const key = `shot:${shot.id}`, before = previous.get(key), after = current.get(key);

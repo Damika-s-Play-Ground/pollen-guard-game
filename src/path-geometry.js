@@ -4,27 +4,36 @@ export function calculatePathLength(path) {
 }
 
 export function createPathSampler(path) {
-  if (!Array.isArray(path) || path.length < 2) return () => ({ x: 850, y: 360 });
+  if (!Array.isArray(path) || path.length < 2) return (_distance, output) => writePoint(output, 850, 360);
   const segments = [];
   for (let index = 1; index < path.length; index++) {
     const [x1, y1] = path[index - 1], [x2, y2] = path[index];
     segments.push({ x1, y1, x2, y2, length: Math.hypot(x2 - x1, y2 - y1) });
   }
   const endpoint = path.at(-1);
-  return distance => {
-    if (!Number.isFinite(distance)) return { x: 850, y: 360 };
+  return (distance, output) => {
+    if (!Number.isFinite(distance)) return writePoint(output, 850, 360);
     let remaining = distance;
     for (const segment of segments) {
       const { x1, y1, x2, y2, length } = segment;
       if (length === 0) continue;
       if (remaining <= length) {
         const ratio = remaining / length;
-        return { x: x1 + (x2 - x1) * ratio, y: y1 + (y2 - y1) * ratio };
+        return writePoint(output, x1 + (x2 - x1) * ratio, y1 + (y2 - y1) * ratio);
       }
       remaining -= length;
     }
-    return { x: endpoint[0], y: endpoint[1] };
+    return writePoint(output, endpoint[0], endpoint[1]);
   };
+}
+
+function writePoint(output, x, y) {
+  if (output && typeof output === 'object') {
+    output.x = x;
+    output.y = y;
+    return output;
+  }
+  return { x, y };
 }
 
 export function pointOnPath(path, distance) {

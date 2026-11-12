@@ -1295,7 +1295,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       selectedTowerRange(tower){const def=towersDef[tower.type];if(def.supportStructure)return getEffectiveTowerStats(tower,{researchLoadout,relicLoadout},def).range; if(!def.range)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));return getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def).range;},
       placementPreviewRange,abilityPreview:liveAbilityPreview,
       placementComboPreviews(type,point){return previewTowerCombinations({id:'placement-preview',type,x:point.x,y:point.y},towers,towersLinked);},
-      enemies,enemyPosition:enemy=>renderSnapshots.enemyPosition(enemy,routeGeometry.pathFor,renderAlpha),shots,shotPosition:shot=>renderSnapshots.shotPosition(shot,renderAlpha),
+      enemies,enemyPosition:(enemy,_alpha,output)=>renderSnapshots.enemyPosition(enemy,routeGeometry.pathFor,renderAlpha,output),shots,shotPosition:shot=>renderSnapshots.shotPosition(shot,renderAlpha),
       shotAngle(shot,alpha){const from=renderSnapshots.shotPosition(shot,alpha),target=shot.target;if(!target)return 0;const point=renderSnapshots.enemyPosition(target,routeGeometry.pathFor,alpha);return Math.atan2(point.y-(target.flying?target.radius*.85:0)-from.y,point.x-from.x);},particles:renderParticles,selectedType,pointer,
       placementError,palette:uiSettings.palette,highContrastEnemyColors,selectedTargetId:targetId,
       visualTime:uiSettings.animation==='full'?gameTime:0,enemyHitFlash:enemy=>renderSnapshots.hitFlash(enemy.id),
