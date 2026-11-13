@@ -617,6 +617,16 @@ export function plantingSettle(animation, now, plantedAt, duration = PLANTING_SE
   return {progress,scaleX,scaleY,offsetY,outlineAlpha:0};
 }
 
+function strictlyWithinCueRadius(dx,dy,reach){
+  const distanceSquared=dx*dx+dy*dy,reachSquared=reach*reach;
+  if(Number.isFinite(distanceSquared)&&Number.isFinite(reachSquared)){
+    const difference=distanceSquared-reachSquared;
+    const roundingGuard=Number.EPSILON*4*Math.max(distanceSquared,reachSquared);
+    if(Math.abs(difference)>roundingGuard)return difference<0;
+  }
+  return Math.hypot(dx,dy)<reach;
+}
+
 // The returned Map is a borrowed workspace and is overwritten on the next call.
 export function createEnemyCueStackRanker() {
   const ranks=new Map(),cellCoordinates=[],cells=new Map(),usedCells=[];
@@ -662,7 +672,7 @@ export function createEnemyCueStackRanker() {
             const b=centers[right];
             if(a.id===b.id)continue;
             const reach=(a.overlapRadius??a.radius)+(b.overlapRadius??b.radius)+18,dx=a.x-b.x,dy=a.y-b.y;
-            if(!(Math.hypot(dx,dy)<reach))continue;
+            if(!strictlyWithinCueRadius(dx,dy,reach))continue;
             const higher=a.id>b.id?a.id:b.id;
             ranks.set(higher,ranks.get(higher)+1);
           }
