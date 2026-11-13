@@ -105,7 +105,7 @@ function targetMatches(event, selector) {
 }
 
 export function resolveKeyboardCommand(event, { dialogOpen = false, placementActive = false, interactionMode = null, guardianMoveActive = false, towerTypes = [], bindings = DEFAULT_KEY_BINDINGS } = {}) {
-  if (targetMatches(event, 'input,select,textarea,[contenteditable="true"]') || dialogOpen) return null;
+  if (targetMatches(event, 'input,select,textarea,[contenteditable="true"]') || targetMatches(event, 'a[href]') || dialogOpen) return null;
   if (targetMatches(event, 'button,summary') && (event.code === 'Space' || event.key === 'Enter')) return null;
   if (event.code === 'Space' && bindings.pause === 'Space') return { type: 'toggle-pause', preventDefault: true };
   if (guardianMoveActive && event.key === 'Escape') return { type: 'cancel-guardian-move', preventDefault: true };
