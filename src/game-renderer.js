@@ -62,7 +62,14 @@ const EXIT_WARNING_GLYPH_STYLE = Object.freeze({ fontWeight:'bold', color:'#fff'
 
 function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize, style = DEFAULT_ROLE_GLYPH_STYLE) {
   const document = ctx.canvas?.ownerDocument;
-  if (!document?.createElement) { ctx.fillText(glyph, x, y); return; }
+  const drawFallback = () => {
+    const fontWeight = style.fontWeight || '';
+    const color = style.color || '#fff8df';
+    ctx.font = `${fontWeight ? `${fontWeight} ` : ''}${fontSize}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
+    ctx.fillText(glyph, x, y);
+  };
+  if (!document?.createElement) { drawFallback(); return; }
   let styles = enemyRoleGlyphSprites.get(document);
   if (!styles) { styles = new Map(); enemyRoleGlyphSprites.set(document, styles); }
   let sizes = styles.get(style);
@@ -74,7 +81,7 @@ function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize, style = DEFAULT_ROLE_GLY
     sprite = document.createElement('canvas');
     sprite.width = 32; sprite.height = 32;
     const spriteContext = sprite.getContext('2d');
-    if (!spriteContext) { ctx.fillText(glyph, x, y); return; }
+    if (!spriteContext) { drawFallback(); return; }
     const fontWeight = style.fontWeight || '';
     const color = style.color || '#fff8df';
     spriteContext.font = `${fontWeight ? `${fontWeight} ` : ''}${fontSize}px sans-serif`;
@@ -818,7 +825,6 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     }
     if (enemyHitFlash(enemy) > 0) { ctx.beginPath(); ctx.arc(point.x, bodyY, silhouette.radius + 2, 0, Math.PI * 2); ctx.strokeStyle = '#fff8d9'; ctx.lineWidth = 2.5; ctx.stroke(); }
     const roleGlyphFontSize = enemy.boss ? 17 : 13;
-    ctx.font = `${roleGlyphFontSize}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff8df';
     if (showEnemyRoleGlyphs) {
       if (burrowed) drawEnemyRoleGlyph(ctx, '⌃', point.x, point.y - 2, roleGlyphFontSize);
       else drawEnemyRoleGlyph(ctx, enemy.flying ? '✦' : enemy.type === 'armored' ? '⬟' : enemy.type === 'shield' ? '◇' : enemy.type === 'carrier' ? '⬡' : enemy.type === 'splitter' ? '●' : enemy.type === 'healer' ? '+' : enemy.boss ? '♛' : '•', point.x, bodyY, roleGlyphFontSize);
