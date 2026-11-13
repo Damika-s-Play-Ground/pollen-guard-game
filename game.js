@@ -20,7 +20,7 @@ import { parseRunExport, serializeRunExport } from './src/run-transfer.js';
 import { clearRunBackupAfterReset, runHasGameplayProgress, selectRecoverableRun, writeRunWithBackup } from './src/run-storage.js';
 import { createRunSaveSnapshot } from './src/run-save.js';
 import { projectSavedRunToRuntime } from './src/run-restore.js';
-import { canRetryCustomPracticeCheckpoint, snapshotCustomPracticeCheckpoint } from './src/custom-practice-retry.js';
+import { canRetryCustomPracticeCheckpoint, customPracticeRetryCopy, snapshotCustomPracticeCheckpoint } from './src/custom-practice-retry.js';
 import { buildBattleSummaryView, createBattleSummaryAnnouncementGate, renderBattleSummary } from './src/battle-summary.js';
 import { firstRunSaveAcknowledgement, runSaveFailureMessage } from './src/run-save-ui.js';
 import { registerOfflineSupport } from './src/offline-support.js';
@@ -373,8 +373,10 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     }
     const retryPractice=Boolean(customMap&&!won&&canRetryCustomPracticeCheckpoint(lastCustomCheckpoint,{maps,mapId:selectedMap,failedWave:wave}));
     byId('resultsRetryCheckpoint').hidden=!retryPractice;
+    const retryCopy=customPracticeRetryCopy(lastCustomCheckpoint);
+    byId('resultsRetryCheckpoint').textContent=retryPractice?retryCopy.button:'Retry from last clear · Practice only';
     byId('resultsPracticeNote').hidden=!customMap;
-    byId('resultsPracticeNote').textContent=customMap?(retryPractice?'Custom-map practice does not award campaign progression or canonical scores. Retry restores the last cleared wave exactly.':'Custom-map play does not award campaign progression or canonical scores.'):'';
+    byId('resultsPracticeNote').textContent=customMap?(retryPractice?retryCopy.note:'Custom-map play does not award campaign progression or canonical scores.'):'';
     if(maps[selectedMap]?.customMap){
       const objective=maps[selectedMap].customObjective;
       byId('resultsText').textContent+=won
