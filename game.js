@@ -1409,7 +1409,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     shouldContinue:()=>shouldContinueBattleLoop({visible:!document.hidden,paused:runStateStopsClock(runState),running:runIsRunning(),intermission,wallClockEffects:hasWallClockEffects()}),
     render:alpha=>{initialBattleFrameRendered=true;renderSelected();draw(alpha);}
   });
-  wakeGameLoop=()=>gameLoop.wake();
+  wakeGameLoop=()=>gameLoop.wake({visible:!document.hidden});
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden)simulationClock.reset();
     else wakeGameLoop();

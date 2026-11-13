@@ -58,8 +58,8 @@ export function createGameLoop({ requestFrame, clock, getFrameOptions, simulateS
       running = true;
       scheduleFrame();
     },
-    wake() {
-      if (!running || inFrame) return false;
+    wake({ visible = true } = {}) {
+      if (!running || inFrame || !visible) return false;
       scheduleFrame();
       return framePending;
     },
