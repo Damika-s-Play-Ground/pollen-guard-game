@@ -26,8 +26,9 @@ export function findTowersAtPoint(towers, point, radius = 20) {
 export function worldRadiusForCssPixels(cssPixels, canvas) {
   const rect = canvas.getBoundingClientRect();
   if (!Number.isFinite(cssPixels) || cssPixels <= 0 || !Number.isFinite(canvas.width) || canvas.width <= 0
-    || !Number.isFinite(rect.width) || rect.width <= 0) return 0;
-  return cssPixels * canvas.width / Math.max(1, rect.width);
+    || !Number.isFinite(rect.width) || rect.width <= 0 || !Number.isFinite(rect.height) || rect.height <= 0) return 0;
+  const portrait=canvas.parentElement?.classList.contains('portrait-map');
+  return cssPixels * canvas.width / Math.max(1,portrait?rect.height:rect.width);
 }
 
 export function movePlacementCursor(point, direction, width, height, step = 18, candidate = null) {

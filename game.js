@@ -132,7 +132,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const learningTransferStudyEnabled=new URLSearchParams(window.location.search).get('learningTransferStudy')==='1';
   const learningTransferStudyMetrics=learningTransferStudyEnabled?createLearningTransferStudyMetrics():null;
   const playtestRecorder=createPlaytestRecorder(localStorage);
-  const mobileLayout=window.matchMedia('(max-width: 800px)');
+  const mobileLayout=window.matchMedia('(max-width: 1024px) and (orientation: portrait), (pointer: coarse) and (max-width: 1366px) and (orientation: portrait)');
   if(actionFeedbackMetrics){window.__pollenGuardActionFeedback=()=>actionFeedbackMetrics.summary();window.__pollenGuardActionFeedbackDiagnostics=()=>actionFeedbackMetrics.diagnostics();}
   if(firstActionStudyMetrics)window.__pollenGuardFirstActionStudy=()=>firstActionStudyMetrics.summary();
   if(learningTransferStudyMetrics)window.__pollenGuardLearningTransferStudy=()=>learningTransferStudyMetrics.summary();
@@ -141,9 +141,10 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     try{return callback();}finally{finish?.();}
   }
   let cameraView=createCameraView(),cameraDrag=null;
+  const cameraViewportDimensions=()=>[canvas.parentElement.clientWidth,canvas.parentElement.clientHeight];
   let canvasDisplayScale = 1;
   const syncCanvasDisplayScale = () => {
-    cameraView=normalizeCameraView(cameraView,canvas.clientWidth,canvas.clientHeight);
+    cameraView=normalizeCameraView(cameraView,...cameraViewportDimensions());
     const portrait=mobileLayout.matches;
     canvas.parentElement.classList.toggle('portrait-map',portrait);
     canvas.style.transformOrigin='center center';canvas.style.transform=portrait?`translate(-50%,-50%) ${cameraTransform(cameraView)} rotate(90deg)`:cameraTransform(cameraView);
@@ -160,8 +161,9 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   if (canvasScaleObserver) canvasScaleObserver.observe(canvas);
   else window.addEventListener('resize', syncCanvasDisplayScale);
   syncCanvasDisplayScale();
+  mobileLayout.addEventListener('change',syncCanvasDisplayScale);
   const updateCamera=()=>{syncCanvasDisplayScale();draw();};
-  const zoomBattlefield=direction=>{cameraView=zoomCameraView(cameraView,direction,canvas.clientWidth,canvas.clientHeight);updateCamera();};
+  const zoomBattlefield=direction=>{cameraView=zoomCameraView(cameraView,direction,...cameraViewportDimensions());updateCamera();};
   byId('cameraZoomIn').onclick=()=>zoomBattlefield(1);
   byId('cameraZoomOut').onclick=()=>zoomBattlefield(-1);
   byId('cameraReset').onclick=()=>{cameraView=resetCameraView();updateCamera();};
@@ -173,7 +175,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     else if(event.key==='0'){event.preventDefault();event.stopImmediatePropagation();cameraView=resetCameraView();updateCamera();}
     else if(cameraView.panMode&&/^Arrow(Up|Down|Left|Right)$/.test(event.key)){
       event.preventDefault();event.stopImmediatePropagation();const amount=48,[dx,dy]=({ArrowUp:[0,amount],ArrowDown:[0,-amount],ArrowLeft:[amount,0],ArrowRight:[-amount,0]})[event.key];
-      cameraView=panCameraView(cameraView,dx,dy,canvas.clientWidth,canvas.clientHeight);updateCamera();
+      cameraView=panCameraView(cameraView,dx,dy,...cameraViewportDimensions());updateCamera();
     }
   },true);
   canvas.addEventListener('pointerdown',event=>{
@@ -183,7 +185,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   canvas.addEventListener('pointermove',event=>{
     if(!cameraDrag||cameraDrag.id!==event.pointerId)return;event.preventDefault();event.stopImmediatePropagation();
     const dx=event.clientX-cameraDrag.x,dy=event.clientY-cameraDrag.y;cameraDrag={...cameraDrag,x:event.clientX,y:event.clientY};
-    cameraView=panCameraView(cameraView,dx,dy,canvas.clientWidth,canvas.clientHeight);syncCanvasDisplayScale();
+    cameraView=panCameraView(cameraView,dx,dy,...cameraViewportDimensions());syncCanvasDisplayScale();
   },true);
   const stopCameraDrag=event=>{if(!cameraDrag||cameraDrag.id!==event.pointerId)return;event.preventDefault();event.stopImmediatePropagation();cameraDrag=null;canvas.parentElement.classList.remove('camera-dragging');};
   canvas.addEventListener('pointerup',stopCameraDrag,true);canvas.addEventListener('pointercancel',stopCameraDrag,true);
