@@ -82,29 +82,37 @@ function removeDefeated(state, enemy, positionOf) {
   return true;
 }
 
-function tickTower(tower, state, dt, positionOf, hooks = {}, pollenBeaconBuffedIds = new Set()) {
+function tickTower(tower, state, dt, positionOf, hooks = {}, pollenBeaconBuffedIds = new Set(), targetingWorkspace) {
   const def = towersDef[tower.type];
   if (!def || def.income || def.supportStructure) return;
   tower.cooldown = Math.max(0, tower.cooldown - dt);
   if (tower.cooldown > 0) return;
-  const linkedCombinations = state.towers
-    .filter(other => other !== tower && towersAreLinked(tower, other, towersDef, state.towers,state.researchLoadout??[],state.relicLoadout??[]))
-    .map(other => combinationForPair(tower, other));
-  const hasGoldenSeeds = linkedCombinations.some(combination => combination?.id === 'golden-seeds');
+  let hasGoldenSeeds=false,steamBurst=null,frostedSeeds=null,sporecap=null,cycloneCap=null,windcarvedThorns=null;
+  for(let otherIndex=0;otherIndex<state.towers.length;otherIndex++){
+    const other=state.towers[otherIndex];
+    if(other===tower||!towersAreLinked(tower,other,towersDef,state.towers,state.researchLoadout??[],state.relicLoadout??[]))continue;
+    const combination=combinationForPair(tower,other);if(!combination)continue;
+    if(combination.id==='golden-seeds'&&tower.type==='sprout')hasGoldenSeeds=true;
+    else if(combination.id==='steam-burst'&&tower.type==='ember')steamBurst ||= combination;
+    else if(combination.id==='frosted-seeds'&&tower.type==='sprout')frostedSeeds ||= combination;
+    else if(combination.id==='sporecap'&&tower.type==='puff')sporecap ||= combination;
+    else if(combination.id==='cyclone-cap'&&tower.type==='puff')cycloneCap ||= combination;
+    else if(combination.id==='windcarved-thorns'&&tower.type==='thorn')windcarvedThorns ||= combination;
+  }
   const terrain=state.terrainRulesVersion>=1?terrainZoneAt(state.selectedMap,tower):'ground';
   const stats = getEffectiveTowerStats(tower, { challenge: state.challenge, challengeRules:state.challengeRules, linked: hasGoldenSeeds, terrain, researchLoadout:state.researchLoadout??[],relicLoadout:state.relicLoadout??[] }, def);
   if (pollenBeaconBuffedIds.has(tower.id)) stats.rate *= state.relicLoadout?.includes('beacon-bell') ? .90 : state.researchLoadout?.includes('beacon-network') ? .91 : towersDef.pollenBeacon.buffMultiplier;
   const rejuvenationField=state.rejuvenationField;
   if (rejuvenationField?.duration>0 && Math.hypot(tower.x-rejuvenationField.x,tower.y-rejuvenationField.y)<=78) stats.rate*=.85;
-  const candidates = state.enemies.filter(enemy => canTowerHitTarget({tower,target:enemy,range:stats.range,canHitAir:def.antiAir,positionOf}));
+  const candidates=targetingWorkspace.candidates;candidates.length=0;
+  const query=targetingWorkspace.query;query.tower=tower;query.range=stats.range;query.canHitAir=def.antiAir;query.positionOf=positionOf;
+  for(let enemyIndex=0;enemyIndex<state.enemies.length;enemyIndex++){
+    const enemy=state.enemies[enemyIndex];query.target=enemy;
+    if(canTowerHitTarget(query))candidates.push(enemy);
+  }
   if (!candidates.length) return;
   const target = chooseTargetForTower(tower, candidates, positionOf);
   tower.cooldown = stats.rate;
-  const steamBurst = tower.type === 'ember' ? linkedCombinations.find(combination => combination?.id === 'steam-burst') : null;
-  const frostedSeeds = tower.type === 'sprout' ? linkedCombinations.find(combination => combination?.id === 'frosted-seeds') : null;
-  const sporecap = tower.type === 'puff' ? linkedCombinations.find(combination => combination?.id === 'sporecap') : null;
-  const cycloneCap = tower.type === 'puff' ? linkedCombinations.find(combination => combination?.id === 'cyclone-cap') : null;
-  const windcarvedThorns = tower.type === 'thorn' ? linkedCombinations.find(combination => combination?.id === 'windcarved-thorns') : null;
   const shot = {
     id: state.nextEntityId++, x: tower.x, y: tower.y, target, targetId: target.id,
     ...(state.trackAttribution === false ? {} : { sourceTowerId: tower.id, sourceTowerType: tower.type }),
@@ -277,7 +285,12 @@ export function stepCombat(state, dt, { pathLength, positionOf, onDefeat, onLeak
   const pollenBeaconBuffedIds = assignPollenBeaconBuffs(state.towers,state.researchLoadout??[],state.relicLoadout??[]);
   const trapTriggers = triggerCompostTraps(state.towers, state.enemies, positionOf,state.researchLoadout??[]);
   trapTriggers.forEach(({ trap, enemy }) => recordCombatControl(state.performance, trap.id, trap.type, 'slow', Math.min(dt, enemy.slow || 0)));
-  state.towers.forEach(tower => tickTower(tower, state, dt, positionOf, hooks, pollenBeaconBuffedIds));
+  const targetingWorkspace={candidates:[],query:{tower:null,target:null,range:0,canHitAir:false,positionOf:null}};
+  const towerCount=state.towers.length;
+  for(let towerIndex=0;towerIndex<towerCount;towerIndex++){
+    if(!(towerIndex in state.towers))continue;
+    tickTower(state.towers[towerIndex],state,dt,positionOf,hooks,pollenBeaconBuffedIds,targetingWorkspace);
+  }
   for (let index = state.shots.length - 1; index >= 0; index--) {
     const shot = state.shots[index];
     if (!state.enemies.includes(shot.target)) { state.shots.splice(index, 1); continue; }
