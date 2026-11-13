@@ -60,16 +60,17 @@ function compareBossWarningCandidates(a,b) { return a.score-b.score; }
 const DEFAULT_ROLE_GLYPH_STYLE = Object.freeze({});
 const EXIT_WARNING_GLYPH_STYLE = Object.freeze({ fontWeight:'bold', color:'#fff' });
 
+function drawEnemyRoleGlyphFallback(ctx, glyph, x, y, fontSize, style) {
+  const fontWeight = style.fontWeight || '';
+  const color = style.color || '#fff8df';
+  ctx.font = `${fontWeight ? `${fontWeight} ` : ''}${fontSize}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
+  ctx.fillText(glyph, x, y);
+}
+
 function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize, style = DEFAULT_ROLE_GLYPH_STYLE) {
   const document = ctx.canvas?.ownerDocument;
-  const drawFallback = () => {
-    const fontWeight = style.fontWeight || '';
-    const color = style.color || '#fff8df';
-    ctx.font = `${fontWeight ? `${fontWeight} ` : ''}${fontSize}px sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
-    ctx.fillText(glyph, x, y);
-  };
-  if (!document?.createElement) { drawFallback(); return; }
+  if (!document?.createElement) { drawEnemyRoleGlyphFallback(ctx, glyph, x, y, fontSize, style); return; }
   let styles = enemyRoleGlyphSprites.get(document);
   if (!styles) { styles = new Map(); enemyRoleGlyphSprites.set(document, styles); }
   let sizes = styles.get(style);
@@ -81,7 +82,7 @@ function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize, style = DEFAULT_ROLE_GLY
     sprite = document.createElement('canvas');
     sprite.width = 32; sprite.height = 32;
     const spriteContext = sprite.getContext('2d');
-    if (!spriteContext) { drawFallback(); return; }
+    if (!spriteContext) { drawEnemyRoleGlyphFallback(ctx, glyph, x, y, fontSize, style); return; }
     const fontWeight = style.fontWeight || '';
     const color = style.color || '#fff8df';
     spriteContext.font = `${fontWeight ? `${fontWeight} ` : ''}${fontSize}px sans-serif`;
