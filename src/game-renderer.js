@@ -55,6 +55,7 @@ const SEED_RECOVERY_PATH_LINES=Object.freeze([
   Object.freeze({offset:3,color:'#f1bd67',direction:-1})
 ]);
 const BURROW_SOIL_OFFSETS=Object.freeze([12,25,38]);
+const ENEMY_LEG_SIDES=Object.freeze([-1,1]);
 function compareBossWarningCandidates(a,b) { return a.score-b.score; }
 const DEFAULT_ROLE_GLYPH_STYLE = Object.freeze({});
 const EXIT_WARNING_GLYPH_STYLE = Object.freeze({ fontWeight:'bold', color:'#fff' });
@@ -381,7 +382,10 @@ function drawEnemyDetails(ctx, enemy, x, y, time = 0, displayScale = 1, silhouet
   } else {
     const legY = y + enemy.radius * .55;
     ctx.beginPath();
-    for (const side of [-1, 1]) { ctx.moveTo(x + side * 4, legY); ctx.lineTo(x + side * 7, legY + 3 + gait * .35); ctx.moveTo(x + side * 1, legY + 1); ctx.lineTo(x + side * 2, legY + 4 - gait * .35); }
+    for (const side of ENEMY_LEG_SIDES) {
+      ctx.moveTo(x + side * 4, legY); ctx.lineTo(x + side * 7, legY + 3 + gait * .35);
+      ctx.moveTo(x + side * 1, legY + 1); ctx.lineTo(x + side * 2, legY + 4 - gait * .35);
+    }
     ctx.stroke();
   }
   if (enemy.type === 'mite') {
@@ -461,9 +465,11 @@ export function drawProjectile(ctx, shot, point, angle = 0, displayScale = 1) {
     ctx.beginPath(); ctx.arc(-radius * .15, -radius * .2, Math.max(1, radius * .2), 0, Math.PI * 2); ctx.fillStyle = '#e8ffff'; ctx.fill();
   } else if (style === 'spore') {
     ctx.arc(0, 0, radius * .7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    for (const [x, y] of [[-radius, -radius * .55], [-radius, radius * .55], [radius * .5, -radius * .7], [radius * .5, radius * .7]]) {
-      ctx.beginPath(); ctx.arc(x, y, radius * .32, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    }
+    const satelliteRadius=radius*.32;
+    ctx.beginPath();ctx.arc(-radius,-radius*.55,satelliteRadius,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(-radius,radius*.55,satelliteRadius,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(radius*.5,-radius*.7,satelliteRadius,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(radius*.5,radius*.7,satelliteRadius,0,Math.PI*2);ctx.fill();ctx.stroke();
   } else if (style === 'dart') {
     ctx.moveTo(radius * 1.8, 0); ctx.lineTo(-radius, -radius * .52); ctx.lineTo(-radius * .35, 0); ctx.lineTo(-radius, radius * .52); ctx.closePath(); ctx.fill(); ctx.stroke();
   } else if (style === 'wind') {
@@ -682,7 +688,8 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if(attackCue&&Number.isFinite(attackCue.angle)&&attackCue.strength>0){
       const angle=attackCue.angle,cos=Math.cos(angle),sin=Math.sin(angle),start=tower.radius??18,end=start+18,tipX=tower.x+cos*end,tipY=tower.y+sin*end,backX=tower.x+cos*(end-5),backY=tower.y+sin*(end-5),wingX=-sin*4,wingY=cos*4;
       ctx.save();ctx.globalAlpha=Math.min(1,.5+attackCue.strength*.5);ctx.lineCap='round';ctx.lineJoin='round';
-      for(const [color,width] of [['#263d2c',6],['#fff0a8',3.5]]){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(tower.x+cos*start,tower.y+sin*start);ctx.lineTo(tipX,tipY);ctx.moveTo(backX+wingX,backY+wingY);ctx.lineTo(tipX,tipY);ctx.lineTo(backX-wingX,backY-wingY);ctx.stroke();}
+      ctx.strokeStyle='#263d2c';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(tower.x+cos*start,tower.y+sin*start);ctx.lineTo(tipX,tipY);ctx.moveTo(backX+wingX,backY+wingY);ctx.lineTo(tipX,tipY);ctx.lineTo(backX-wingX,backY-wingY);ctx.stroke();
+      ctx.strokeStyle='#fff0a8';ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(tower.x+cos*start,tower.y+sin*start);ctx.lineTo(tipX,tipY);ctx.moveTo(backX+wingX,backY+wingY);ctx.lineTo(tipX,tipY);ctx.lineTo(backX-wingX,backY-wingY);ctx.stroke();
       ctx.restore();
     }
     if (isSelected) { ctx.beginPath(); ctx.arc(tower.x, tower.y, 20, 0, Math.PI * 2); ctx.setLineDash(DASH_2_3); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash(EMPTY_DASH); }
@@ -749,7 +756,8 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if (enemy.burrowTelegraphTimer > 0) {
       ctx.beginPath(); ctx.arc(point.x, point.y, enemy.radius + 8, 0, Math.PI * 2);
       ctx.strokeStyle = '#e0b878'; ctx.lineWidth = 2.6/enemyStrokeScale; setScaledLineDash(ctx,DASH_3_2,enemyStrokeScale); ctx.stroke(); ctx.setLineDash(EMPTY_DASH);
-      for (const [dx,dy] of [[-5,-enemy.radius-5],[0,-enemy.radius-9],[5,-enemy.radius-5]]) {
+      for (let markerIndex=0;markerIndex<3;markerIndex++) {
+        const dx=markerIndex===1?0:markerIndex===0?-5:5,dy=-enemy.radius-(markerIndex===1?9:5);
         ctx.beginPath(); ctx.arc(point.x+dx/enemyStrokeScale,point.y+Math.sign(dy)*enemy.radius+dy/enemyStrokeScale,2.2/enemyStrokeScale,0,Math.PI*2); ctx.fillStyle='#c99453'; ctx.fill();
       }
     }
