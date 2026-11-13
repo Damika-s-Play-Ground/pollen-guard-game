@@ -38,41 +38,84 @@ export function buildHudView({
   };
 }
 
-export function renderHud(document, view) {
-  const byId = id => document.getElementById(id);
-  for (const [id, value] of Object.entries(view.counters)) byId(id).textContent = value;
+const hudElementsByDocument = new WeakMap();
+const pauseButtonMarkup = new Map();
 
-  byId('lifeBar').style.width = `${view.life.percent}%`;
-  byId('lifeBar').parentElement.setAttribute('aria-valuemax', view.life.max);
-  byId('lifeBar').parentElement.setAttribute('aria-valuenow', view.life.value);
-  byId('bloomBar').style.width = `${view.bloom.percent}%`;
-  byId('bloomBar').parentElement.setAttribute('aria-valuenow', view.bloom.percent);
-  byId('waveLimit').textContent = view.waveLimit;
-  byId('battlefieldSummary').textContent = view.battlefieldSummary;
-  byId('game').setAttribute('aria-label', view.battlefieldLabel);
+function hudElements(document) {
+  let elements = hudElementsByDocument.get(document);
+  if (elements) return elements;
+  const byId = id => document.getElementById(id);
+  elements = {
+    counters: Object.fromEntries(['cash','lives','popped','wave'].map(id => [id, byId(id)])),
+    lifeBar: byId('lifeBar'),
+    lifeMeter: byId('lifeBar').parentElement,
+    bloomBar: byId('bloomBar'),
+    bloomMeter: byId('bloomBar').parentElement,
+    waveLimit: byId('waveLimit'),
+    battlefieldSummary: byId('battlefieldSummary'),
+    game: byId('game'),
+    buttons: Object.fromEntries(['startBtn','pauseBtn','bloomBtn','snareBtn','speedBtn'].map(id => [id, byId(id)])),
+    waveTag: byId('waveTag'),
+    bloomStatus: byId('bloomStatus'),
+    snareStatus: byId('snareStatus'),
+    resume: byId('resumeBtn'),
+    upgrade: byId('upgradeBtn')
+  };
+  hudElementsByDocument.set(document, elements);
+  return elements;
+}
+
+function setText(element, value) {
+  const text = String(value);
+  if (element.textContent !== text) element.textContent = text;
+}
+
+function setAttribute(element, name, value) {
+  const text = String(value);
+  if (element.getAttribute(name) !== text) element.setAttribute(name, text);
+}
+
+export function renderHud(document, view) {
+  const elements = hudElements(document);
+  for (const [id, value] of Object.entries(view.counters)) setText(elements.counters[id], value);
+
+  const lifeWidth = `${view.life.percent}%`;
+  if (elements.lifeBar.style.width !== lifeWidth) elements.lifeBar.style.width = lifeWidth;
+  setAttribute(elements.lifeMeter, 'aria-valuemax', view.life.max);
+  setAttribute(elements.lifeMeter, 'aria-valuenow', view.life.value);
+  const bloomWidth = `${view.bloom.percent}%`;
+  if (elements.bloomBar.style.width !== bloomWidth) elements.bloomBar.style.width = bloomWidth;
+  setAttribute(elements.bloomMeter, 'aria-valuenow', view.bloom.percent);
+  setText(elements.waveLimit, view.waveLimit);
+  setText(elements.battlefieldSummary, view.battlefieldSummary);
+  setAttribute(elements.game, 'aria-label', view.battlefieldLabel);
 
   for (const [id, button] of Object.entries(view.buttons)) {
-    const element = byId(id);
+    const element = elements.buttons[id];
     if (button.text !== undefined) {
-      if(id==='pauseBtn')element.innerHTML=uiIconSvg(button.text,'ui-icon pause-icon');
-      else element.textContent = button.text;
+      if (id === 'pauseBtn') {
+        let markup = pauseButtonMarkup.get(button.text);
+        if (markup === undefined) {
+          markup = uiIconSvg(button.text, 'ui-icon pause-icon');
+          pauseButtonMarkup.set(button.text, markup);
+        }
+        if (element.innerHTML !== markup) element.innerHTML = markup;
+      } else setText(element, button.text);
     }
     if (button.disabled !== undefined && element.disabled !== button.disabled) element.disabled = button.disabled;
-    if (button.label !== undefined) element.setAttribute('aria-label', button.label);
-    if (button.pressed !== undefined) element.setAttribute('aria-pressed', String(button.pressed));
-    if (button.shortLabel !== undefined) element.dataset.shortLabel = button.shortLabel;
-    if (button.active !== undefined) element.classList.toggle('active', button.active);
+    if (button.label !== undefined) setAttribute(element, 'aria-label', button.label);
+    if (button.pressed !== undefined) setAttribute(element, 'aria-pressed', button.pressed);
+    if (button.shortLabel !== undefined && element.dataset.shortLabel !== button.shortLabel) element.dataset.shortLabel = button.shortLabel;
+    if (button.active !== undefined && element.classList.contains('active') !== button.active) element.classList.toggle('active', button.active);
   }
 
-  byId('waveTag').textContent = view.waveTag;
-  byId('bloomStatus').textContent = view.bloomStatus;
-  byId('snareStatus').textContent = view.snareStatus;
-  const resume = byId('resumeBtn');
-  if (resume.disabled !== view.resumeDisabled) resume.disabled = view.resumeDisabled;
-  const upgrade = byId('upgradeBtn');
+  setText(elements.waveTag, view.waveTag);
+  setText(elements.bloomStatus, view.bloomStatus);
+  setText(elements.snareStatus, view.snareStatus);
+  if (elements.resume.disabled !== view.resumeDisabled) elements.resume.disabled = view.resumeDisabled;
   if (view.upgradeDisabled !== undefined) {
-    const disabled=Boolean(view.upgradeDisabled&&!view.upgradeFocusable);
-    if(upgrade.disabled!==disabled)upgrade.disabled=disabled;
-    upgrade.setAttribute('aria-disabled',String(Boolean(view.upgradeDisabled)));
+    const disabled = Boolean(view.upgradeDisabled && !view.upgradeFocusable);
+    if (elements.upgrade.disabled !== disabled) elements.upgrade.disabled = disabled;
+    setAttribute(elements.upgrade, 'aria-disabled', Boolean(view.upgradeDisabled));
   }
 }
