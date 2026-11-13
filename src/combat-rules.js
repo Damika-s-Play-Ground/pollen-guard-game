@@ -30,6 +30,8 @@ export function canHitTarget(attack = {}, target = {}) {
   return !isBurrowed(target) && (!target.flying || Boolean(attack.canHitAir));
 }
 
+const identityTargetPosition = value => value;
+
 export function isPointInTowerRange(tower, point, range) {
   return Number.isFinite(tower?.x) && Number.isFinite(tower?.y) &&
     Number.isFinite(point?.x) && Number.isFinite(point?.y) &&
@@ -37,8 +39,9 @@ export function isPointInTowerRange(tower, point, range) {
     Math.hypot(tower.x - point.x, tower.y - point.y) <= range;
 }
 
-export function canTowerHitTarget({ tower, target, range, canHitAir = false, positionOf = value => value } = {}) {
-  return canHitTarget({ canHitAir }, target) && isPointInTowerRange(tower, positionOf(target), range);
+export function canTowerHitTarget({ tower, target, range, canHitAir = false, positionOf = identityTargetPosition } = {}) {
+  return !isBurrowed(target) && (!target?.flying || Boolean(canHitAir)) &&
+    isPointInTowerRange(tower, positionOf(target), range);
 }
 
 export function filterEligibleTargets(targets, attack = {}) {

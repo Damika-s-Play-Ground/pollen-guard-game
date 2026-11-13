@@ -247,6 +247,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   let rewardRulesVersion=WAVE_REWARD_RULES_VERSION;
   let cash=220+initialResearchStart.cash, lives=Math.max(1,20+initialResearchStart.lives), popped=0, wave=0, bloomCharge=0, waveScheduleVersion=WAVE_SCHEDULE_VERSION, towers=[], enemies=[], shots=[], particles=[];
   const renderParticleScratch=[],liveEnemyIdsScratch=new Set();
+  const selectedTargetCandidatesScratch=[];
+  const selectedTargetQueryScratch={tower:null,target:null,range:0,canHitAir:false,positionOf:null};
   let endlessModifier=null,endlessChoiceWave=0;
   let guardianMode='none', guardian=null, guardianMoveActive=false, guardianMoveOrigin=null;
   let seedObjective=null;
@@ -1311,9 +1313,18 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function getSelectedTargetId() {
     if(!selectedTower)return null;
     const def=towersDef[selectedTower.type];if(def.income||def.supportStructure)return null;
-    const linked=towers.some(other=>other!==selectedTower&&towersLinked(selectedTower,other));
+    let linked=false;
+    for(let index=0;index<towers.length;index++){
+      const other=towers[index];
+      if(other!==selectedTower&&towersLinked(selectedTower,other)){linked=true;break;}
+    }
     const range=getEffectiveTowerStats(selectedTower,{challenge,challengeRules,linked,researchLoadout,relicLoadout},def).range;
-    const eligible=enemies.filter(enemy=>canTowerHitTarget({tower:selectedTower,target:enemy,range,canHitAir:def.antiAir,positionOf:enemyPosition}));
+    const eligible=selectedTargetCandidatesScratch;eligible.length=0;
+    const query=selectedTargetQueryScratch;query.tower=selectedTower;query.range=range;query.canHitAir=def.antiAir;query.positionOf=enemyPosition;
+    for(let index=0;index<enemies.length;index++){
+      const enemy=enemies[index];query.target=enemy;
+      if(canTowerHitTarget(query))eligible.push(enemy);
+    }
     return chooseTargetForTower(selectedTower,eligible,enemyPosition)?.id??null;
   }
   function applyChallenge() {
