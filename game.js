@@ -61,7 +61,7 @@ import { advanceTutorialPracticeState, beginTutorialPracticeState, createTutoria
 import { advanceFirstActionCoach, buildFirstActionCoachView, buildTutorialCoachView, clearTutorialCoach, firstActionCoachHasSavedRun, firstActionCoachProgress, mountTutorialCoach, renderTutorialCoach, renderTutorialStep, shouldShowFirstActionCoach } from './src/tutorial-ui.js';
 import { DEFAULT_KEY_BINDINGS, bindKey, keyCodeLabel } from './src/keyboard-bindings.js';
 import { keyboardActionLabels as buildKeyboardActionLabels, renderKeyboardBindings as presentKeyboardBindings } from './src/keyboard-bindings-ui.js';
-import { shouldEmitParticles } from './src/visual-preferences.js';
+import { shouldEmitParticles, shouldShakeBoard, shouldShowImpactFlash } from './src/visual-preferences.js';
 import { createGameAudio } from './src/game-audio.js';
 import { appendCosmeticParticles } from './src/effect-budget.js';
 import { createRewardFeedbackQueue } from './src/reward-feedback.js';
@@ -508,7 +508,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     });
   }
   function shakeBoard() {
-    if(!uiSettings.shake||uiSettings.animation==='off')return;
+    if(!shouldShakeBoard(uiSettings))return;
     const board=document.querySelector('.board-card');board.classList.remove('shake');void board.offsetWidth;board.classList.add('shake');
   }
   function explainFreshGarden(message) {
@@ -1358,7 +1358,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       const point=renderSnapshots.enemyPosition(target,routeGeometry.pathFor,alpha,targetPoint);
       return Math.atan2(point.y-(target.flying?target.radius*.85:0)-from.y,point.x-from.x);
     },
-    enemyHitFlash(enemy){return renderSnapshots.hitFlash(enemy.id);},
+    enemyHitFlash(enemy){return shouldShowImpactFlash(uiSettings)?renderSnapshots.hitFlash(enemy.id):0;},
     impactCausalityForEnemy(enemy){
       const cue=impactCausalityCues.get(enemy.id);if(!cue||uiSettings.animation==='off')return null;
       const age=gameTime-cue.time;
