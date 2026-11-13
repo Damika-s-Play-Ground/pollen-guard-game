@@ -2,7 +2,7 @@ import { renderBossWarnings } from './src/boss-warning-ui.js';
 import { petalTextMarkup } from './src/ui-icons.js';
 import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, saleRefundRate, towerUpgradeQuote, getEffectiveTowerStats, towersAreLinked, isUnsupportedRunVersion, RUN_SAVE_VERSION, assignRunEntityIds } from './src/game-core.js';
 import { DEFAULT_GAME_SPEED, toggleGameSpeed } from './src/simulation-speed.js';
-import { createGameLoop, createTerminalRenderGate, shouldRenderBattleFrame } from './src/game-loop.js';
+import { createGameLoop, createTerminalRenderGate, shouldContinueBattleLoop, shouldRenderBattleFrame } from './src/game-loop.js';
 import { createRenderGate, createRenderSignature } from './src/render-gate.js';
 import { refreshPurchaseAffordability } from './src/affordability-ui.js';
 import { modes, maps, towersDef, towerRoles, enemyCombatProfiles } from './src/game-data.js';
@@ -252,6 +252,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   let spellLoadout=normalizeSpellLoadout(uiSettings.spellLoadout||DEFAULT_SPELL_LOADOUT), rejuvenationField=null;
   const towerRecoilAt=new Map();
   const towerPlantingAt=new Map();
+  const isWallClockParticle=particle=>particle.wallClock;
+  const hasWallClockEffects=()=>towerPlantingAt.size>0||particles.some(isWallClockParticle);
   const armorImpactCues=new Map(),armorFeedbackSeen=new Map(),impactCausalityCues=new Map();
   const healerPulses=new Map(),healerLinkScratch=[],burrowEmergenceCues=new Map(),bossChoreoCues=new Map();
   let healerInterventionObserved=false;
@@ -261,6 +263,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', specialistCounterTypes=[], tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, firstActionCoachPlaced=resumedFirstActionCoach.placed, firstActionCoachLaunched=resumedFirstActionCoach.launched, firstActionCoachPhase=resumedFirstActionCoach.phase, tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
   const aimedSpellControls=new Map();
   let runState=createRunState();
+  let wakeGameLoop=()=>{};
   let combatPerformance=createCombatPerformance();
   let speed=DEFAULT_GAME_SPEED, intermission=0, saveClock=0, pointer={x:-99,y:-99,inside:false}, soundOn=!!uiSettings.sound, keyBindings={...uiSettings.keyBindings}, pendingKeyBinding=null;
   const gameAudio=createGameAudio({
@@ -294,7 +297,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const runIsPaused=()=>runState.basePhase==='user-paused';
   const pauseFocus=createPauseFocusController({resumeButton:byId('pauseResumeBtn'),fallbackFocus:canvas,document});
   const runIsOver=()=>runState.basePhase==='won'||runState.basePhase==='lost'||runState.basePhase==='retired';
-  function transitionRun(event) { runState=transitionRunState(runState,event); if(waveTransitionController)syncAutoStart(); }
+  function transitionRun(event) { runState=transitionRunState(runState,event); if(waveTransitionController)syncAutoStart();wakeGameLoop(); }
   const confirmationFlow=createConfirmationFlow({
     dialog:byId('confirmDialog'), title:byId('confirmTitle'), message:byId('confirmText'), accept:byId('confirmAccept'),
     document, fallbackFocus:canvas,
@@ -1299,7 +1302,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     renderState.towers=towers;renderState.selectedTower=selectedTower;renderState.towersDef=towersDef;renderState.towersLinked=towersLinked;renderState.placementPreviewRange=placementPreviewRange;renderState.abilityPreview=liveAbilityPreview;renderState.enemies=enemies;
     renderState.shots=shots;renderState.particles=renderParticles;renderState.selectedType=selectedType;renderState.pointer=pointer;renderState.placementError=placementError;renderState.palette=uiSettings.palette;renderState.highContrastEnemyColors=highContrastEnemyColors;renderState.selectedTargetId=targetId;
     renderState.visualTime=uiSettings.animation==='full'?gameTime:0;renderState.healerLinks=healerLinks;renderState.guardian=guardian;renderState.guardianMoveActive=guardianMoveActive;renderState.guardianCursor=pointer;renderState.seedObjective=seedObjective;
-    drawBattlefield(ctx,renderState,renderAlpha,staticMapCache);drawSpellOverlay();drawMapMagnifier();
+    drawBattlefield(ctx,renderState,renderAlpha,staticMapCache);drawSpellOverlay();drawMapMagnifier();wakeGameLoop();
   }
   function getSelectedTargetId() {
     if(!selectedTower)return null;
@@ -1402,8 +1405,14 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     clock:simulationClock,
     getFrameOptions:()=>({paused:runStateStopsClock(runState)||document.hidden,speed}),
     simulateStep:dt=>{renderSnapshots.beginStep();simulate(dt);renderSnapshots.capture(enemies,shots);renderSnapshots.updateHitFlashes(enemies,dt);},
-    shouldRender:()=>shouldRenderBattleFrame({initialFramePending:!initialBattleFrameRendered,running:runIsRunning(),terminalFramePending:terminalRenderGate.shouldRender(runIsOver()),wallClockEffects:towerPlantingAt.size>0||particles.some(particle=>particle.wallClock)}),
+    shouldRender:()=>shouldRenderBattleFrame({initialFramePending:!initialBattleFrameRendered,running:runIsActivelyRunning(),terminalFramePending:terminalRenderGate.shouldRender(runIsOver()),wallClockEffects:hasWallClockEffects()}),
+    shouldContinue:()=>shouldContinueBattleLoop({visible:!document.hidden,paused:runStateStopsClock(runState),running:runIsRunning(),intermission,wallClockEffects:hasWallClockEffects()}),
     render:alpha=>{initialBattleFrameRendered=true;renderSelected();draw(alpha);}
+  });
+  wakeGameLoop=()=>gameLoop.wake();
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)simulationClock.reset();
+    else wakeGameLoop();
   });
   function simulate(dt) {
     gameTime+=dt;simulationTick++;
@@ -1494,7 +1503,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       byId('pauseMenu').hidden=!isPaused;
       if(!wasPaused&&isPaused)pauseFocus.enter(document.activeElement);
       else if(wasPaused&&!isPaused)pauseFocus.exit();
-      updateHud();updateGatePanel();saveRun();
+      updateHud();updateGatePanel();saveRun();draw();
     });
   }
   byId('pauseBtn').onclick=toggleGardenPause;

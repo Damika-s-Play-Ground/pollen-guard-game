@@ -20,23 +20,48 @@ export function createTerminalRenderGate() {
   };
 }
 
-export function createGameLoop({ requestFrame, clock, getFrameOptions, simulateStep, render, shouldRender = () => true }) {
+export function shouldContinueBattleLoop({visible=true,paused=false,running=false,intermission=0,wallClockEffects=false}={}) {
+  if (!visible) return false;
+  if (wallClockEffects) return true;
+  return !paused && (running || (Number.isFinite(intermission) && intermission > 0));
+}
+
+export function createGameLoop({ requestFrame, clock, getFrameOptions, simulateStep, render, shouldRender = () => true, shouldContinue = () => true }) {
   let running = false;
+  let framePending = false;
+  let inFrame = false;
+
+  function scheduleFrame() {
+    if (!running || framePending) return;
+    framePending = true;
+    requestFrame(frame);
+  }
 
   function frame(now) {
+    framePending = false;
     if (!running) return;
-    requestFrame(frame);
-    const { paused = false, speed = 1 } = getFrameOptions();
-    advanceFixedSteps(clock, now, { paused, speed }, simulateStep);
-    const alpha=renderAlphaForClock(clock, paused);
-    if(shouldRender({now,paused,speed,alpha}))render(alpha);
+    inFrame = true;
+    try {
+      const { paused = false, speed = 1 } = getFrameOptions();
+      advanceFixedSteps(clock, now, { paused, speed }, simulateStep);
+      const alpha=renderAlphaForClock(clock, paused);
+      if(shouldRender({now,paused,speed,alpha}))render(alpha);
+    } finally {
+      inFrame = false;
+      if (running && shouldContinue()) scheduleFrame();
+    }
   }
 
   return {
     start() {
       if (running) return;
       running = true;
-      requestFrame(frame);
+      scheduleFrame();
+    },
+    wake() {
+      if (!running || inFrame) return false;
+      scheduleFrame();
+      return framePending;
     },
     stop() {
       running = false;
