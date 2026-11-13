@@ -48,6 +48,7 @@
   "./src/enemy-silhouette.js",
   "./src/engagement-study-analysis.js",
   "./src/first-action-study-metrics.js",
+  "./src/frame-workspaces.js",
   "./src/game-actions.js",
   "./src/game-audio.js",
   "./src/game-core.js",

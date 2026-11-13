@@ -66,7 +66,7 @@ import { shouldEmitParticles, shouldShakeBoard, shouldShowImpactFlash } from './
 import { createGameAudio } from './src/game-audio.js';
 import { appendCosmeticParticles } from './src/effect-budget.js';
 import { createRewardFeedbackQueue } from './src/reward-feedback.js';
-import { plantingSettleExpired, plantingDustParticles, advancePlantingParticle } from './src/planting-effects.js';
+import { plantingSettleExpired, plantingDustParticles } from './src/planting-effects.js';
 import { ATTACK_ANTICIPATION_SECONDS, attackAnticipation } from './src/attack-anticipation.js';
 import { defeatResponseParticles } from './src/defeat-effects.js';
 import { activeArmorFeedback, armorImpactFeedback } from './src/armor-feedback.js';
@@ -108,6 +108,7 @@ import { renderChallengeBoard } from './src/challenge-board-ui.js';
 import { ENDLESS_CHOICES, endlessChoiceDue, endlessChoiceRequired } from './src/endless-mode.js';
 import { renderEndlessChoices } from './src/endless-mode-ui.js';
 import { createPlaytestRecorder } from './src/playtest-recorder.js';
+import { advanceCosmeticParticlesInPlace, prepareRenderParticleFrame, refreshLiveEnemyIds } from './src/frame-workspaces.js';
 
 let savedCustomMaps=normalizeCustomMapCollection(null);
 try{savedCustomMaps=normalizeCustomMapCollection(JSON.parse(localStorage.getItem(CUSTOM_MAP_STORAGE_KEY)||'null'));}catch{}
@@ -245,6 +246,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const initialResearchStart=researchStartingAdjustment(researchLoadout);
   let rewardRulesVersion=WAVE_REWARD_RULES_VERSION;
   let cash=220+initialResearchStart.cash, lives=Math.max(1,20+initialResearchStart.lives), popped=0, wave=0, bloomCharge=0, waveScheduleVersion=WAVE_SCHEDULE_VERSION, towers=[], enemies=[], shots=[], particles=[];
+  const renderParticleScratch=[],liveEnemyIdsScratch=new Set();
   let endlessModifier=null,endlessChoiceWave=0;
   let guardianMode='none', guardian=null, guardianMoveActive=false, guardianMoveOrigin=null;
   let seedObjective=null;
@@ -1286,11 +1288,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     syncGuidanceVisibility(criticalWarningActive);
     for(const [id,launch] of towerRecoilAt)if(gameTime-launch.time>.1)towerRecoilAt.delete(id);
     for(const [id,plantedAt] of towerPlantingAt)if(plantingSettleExpired(visualNow,plantedAt))towerPlantingAt.delete(id);
-    particles=particles.filter(p=>!p.wallClock||!plantingSettleExpired(visualNow,p.startedAt));
-    const renderParticles=particles.map(p=>p.wallClock?advancePlantingParticle(p,visualNow):p);
+    const renderParticles=prepareRenderParticleFrame(particles,renderParticleScratch,visualNow);
     for(const [id,cue] of armorImpactCues)if(gameTime-cue.time>=.8)armorImpactCues.delete(id);
-    for(const [id,cue] of impactCausalityCues)if(gameTime-cue.time>=.32||!enemies.some(enemy=>enemy.id===id))impactCausalityCues.delete(id);
-    const liveEnemyIds=new Set(enemies.map(enemy=>enemy.id));for(const id of armorFeedbackSeen.keys())if(!liveEnemyIds.has(id))armorFeedbackSeen.delete(id);
+    const liveEnemyIds=refreshLiveEnemyIds(enemies,liveEnemyIdsScratch);
+    for(const [id,cue] of impactCausalityCues)if(gameTime-cue.time>=.32||!liveEnemyIds.has(id))impactCausalityCues.delete(id);
+    for(const id of armorFeedbackSeen.keys())if(!liveEnemyIds.has(id))armorFeedbackSeen.delete(id);
     for(const [id,pulse] of healerPulses)if(gameTime-pulse.time>=.5||!liveEnemyIds.has(id)||!liveEnemyIds.has(pulse.targetId))healerPulses.delete(id);
     for(const [id,time] of burrowEmergenceCues)if(gameTime-time>=.5||!liveEnemyIds.has(id))burrowEmergenceCues.delete(id);
     for(const [id,cue] of bossChoreoCues)if(gameTime-cue.time>=.9||!liveEnemyIds.has(id))bossChoreoCues.delete(id);
@@ -1460,7 +1462,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       if(guardianMoveInterrupted(guardian,guardianMoveActive))endGuardianMove();
       if(guardian.downTimer>0||guardian.pulseCooldown>0)updateGuardianControls();
     }
-    particles=particles.filter(p=>p.wallClock||p.life>0);particles.forEach(p=>{if(p.wallClock)return;p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.95;p.vy*=.95;});
+    advanceCosmeticParticlesInPlace(particles,dt);
     saveClock+=dt;if(saveClock>=1){saveClock=0;if(wave||towers.length||guardianMode!=='none')saveRun();}
   }
   function resetRun() {
