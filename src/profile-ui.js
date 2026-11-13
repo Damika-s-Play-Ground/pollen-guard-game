@@ -90,6 +90,7 @@ export function renderResearchTree({ document, root, profile, canRespec=true, re
     const group=document.createElement('section');group.className='research-path';
     const heading=document.createElement('h4');heading.textContent=path.name;
     const description=document.createElement('p');description.textContent=path.summary;group.append(heading,description);
+    const lockedOptions=document.createElement('details');lockedOptions.className='research-future-options';lockedOptions.open=false;
     for(const node of RESEARCH_NODES.filter(item=>item.path===path.id)){
       const unlocked=state.unlocked.includes(node.id),active=state.loadout[path.id]===node.id;
       const conflict=active?null:gardenKitConflictForResearch(node.id,relicLoadout,Object.values(state.loadout));
@@ -105,8 +106,10 @@ export function renderResearchTree({ document, root, profile, canRespec=true, re
       button.setAttribute('aria-pressed',String(active));
       button.setAttribute('aria-label',`${active?'Equipped':unlocked?'Equip':'Research'} ${node.name}`);
       button.setAttribute('aria-describedby',copy.id);
-      card.append(title,copy,button);group.append(card);
+      card.append(title,copy,button);
+      if(!available&&!unlocked)lockedOptions.append(card);else group.append(card);
     }
+    if(lockedOptions.children.length){const summary=document.createElement('summary');summary.textContent=`Locked research options · ${lockedOptions.children.length}`;lockedOptions.prepend(summary);group.append(lockedOptions);}
     root.append(group);
   }
   const respec=document.createElement('button');respec.type='button';respec.dataset.researchRespec='true';respec.disabled=!canRespec||state.unlocked.length===0;respec.textContent='Reset research · refund points';
@@ -125,6 +128,7 @@ export function renderRelicLoadout({document,root,profile,canRefit=true,research
   root.append(slot);
   if(!canRefit){const note=document.createElement('p');note.className='relic-lock';note.textContent='Relics can be refit between missions. Resume or explicitly restart a saved garden before changing the loadout.';root.append(note);}
   const unlocked=new Set(state.unlocked);
+  const lockedRelics=document.createElement('details');lockedRelics.className='relic-future-options';lockedRelics.open=false;
   for(const relic of RELICS){
     const owned=unlocked.has(relic.id),equipped=state.loadout.includes(relic.id);
     const blockedBy=state.loadout.filter(id=>relic.incompatible.includes(id)||RELICS.find(item=>item.id===id)?.incompatible.includes(relic.id));
@@ -144,7 +148,9 @@ export function renderRelicLoadout({document,root,profile,canRefit=true,research
     button.setAttribute('aria-pressed',String(equipped));
     button.setAttribute('aria-label',`${equipped?'Unequip':'Equip'} ${relic.name}`);
     button.setAttribute('aria-describedby',detail.id);
-    card.append(title,detail,reward,button);root.append(card);
+    card.append(title,detail,reward,button);
+    if(owned||equipped)root.append(card);else lockedRelics.append(card);
   }
+  if(lockedRelics.children.length){const futureSummary=document.createElement('summary');futureSummary.textContent=`Locked mission relics · ${lockedRelics.children.length}`;lockedRelics.prepend(futureSummary);root.append(lockedRelics);}
   return {state};
 }
