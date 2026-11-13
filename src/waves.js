@@ -40,7 +40,9 @@ export const PRE_GENTLE_OPENING_SCHEDULE_VERSION = ARMOR_DEMONSTRATION_SCHEDULE_
 export const GENTLE_OPENING_SCHEDULE_VERSION = PRE_GENTLE_OPENING_SCHEDULE_VERSION + 1;
 export const PRE_AIR_INTRODUCTION_SCHEDULE_VERSION = GENTLE_OPENING_SCHEDULE_VERSION;
 export const AIR_INTRODUCTION_SCHEDULE_VERSION = PRE_AIR_INTRODUCTION_SCHEDULE_VERSION + 1;
-export const WAVE_SCHEDULE_VERSION = AIR_INTRODUCTION_SCHEDULE_VERSION;
+export const PRE_SHOWCASE_ARC_SCHEDULE_VERSION = AIR_INTRODUCTION_SCHEDULE_VERSION;
+export const SHOWCASE_ARC_SCHEDULE_VERSION = PRE_SHOWCASE_ARC_SCHEDULE_VERSION + 1;
+export const WAVE_SCHEDULE_VERSION = SHOWCASE_ARC_SCHEDULE_VERSION;
 export const SUPPORTED_WAVE_SCHEDULE_VERSIONS = Object.freeze(Array.from({length:WAVE_SCHEDULE_VERSION+1},(_,version)=>version));
 
 const threatWeights = { mite: 1, zip: 1.3, armored: 3, shield: 2.5, splitter: 2.4, flyer: 2.2, boss: 18, healer:3, carrier:4, burrower:2.3 };
@@ -206,7 +208,7 @@ export const AIR_ROUTE_CAMPAIGN_WAVES = Object.freeze(airRouteSchedules(MIXED_RO
 
 function replaceAuthoredWave(schedule, waveNumber, cue, groups) {
   const copy=schedule.map(wave=>({...wave,groups:wave.groups.map(group=>({...group}))}));
-  const authoredGroups=groups.map(group=>({ ...group, lane:group.type==='flyer'?'air':'ground', telegraph:cue }));
+  const authoredGroups=groups.map(group=>({ ...group, lane:group.lane??(group.type==='flyer'?'air':'ground'), telegraph:group.telegraph??cue }));
   copy[waveNumber-1]={cue,groups:authoredGroups,budget:authoredGroups.reduce((sum,group)=>sum+(threatWeights[group.type]||0)*group.count,0)};
   return copy;
 }
@@ -268,6 +270,84 @@ export const AIR_INTRODUCTION_CAMPAIGN_WAVES=Object.freeze({
   meadow:airIntroductionMeadow
 });
 
+const SHOWCASE_ARC_OVERRIDES=Object.freeze({
+  'meadow-crossing':[
+    {wave:4,cue:'A short ground line leaves time to reset before the first boss.',groups:[
+      {type:'mite',count:8,interval:.56},{type:'zip',count:2,interval:.42}
+    ]},
+    {wave:8,cue:'Sky gnats and splitters use both lanes; answer with air and area coverage.',groups:[
+      {type:'mite',count:4,interval:.5},{type:'zip',count:4,interval:.32},{type:'flyer',count:3,interval:.66},{type:'splitter',count:3,interval:.65}
+    ]},
+    {wave:10,cue:'The Matriarch leads a fast air-and-splitter push through the crossing.',groups:[
+      {type:'boss',count:1,interval:1},{type:'flyer',count:4,interval:.5},{type:'zip',count:4,interval:.3},{type:'splitter',count:3,interval:.62}
+    ]},
+    {wave:12,cue:'A shorter mixed group gives the garden room to recover after the boss.',groups:[
+      {type:'flyer',count:3,interval:.58},{type:'armored',count:2,interval:.64},{type:'zip',count:4,interval:.34},{type:'splitter',count:2,interval:.68}
+    ]},
+    {wave:13,cue:'Burrowers dive beneath the trail; watch their dirt plume and catch them surfaced.',groups:[
+      {type:'burrower',count:2,interval:.82,lane:'ground',telegraph:'Burrower · dirt plume before dive'},
+      {type:'flyer',count:2,interval:.58},{type:'mite',count:4,interval:.5}
+    ]},
+    {wave:14,cue:'A small tactical escort reconnects healing, shielding and burrow pressure.',groups:[
+      {type:'healer',count:1,interval:.8,lane:'ground',telegraph:'Moss Tender · healing pulse'},
+      {type:'carrier',count:1,interval:.85,lane:'ground',telegraph:'Shield carrier · ward pulse'},
+      {type:'burrower',count:1,interval:.9,lane:'ground',telegraph:'Burrower · dirt plume before dive'},
+      {type:'armored',count:2,interval:.62},{type:'zip',count:2,interval:.34},{type:'splitter',count:2,interval:.68}
+    ]}
+  ],
+  'creek-ford':[
+    {wave:8,cue:'Splitters trail shielded beetles along the ford; spread ground coverage.',groups:[
+      {type:'armored',count:3,interval:.58},{type:'shield',count:3,interval:.62},{type:'zip',count:4,interval:.34},{type:'splitter',count:2,interval:.7}
+    ]},
+    {wave:10,cue:'A Bramble boss anchors armored and shielded ranks across the ford.',groups:[
+      {type:'boss',count:1,interval:1},{type:'armored',count:4,interval:.58},{type:'shield',count:4,interval:.65},{type:'flyer',count:3,interval:.58}
+    ]},
+    {wave:12,cue:'Armored ranks slow while Zip mites wrap the opposite bank.',groups:[
+      {type:'armored',count:5,interval:.58},{type:'shield',count:4,interval:.64},{type:'zip',count:6,interval:.32}
+    ]},
+    {wave:13,cue:'Burrowers cross the ford bed beneath armor and air pressure.',groups:[
+      {type:'burrower',count:2,interval:.84,lane:'ground',telegraph:'Burrower · dirt plume before dive'},
+      {type:'armored',count:3,interval:.62},{type:'flyer',count:3,interval:.56}
+    ]},
+    {wave:14,cue:'The ford’s mixed escort returns with a measured shield-and-armor line.',groups:[
+      {type:'healer',count:1,interval:.8,lane:'ground',telegraph:'Moss Tender · healing pulse'},
+      {type:'carrier',count:1,interval:.85,lane:'ground',telegraph:'Shield carrier · ward pulse'},
+      {type:'burrower',count:1,interval:.9,lane:'ground',telegraph:'Burrower · dirt plume before dive'},
+      {type:'shield',count:4,interval:.64},{type:'armored',count:3,interval:.62},{type:'zip',count:2,interval:.34}
+    ]}
+  ],
+  'ridge-switchback':[
+    {wave:10,cue:'A Colossus pins the switchback while air and Zip mites split the approach.',groups:[
+      {type:'boss',count:1,interval:1},{type:'flyer',count:4,interval:.5},{type:'zip',count:8,interval:.27},{type:'shield',count:2,interval:.66}
+    ]},
+    {wave:12,cue:'Fast Zip mites race beneath a short air escort on the narrow ridge.',groups:[
+      {type:'flyer',count:6,interval:.48},{type:'zip',count:8,interval:.27},{type:'shield',count:2,interval:.64}
+    ]},
+    {wave:13,cue:'Burrowers and splitters arrive under a small air screen; track the dirt plume.',groups:[
+      {type:'burrower',count:2,interval:.84,lane:'ground',telegraph:'Burrower · dirt plume before dive'},
+      {type:'flyer',count:2,interval:.56},{type:'splitter',count:1,interval:.72},{type:'zip',count:4,interval:.32}
+    ]},
+    {wave:14,cue:'Healing, shielding and burrowers return with a compact air-and-ground escort.',groups:[
+      {type:'healer',count:1,interval:.8,lane:'ground',telegraph:'Moss Tender · healing pulse'},
+      {type:'carrier',count:1,interval:.85,lane:'ground',telegraph:'Shield carrier · ward pulse'},
+      {type:'burrower',count:1,interval:.9,lane:'ground',telegraph:'Burrower · dirt plume before dive'},
+      {type:'flyer',count:3,interval:.52},{type:'zip',count:4,interval:.32},{type:'shield',count:2,interval:.64},{type:'splitter',count:2,interval:.7}
+    ]}
+  ]
+});
+
+function showcaseArcSchedules(schedules){
+  const updated={...schedules};
+  for(const [mapId,overrides] of Object.entries(SHOWCASE_ARC_OVERRIDES)){
+    let schedule=schedules[mapId];
+    for(const {wave,cue,groups} of overrides)schedule=replaceAuthoredWave(schedule,wave,cue,groups);
+    updated[mapId]=schedule;
+  }
+  return updated;
+}
+
+export const SHOWCASE_ARC_CAMPAIGN_WAVES=Object.freeze(showcaseArcSchedules(AIR_INTRODUCTION_CAMPAIGN_WAVES));
+
 const customWaveSchedules=new Map();
 export function registerCustomWaveSchedules(mapId,schedules){
   if(typeof mapId!=='string'||!/^custom-[a-z][a-z0-9-]{1,31}$/.test(mapId)||!Array.isArray(schedules)||schedules.length!==15)return false;
@@ -277,7 +357,8 @@ export function registerCustomWaveSchedules(mapId,schedules){
 export function waveSchedulesForMap(mapId = 'meadow', version = WAVE_SCHEDULE_VERSION) {
   if(customWaveSchedules.has(mapId))return customWaveSchedules.get(mapId);
   if (version === LEGACY_WAVE_SCHEDULE_VERSION) return AUTHORED_WAVES;
-  const schedules = version >= AIR_INTRODUCTION_SCHEDULE_VERSION ? AIR_INTRODUCTION_CAMPAIGN_WAVES :
+  const schedules = version >= SHOWCASE_ARC_SCHEDULE_VERSION ? SHOWCASE_ARC_CAMPAIGN_WAVES :
+    version >= AIR_INTRODUCTION_SCHEDULE_VERSION ? AIR_INTRODUCTION_CAMPAIGN_WAVES :
     version >= GENTLE_OPENING_SCHEDULE_VERSION ? GENTLE_OPENING_CAMPAIGN_WAVES :
     version >= ARMOR_DEMONSTRATION_SCHEDULE_VERSION ? ARMOR_DEMONSTRATION_CAMPAIGN_WAVES :
     version >= OPENING_DECISION_SCHEDULE_VERSION ? OPENING_DECISION_CAMPAIGN_WAVES :
