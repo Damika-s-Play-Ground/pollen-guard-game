@@ -72,6 +72,8 @@ export function renderResultsScreen(elements, model, document) {
     ? 'You ended the run at a clear checkpoint. Your best wave and run record have been saved.'
     : model.won
     ? 'Your defenders protected the meadow. Here is how the run finished.'
+    : model.lives <= 0
+      ? `Garden health reached zero, so the run has ended.${model.report?.suggestion ? ` Run insight: ${model.report.suggestion}` : ' Try another trail or challenge rule.'}`
     : model.report?.suggestion
       ? `Run insight: ${model.report.suggestion}`
       : 'Your seed pod was overrun. Try another trail or challenge rule.';

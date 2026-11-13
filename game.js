@@ -351,7 +351,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       wave:byId('resultWave'), popped:byId('resultPopped'), petals:byId('resultPetals'), record:byId('resultRecord'),
       debrief:byId('runDebrief'), vignette:byId('resultsVictoryVignette'),continueButton:byId('resultsClose')
     }, {
-      won, retired:runState.basePhase==='retired', wave, popped, petals:Math.floor(cash),motion:uiSettings.animation,
+      won, retired:runState.basePhase==='retired', wave, popped, petals:Math.floor(cash),lives,motion:uiSettings.animation,
       record:buildResultRecord({customMap:Boolean(maps[selectedMap]?.customMap),profileSaved,challengeBoardId,bestWave:profile.bestWave}),
       report:buildRunDebrief(combatPerformance,{mapName:maps[selectedMap].name,challengeLabel:challengeDisplayLabel(),won,retired:runState.basePhase==='retired'})
     }, document);
@@ -376,7 +376,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
         ?` Custom objective met: ${lives} seeds remain (target ${objective.minLives}).`
         :` Custom objective missed: keep ${objective.minLives} seeds through wave 15; ${lives} remain.`;
     }
-    byId('resultsDialog').showModal();transitionRun({type:'DIALOG_OPEN'});
+    byId('resultsDialog').showModal();byId('resultsTitle').focus({preventScroll:true});transitionRun({type:'DIALOG_OPEN'});
   }
   function updateTutorial() {
     renderTutorialStep({
