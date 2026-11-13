@@ -62,21 +62,24 @@ const EXIT_WARNING_GLYPH_STYLE = Object.freeze({ fontWeight:'bold', color:'#fff'
 function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize, style = DEFAULT_ROLE_GLYPH_STYLE) {
   const document = ctx.canvas?.ownerDocument;
   if (!document?.createElement) { ctx.fillText(glyph, x, y); return; }
-  let sprites = enemyRoleGlyphSprites.get(document);
-  if (!sprites) { sprites = new Map(); enemyRoleGlyphSprites.set(document, sprites); }
-  const fontWeight = style.fontWeight || '';
-  const color = style.color || '#fff8df';
-  const key = `${fontWeight}:${fontSize}:${color}:${glyph}`;
-  let sprite = sprites.get(key);
+  let styles = enemyRoleGlyphSprites.get(document);
+  if (!styles) { styles = new Map(); enemyRoleGlyphSprites.set(document, styles); }
+  let sizes = styles.get(style);
+  if (!sizes) { sizes = new Map(); styles.set(style, sizes); }
+  let sprites = sizes.get(fontSize);
+  if (!sprites) { sprites = new Map(); sizes.set(fontSize, sprites); }
+  let sprite = sprites.get(glyph);
   if (!sprite) {
     sprite = document.createElement('canvas');
     sprite.width = 32; sprite.height = 32;
     const spriteContext = sprite.getContext('2d');
     if (!spriteContext) { ctx.fillText(glyph, x, y); return; }
+    const fontWeight = style.fontWeight || '';
+    const color = style.color || '#fff8df';
     spriteContext.font = `${fontWeight ? `${fontWeight} ` : ''}${fontSize}px sans-serif`;
     spriteContext.textAlign = 'center'; spriteContext.textBaseline = 'middle'; spriteContext.fillStyle = color;
     spriteContext.fillText(glyph, 16, 16);
-    sprites.set(key, sprite);
+    sprites.set(glyph, sprite);
   }
   ctx.drawImage(sprite, x - 16, y - 16);
 }

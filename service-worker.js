@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'pollen-guard-shell-';
-const APP_VERSION = 'adae4b63c8a6';
+const APP_VERSION = '06231d96cd08';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const MANIFEST = './offline-assets.json';
 const scopeUrl = new URL(self.registration.scope);
