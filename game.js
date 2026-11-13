@@ -1273,6 +1273,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function draw(renderAlpha=1) {
     const visualNow=performance.now()/1000;
+    renderVisualNow=visualNow;
     criticalWarningActive=renderBossWarnings(byId('bossWarnings'),enemies,bossChoreoCues,gameTime);
     syncGuidanceVisibility(criticalWarningActive);
     for(const [id,launch] of towerRecoilAt)if(gameTime-launch.time>.1)towerRecoilAt.delete(id);
@@ -1288,29 +1289,14 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const healerLinks=[...healerPulses.values()].map(pulse=>{const healer=enemies.find(enemy=>enemy.id===pulse.healerId),target=enemies.find(enemy=>enemy.id===pulse.targetId);if(!healer||!target)return null;const age=gameTime-pulse.time;return{from:renderSnapshots.enemyPosition(healer,routeGeometry.pathFor,renderAlpha),to:renderSnapshots.enemyPosition(target,routeGeometry.pathFor,renderAlpha),amount:pulse.amount,progress:Math.min(1,age/.45),alpha:Math.max(.25,1-age/.5),targetId:target.id};}).filter(Boolean);
     const liveAbilityPreview=abilityPreview&&selectedTower?.id===abilityPreview.towerId?{...abilityPreview,targetIds:towerAbilityTargets(selectedTower,enemies,towersDef[selectedTower.type],enemyPosition).map(enemy=>enemy.id)}:null;
     const targetId=getSelectedTargetId();
-    drawBattlefield(ctx,{
-      width:canvas.width,height:canvas.height,displayScale:canvasDisplayScale,map:maps[selectedMap],path,pathLength,
-      gateRoutePreviews:!runIsActivelyRunning()&&!enemies.length&&!spawnQueue.length&&maps[selectedMap].gateRoutes?Object.entries(maps[selectedMap].gateRoutes).map(([id,route])=>({id,label:route.label,path:route.path})):null,selectedGateRoute:gateRoute,
-      airPath:distinctAirRoutePath(routeGeometry),showAirRoute:Boolean(uiSettings.showAirRoute||airRoutePreviewed||enemies.some(enemy=>enemy.flying)||(selectedTower&&towersDef[selectedTower.type]?.antiAir)),
-      towers,selectedTower,towersDef,towersLinked,
-      selectedTowerRange(tower){const def=towersDef[tower.type];if(def.supportStructure)return getEffectiveTowerStats(tower,{researchLoadout,relicLoadout},def).range; if(!def.range)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));return getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def).range;},
-      placementPreviewRange,abilityPreview:liveAbilityPreview,
-      placementComboPreviews(type,point){return previewTowerCombinations({id:'placement-preview',type,x:point.x,y:point.y},towers,towersLinked);},
-      enemies,enemyPosition:(enemy,_alpha,output)=>renderSnapshots.enemyPosition(enemy,routeGeometry.pathFor,renderAlpha,output),shots,shotPosition:(_shot,_alpha,output)=>renderSnapshots.shotPosition(_shot,renderAlpha,output),
-      shotAngle(shot,alpha,from,targetPoint){from||=renderSnapshots.shotPosition(shot,alpha);const target=shot.target;if(!target)return 0;const point=renderSnapshots.enemyPosition(target,routeGeometry.pathFor,alpha,targetPoint);return Math.atan2(point.y-(target.flying?target.radius*.85:0)-from.y,point.x-from.x);},particles:renderParticles,selectedType,pointer,
-      placementError,palette:uiSettings.palette,highContrastEnemyColors,selectedTargetId:targetId,
-      visualTime:uiSettings.animation==='full'?gameTime:0,enemyHitFlash:enemy=>renderSnapshots.hitFlash(enemy.id),
-      impactCausalityForEnemy:enemy=>{const cue=impactCausalityCues.get(enemy.id);if(!cue||uiSettings.animation==='off')return null;const age=gameTime-cue.time;return age<0||age>=.32?null:{from:cue.from,color:cue.color,alpha:1-age/.32};},
-      recoilForTower:id=>shotRecoil(uiSettings.animation,gameTime,towerRecoilAt.get(id)?.time),
-      attackCueForTower:tower=>{if(uiSettings.animation!=='full'||tower.cooldown<=0||tower.cooldown>ATTACK_ANTICIPATION_SECONDS)return null;const def=towersDef[tower.type];if(!def||def.income||def.supportStructure)return null;const linked=towers.some(other=>other!==tower&&towersLinked(tower,other)),stats=getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def),candidates=enemies.filter(enemy=>canTowerHitTarget({tower,target:enemy,range:stats.range,canHitAir:def.antiAir,positionOf:enemyPosition})),target=chooseTargetForTower(tower,candidates,enemyPosition);return target?attackAnticipation(uiSettings.animation,tower,enemyPosition(target)) : null;},
-      plantingForTower:id=>plantingSettle(uiSettings.animation,visualNow,towerPlantingAt.get(id)),
-      armorFeedbackForEnemy:enemy=>activeArmorFeedback(armorImpactCues.get(enemy.id),gameTime),
-      healerLinks,healerFeedbackForEnemy:enemy=>{const pulse=healerPulses.get(enemy.id);return pulse?{amount:pulse.amount,alpha:Math.max(.25,1-(gameTime-pulse.time)/.5)}:null;},
-      burrowEmergenceForEnemy:enemy=>{const time=burrowEmergenceCues.get(enemy.id);return time===undefined?null:{alpha:Math.max(.25,1-(gameTime-time)/.5)};},
-      bossChoreoForEnemy:enemy=>{const cue=bossChoreoCues.get(enemy.id);if(enemy.bossRushTimer>0)return{kind:'danger',alpha:1};if(!cue)return null;const age=gameTime-cue.time;if(age>=.9)return null;return{kind:cue.kind==='danger'&&age<.35?'danger':'recovery',alpha:Math.max(.3,1-age/.9)};},
-      guardian,guardianMoveActive,guardianCursor:pointer,seedObjective,
-      recoilAngleForTower:id=>towerRecoilAt.get(id)?.angle
-    },renderAlpha,staticMapCache);drawSpellOverlay();drawMapMagnifier();
+    const renderState=battlefieldRenderState;
+    renderState.width=canvas.width;renderState.height=canvas.height;renderState.displayScale=canvasDisplayScale;renderState.map=maps[selectedMap];renderState.path=path;renderState.pathLength=pathLength;
+    renderState.gateRoutePreviews=!runIsActivelyRunning()&&!enemies.length&&!spawnQueue.length&&maps[selectedMap].gateRoutes?Object.entries(maps[selectedMap].gateRoutes).map(([id,route])=>({id,label:route.label,path:route.path})):null;renderState.selectedGateRoute=gateRoute;
+    renderState.airPath=distinctAirRoutePath(routeGeometry);renderState.showAirRoute=Boolean(uiSettings.showAirRoute||airRoutePreviewed||enemies.some(enemy=>enemy.flying)||(selectedTower&&towersDef[selectedTower.type]?.antiAir));
+    renderState.towers=towers;renderState.selectedTower=selectedTower;renderState.towersDef=towersDef;renderState.towersLinked=towersLinked;renderState.placementPreviewRange=placementPreviewRange;renderState.abilityPreview=liveAbilityPreview;renderState.enemies=enemies;
+    renderState.shots=shots;renderState.particles=renderParticles;renderState.selectedType=selectedType;renderState.pointer=pointer;renderState.placementError=placementError;renderState.palette=uiSettings.palette;renderState.highContrastEnemyColors=highContrastEnemyColors;renderState.selectedTargetId=targetId;
+    renderState.visualTime=uiSettings.animation==='full'?gameTime:0;renderState.healerLinks=healerLinks;renderState.guardian=guardian;renderState.guardianMoveActive=guardianMoveActive;renderState.guardianCursor=pointer;renderState.seedObjective=seedObjective;
+    drawBattlefield(ctx,renderState,renderAlpha,staticMapCache);drawSpellOverlay();drawMapMagnifier();
   }
   function getSelectedTargetId() {
     if(!selectedTower)return null;
@@ -1354,6 +1340,59 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     updateHud();renderAchievements();setToast(retired?'Endless run retired; your checkpoint has been banked.':customMap?'Custom-map play does not award campaign progression or challenge scores.':profileSaved?(won?'Meadow saved!':combatPerformance.leaks.total?`Run ended after ${combatPerformance.leaks.total} leak${combatPerformance.leaks.total===1?'':'s'}; your best wave has been saved.`:'Run ended. Your best wave has been saved.'):'Run completed, but local progress could not be saved. Free browser storage and try again.');if(!historySaved)byId('runHistory').textContent='Run history could not be saved on this device; existing records are unchanged.';playCue(won?'victory':'defeat');showResults(won,masteryResult,{profileSaved});
   }
   let gameTime=0;
+  let renderVisualNow=0;
+  const battlefieldRenderState={
+    selectedTowerRange(tower){
+      const def=towersDef[tower.type];
+      if(def.supportStructure)return getEffectiveTowerStats(tower,{researchLoadout,relicLoadout},def).range;
+      if(!def.range)return null;
+      const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));
+      return getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def).range;
+    },
+    placementComboPreviews(type,point){return previewTowerCombinations({id:'placement-preview',type,x:point.x,y:point.y},towers,towersLinked);},
+    enemyPosition(enemy,alpha,output){return renderSnapshots.enemyPosition(enemy,routeGeometry.pathFor,alpha,output);},
+    shotPosition(shot,alpha,output){return renderSnapshots.shotPosition(shot,alpha,output);},
+    shotAngle(shot,alpha,from,targetPoint){
+      from||=renderSnapshots.shotPosition(shot,alpha);
+      const target=shot.target;if(!target)return 0;
+      const point=renderSnapshots.enemyPosition(target,routeGeometry.pathFor,alpha,targetPoint);
+      return Math.atan2(point.y-(target.flying?target.radius*.85:0)-from.y,point.x-from.x);
+    },
+    enemyHitFlash(enemy){return renderSnapshots.hitFlash(enemy.id);},
+    impactCausalityForEnemy(enemy){
+      const cue=impactCausalityCues.get(enemy.id);if(!cue||uiSettings.animation==='off')return null;
+      const age=gameTime-cue.time;
+      return age<0||age>=.32?null:{from:cue.from,color:cue.color,alpha:1-age/.32};
+    },
+    recoilForTower(id){return shotRecoil(uiSettings.animation,gameTime,towerRecoilAt.get(id)?.time);},
+    attackCueForTower(tower){
+      if(uiSettings.animation!=='full'||tower.cooldown<=0||tower.cooldown>ATTACK_ANTICIPATION_SECONDS)return null;
+      const def=towersDef[tower.type];if(!def||def.income||def.supportStructure)return null;
+      const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));
+      const stats=getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def);
+      const candidates=enemies.filter(enemy=>canTowerHitTarget({tower,target:enemy,range:stats.range,canHitAir:def.antiAir,positionOf:enemyPosition}));
+      const target=chooseTargetForTower(tower,candidates,enemyPosition);
+      return target?attackAnticipation(uiSettings.animation,tower,enemyPosition(target)):null;
+    },
+    plantingForTower(id){return plantingSettle(uiSettings.animation,renderVisualNow,towerPlantingAt.get(id));},
+    armorFeedbackForEnemy(enemy){return activeArmorFeedback(armorImpactCues.get(enemy.id),gameTime);},
+    healerFeedbackForEnemy(enemy){
+      const pulse=healerPulses.get(enemy.id);
+      return pulse?{amount:pulse.amount,alpha:Math.max(.25,1-(gameTime-pulse.time)/.5)}:null;
+    },
+    burrowEmergenceForEnemy(enemy){
+      const time=burrowEmergenceCues.get(enemy.id);
+      return time===undefined?null:{alpha:Math.max(.25,1-(gameTime-time)/.5)};
+    },
+    bossChoreoForEnemy(enemy){
+      const cue=bossChoreoCues.get(enemy.id);
+      if(enemy.bossRushTimer>0)return{kind:'danger',alpha:1};
+      if(!cue)return null;
+      const age=gameTime-cue.time;if(age>=.9)return null;
+      return{kind:cue.kind==='danger'&&age<.35?'danger':'recovery',alpha:Math.max(.3,1-age/.9)};
+    },
+    recoilAngleForTower(id){return towerRecoilAt.get(id)?.angle;}
+  };
   let initialBattleFrameRendered=false;
   const gameLoop=createGameLoop({
     requestFrame:callback=>requestAnimationFrame(callback),
