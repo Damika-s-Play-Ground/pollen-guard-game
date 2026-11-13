@@ -100,6 +100,7 @@ import { closeMissionPreparation, missionChangeNeedsConfirmation } from './src/m
 import { aimedSpellTargets, buildSpellPreview, DEFAULT_SPELL_LOADOUT, normalizeSpellLoadout, rejuvenationTargets, SPELLS } from './src/spells.js';
 import { previewTowerCombinations } from './src/tower-combinations.js';
 import { visibleSpellIdsForRun } from './src/starter-abilities.js';
+import { updateSpellTargetAvailability } from './src/spell-target-availability.js';
 import { terrainBonusForTower, terrainZoneAt } from './src/terrain.js';
 import { advanceDroppedSeeds, createSeedObjective, SEED_RECOVERY_RULE, seedObjectiveResultText, seedObjectiveTally } from './src/seed-objective.js';
 import { describeLeakFeedback } from './src/leak-feedback.js';
@@ -268,6 +269,13 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const resumedFirstActionCoach=firstActionCoachProgress(uiSettings.firstActionCoachPhase);
   let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', specialistCounterTypes=[], tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, firstActionCoachPlaced=resumedFirstActionCoach.placed, firstActionCoachLaunched=resumedFirstActionCoach.launched, firstActionCoachPhase=resumedFirstActionCoach.phase, tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
   const aimedSpellControls=new Map();
+  const fixedSpellControls=['bloom','snare'].map(spellId=>{
+    const button=byId(spellId==='bloom'?'bloomBtn':'snareBtn');
+    const preview=buildSpellPreview(spellId);
+    return {spellId,card:button.closest('.ability-card'),status:byId(`${spellId}Status`),statusText:`${preview.range} · ${preview.area} · ${preview.duration} · ${preview.cost}`};
+  });
+  const spellGroundTargetQuery=Object.freeze({canHitAir:false}),spellAirTargetQuery=Object.freeze({canHitAir:true});
+  const spellTargetAvailability={groundEnemy:false,airCapableEnemy:false,attackingDefender:false};
   let runState=createRunState();
   let wakeGameLoop=()=>{};
   let combatPerformance=createCombatPerformance();
@@ -856,22 +864,27 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function refreshSpellControls(){
     const visibleSpells=visibleSpellIds();
-    for(const spellId of ['bloom','snare']){
-      const button=byId(spellId==='bloom'?'bloomBtn':'snareBtn');button.closest('.ability-card').hidden=!visibleSpells.includes(spellId);
-      const preview=buildSpellPreview(spellId),status=byId(spellId==='bloom'?'bloomStatus':'snareStatus');
-      status.textContent=`${preview.range} · ${preview.area} · ${preview.duration} · ${preview.cost}`;
+    for(let index=0;index<fixedSpellControls.length;index++){
+      const control=fixedSpellControls[index],hidden=!visibleSpells.includes(control.spellId);
+      if(control.card.hidden!==hidden)control.card.hidden=hidden;
+      if(control.status.textContent!==control.statusText)control.status.textContent=control.statusText;
     }
+    updateSpellTargetAvailability(enemies,towers,towersDef,canHitTarget,spellGroundTargetQuery,spellAirTargetQuery,spellTargetAvailability);
     for(const [spellId,control] of aimedSpellControls){
-      control.card.classList.toggle('aiming',aimedSpellId===spellId);
-      const eligibleEnemy=spellId==='rootTrap'?enemies.some(enemy=>canHitTarget({canHitAir:false},enemy)):enemies.some(enemy=>canHitTarget({canHitAir:true},enemy));
-      const eligibleDefender=towers.some(tower=>!towersDef[tower.type].supportStructure);
-      const equipped=visibleSpells.includes(spellId),hasTarget=spellId==='rejuvenation'?eligibleDefender:eligibleEnemy;
+      const aiming=aimedSpellId===spellId;
+      if(control.card.classList.contains('aiming')!==aiming)control.card.classList.toggle('aiming',aiming);
+      const equipped=visibleSpells.includes(spellId);
+      const hasTarget=spellId==='rejuvenation'?spellTargetAvailability.attackingDefender:spellId==='rootTrap'?spellTargetAvailability.groundEnemy:spellTargetAvailability.airCapableEnemy;
       const ready=runIsActivelyRunning()&&!runIsOver()&&cash>=SPELLS[spellId].cost&&hasTarget;
-      control.card.hidden=!equipped;control.button.disabled=!ready;
-      control.button.setAttribute('aria-pressed',String(aimedSpellId===spellId));control.cancel.hidden=aimedSpellId!==spellId;
-      control.small.textContent=aimedSpellId===spellId?(spellId==='lineGust'&&spellTargetStart?'Choose the gust endpoint; Escape cancels.':'Aim on the battlefield; Escape cancels.'):
+      const hidden=!equipped,disabled=!ready,cancelHidden=!aiming,pressed=String(aiming);
+      if(control.card.hidden!==hidden)control.card.hidden=hidden;
+      if(control.button.disabled!==disabled)control.button.disabled=disabled;
+      if(control.button.getAttribute('aria-pressed')!==pressed)control.button.setAttribute('aria-pressed',pressed);
+      if(control.cancel.hidden!==cancelHidden)control.cancel.hidden=cancelHidden;
+      const statusText=aiming?(spellId==='lineGust'&&spellTargetStart?'Choose the gust endpoint; Escape cancels.':'Aim on the battlefield; Escape cancels.'):
         !hasTarget?(spellId==='rejuvenation'?'Place an attacking defender before casting.':'Wait for a valid pest to reach the trail.'):
         `${control.preview.range} · ${control.preview.area} · ${control.preview.duration} · ${control.preview.cost}`;
+      if(control.small.textContent!==statusText)control.small.textContent=statusText;
     }
   }
   function renderTowerOptions() {

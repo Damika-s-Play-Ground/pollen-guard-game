@@ -112,6 +112,7 @@
   "./src/settings-controller.js",
   "./src/settings-ui.js",
   "./src/simulation-speed.js",
+  "./src/spell-target-availability.js",
   "./src/spells.js",
   "./src/starter-abilities.js",
   "./src/starter-shop.css",
