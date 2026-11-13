@@ -23,6 +23,11 @@ const enemyRoleGlyphSprites = new WeakMap();
 // instead of allocating one short-lived object per enemy on every render.
 const enemyVisualScratch = [];
 const shotVisualScratch = [];
+// Battlefield draws are synchronous; these frame workspaces are consumed before reuse.
+const firingShotByTowerScratch = new Map();
+const bossWarningBoxScratch = [];
+const bossWarningScratch = [];
+const terrainLabelBoxScratch = [];
 const DEFAULT_ROLE_GLYPH_STYLE = Object.freeze({});
 const EXIT_WARNING_GLYPH_STYLE = Object.freeze({ fontWeight:'bold', color:'#fff' });
 
@@ -587,7 +592,8 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     drawAirCoverage(ctx,airPath,selectedTower,selectedTowerRange(selectedTower),displayScale);
   }
 
-  const firingByTower = new Map();
+  const firingByTower = firingShotByTowerScratch;
+  firingByTower.clear();
   for (const shot of shots) if (shot.sourceTowerId != null && !firingByTower.has(shot.sourceTowerId)) firingByTower.set(shot.sourceTowerId, shot);
   const linkScale = Number.isFinite(displayScale) && displayScale > 0 ? displayScale : 1;
   for (let i = 0; i < towers.length; i++) for (let j = i + 1; j < towers.length; j++) {
@@ -720,15 +726,22 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   }
   ctx.globalAlpha = 1;
   // Keep threat information readable even when volleys and impact particles cross the enemy.
-  const bossWarningBoxes = [];
-  const bossWarnings = [];
-  const terrainLabelBoxes = (TERRAIN_ZONES[map.biome]||[]).map(zone=>{
+  const bossWarningBoxes = bossWarningBoxScratch;
+  bossWarningBoxes.length = 0;
+  const bossWarnings = bossWarningScratch;
+  bossWarnings.length = 0;
+  const terrainZones = TERRAIN_ZONES[map.biome]||[];
+  const terrainLabelBoxes = terrainLabelBoxScratch;
+  terrainLabelBoxes.length = terrainZones.length;
+  for(let index=0;index<terrainZones.length;index++){
+    const zone=terrainZones[index];
     const terrainScale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
     const label=TERRAIN_TYPES[zone.type].label,fontSize=Math.max(9,10/terrainScale);
     const labelY=zone.y+zone.radius*(terrainScale<.7&&zone.type==='waterEdge'?-2.2:terrainScale<.7?.82:.58);
     const labelWidth=label.length*fontSize*.62+10,labelHeight=fontSize+6;
-    return {left:zone.x-labelWidth/2,right:zone.x+labelWidth/2,top:labelY-labelHeight/2,bottom:labelY+labelHeight/2};
-  });
+    const box=terrainLabelBoxes[index]||(terrainLabelBoxes[index]={left:0,right:0,top:0,bottom:0});
+    box.left=zone.x-labelWidth/2;box.right=zone.x+labelWidth/2;box.top=labelY-labelHeight/2;box.bottom=labelY+labelHeight/2;
+  }
   const cueStackRanks = renderEnemyCueStackRanks(enemyVisuals);
   for(let index=0;index<enemies.length;index++){
     const enemy=enemies[index],cueCenter=enemyVisuals[index],point=cueCenter.point,bodyY=cueCenter.y,radius=cueCenter.radius;
