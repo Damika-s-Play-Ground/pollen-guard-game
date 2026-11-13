@@ -27,7 +27,12 @@ const shotVisualScratch = [];
 const firingShotByTowerScratch = new Map();
 const bossWarningBoxScratch = [];
 const bossWarningScratch = [];
+const bossWarningCandidateScratch = [];
+const bossWarningCandidatePool = [];
 const terrainLabelBoxScratch = [];
+const towerArtOptionsScratch = [];
+const placementTowerArtOptionsScratch = {level:1,branch:null,color:'#79b85b',scale:1,scaleX:.82,scaleY:.82,displayScale:1};
+function compareBossWarningCandidates(a,b) { return a.score-b.score; }
 const DEFAULT_ROLE_GLYPH_STYLE = Object.freeze({});
 const EXIT_WARNING_GLYPH_STYLE = Object.freeze({ fontWeight:'bold', color:'#fff' });
 
@@ -605,7 +610,8 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     ctx.lineWidth = style ? Math.max(2, 2.5 / linkScale) : 2;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
   }
-  towers.forEach(tower => {
+  for(let towerIndex=0;towerIndex<towers.length;towerIndex++){
+    const tower=towers[towerIndex];
     const def = towersDef[tower.type], isSelected = tower === selectedTower;
     const range = isSelected ? selectedTowerRange(tower) : null;
     let artX=tower.x,artY=tower.y;
@@ -616,7 +622,10 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const attackCue=attackCueForTower(tower);
     if(planting?.outlineAlpha>0){ctx.beginPath();ctx.arc(tower.x,tower.y,22,0,Math.PI*2);ctx.strokeStyle=`rgba(230,255,187,${planting.outlineAlpha})`;ctx.lineWidth=2.4;ctx.stroke();}
     if (range) { ctx.beginPath(); ctx.arc(tower.x, tower.y, range, 0, Math.PI * 2); ctx.fillStyle = '#efffc31b'; ctx.fill(); ctx.strokeStyle = '#f1ffd588'; ctx.lineWidth = 1.3; ctx.stroke(); }
-    drawTowerArt(ctx, tower.type, artX, artY+(planting?.offsetY||0), { level: tower.level, branch: tower.branch ?? tower.branchChoice, color: def.color, scaleX:planting?.scaleX??1, scaleY:planting?.scaleY??1, displayScale });
+    const artOptions=towerArtOptionsScratch[towerIndex]||(towerArtOptionsScratch[towerIndex]={});
+    artOptions.level=tower.level;artOptions.branch=tower.branch??tower.branchChoice;artOptions.color=def.color;artOptions.scale=1;
+    artOptions.scaleX=planting?.scaleX??1;artOptions.scaleY=planting?.scaleY??1;artOptions.displayScale=displayScale;
+    drawTowerArt(ctx, tower.type, artX, artY+(planting?.offsetY||0), artOptions);
     if(attackCue&&Number.isFinite(attackCue.angle)&&attackCue.strength>0){
       const angle=attackCue.angle,cos=Math.cos(angle),sin=Math.sin(angle),start=tower.radius??18,end=start+18,tipX=tower.x+cos*end,tipY=tower.y+sin*end,backX=tower.x+cos*(end-5),backY=tower.y+sin*(end-5),wingX=-sin*4,wingY=cos*4;
       ctx.save();ctx.globalAlpha=Math.min(1,.5+attackCue.strength*.5);ctx.lineCap='round';ctx.lineJoin='round';
@@ -625,15 +634,20 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     }
     if (isSelected) { ctx.beginPath(); ctx.arc(tower.x, tower.y, 20, 0, Math.PI * 2); ctx.setLineDash([2, 3]); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]); }
     if (tower.level > 1) { ctx.fillStyle = '#ffe28b'; ctx.beginPath(); ctx.arc(tower.x + 11, tower.y - 11, 6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#493e20'; ctx.font = '8px DM Mono, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tower.level, tower.x + 11, tower.y - 10); }
-  });
+  }
   if (abilityPreview) {
-    const tower = towers.find(item => item.id === abilityPreview.towerId);
+    let tower=null;
+    for(let towerIndex=0;towerIndex<towers.length;towerIndex++)if(towers[towerIndex].id===abilityPreview.towerId){tower=towers[towerIndex];break;}
     if (tower) {
       ctx.beginPath(); ctx.arc(tower.x, tower.y, abilityPreview.radius, 0, Math.PI * 2);
       ctx.fillStyle = '#ffe18a20'; ctx.fill(); ctx.setLineDash([7, 5]); ctx.strokeStyle = '#fff0a9'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
     }
   }
-  healerLinks.forEach(link=>{if(!link?.from||!link?.to)return;ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);ctx.setLineDash([6/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash([]);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();});
+  for(let linkIndex=0;linkIndex<healerLinks.length;linkIndex++){
+    const link=healerLinks[linkIndex];
+    if(!link?.from||!link?.to)continue;
+    ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);ctx.setLineDash([6/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash([]);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
   // Threat silhouettes follow projectiles and particles; health and warning overlays follow the bodies.
   const shotVisuals=shotVisualScratch;
   shotVisuals.length=shots.length;
@@ -645,7 +659,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const angle=shotAngle(shot,renderAlpha,visual.point,visual.targetPoint);
     drawProjectile(ctx,shot,visual.point,angle,displayScale);
   }
-  particles.forEach(particle=>drawCosmeticParticle(ctx,particle,displayScale));
+  for(let particleIndex=0;particleIndex<particles.length;particleIndex++)drawCosmeticParticle(ctx,particles[particleIndex],displayScale);
   const enemyVisuals = enemyVisualScratch;
   enemyVisuals.length = enemies.length;
   for (let index = 0; index < enemies.length; index++) {
@@ -663,7 +677,8 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     visual.y = visual.point.y - (enemy.flying ? visual.silhouette.radius * .85 : visual.silhouette.float);
     visual.rawY = visual.point.y;
   }
-  enemyVisuals.forEach(({enemy,point,silhouette}) => {
+  for(let visualIndex=0;visualIndex<enemyVisuals.length;visualIndex++){
+    const {enemy,point,silhouette}=enemyVisuals[visualIndex];
     const altitude=enemy.flying?silhouette.radius*.85:silhouette.float,bodyY=point.y-altitude;
     const causality=impactCausalityForEnemy(enemy);
     if(causality?.from&&causality.alpha>0){ctx.save();ctx.globalAlpha=Math.min(1,causality.alpha)*.55;ctx.strokeStyle=causality.color||'#fff0a8';ctx.lineWidth=Math.max(1.5,2/enemyStrokeScale);ctx.setLineDash([5/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(causality.from.x,causality.from.y);ctx.lineTo(point.x,bodyY);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=Math.min(1,causality.alpha);ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+7,0,Math.PI*2);ctx.stroke();ctx.restore();}
@@ -705,10 +720,16 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const burrowEmergence=enemy.type==='burrower'&&enemy.burrowTimer<=0?burrowEmergenceForEnemy(enemy):null;
     if(burrowEmergence){ctx.save();ctx.globalAlpha=burrowEmergence.alpha??1;ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+11,0,Math.PI*2);ctx.strokeStyle='#e9cf82';ctx.lineWidth=Math.max(2.2,2.4/enemyStrokeScale);ctx.stroke();ctx.fillStyle='#fff0ae';ctx.font=`bold ${Math.max(8,9/enemyStrokeScale)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('SURFACED',point.x,bodyY+silhouette.radius+13/enemyStrokeScale);ctx.restore();}
     if(enemy.carryingSeedId!==null&&enemy.carryingSeedId!==undefined){ctx.fillStyle='#fff1a0';ctx.font='bold 13px sans-serif';ctx.fillText('✦',point.x+enemy.radius*.75,bodyY-enemy.radius*.8);}
-  });
+  }
   // Ability target markers must sit above enemy silhouettes, like selected-target markers.
-  if(abilityPreview&&towers.some(tower=>tower.id===abilityPreview.towerId)){
-    enemies.forEach(enemy=>{if(abilityPreview.targetIds&&!abilityPreview.targetIds.includes(enemy.id))return;const point=enemyPosition(enemy,renderAlpha);ctx.beginPath();ctx.arc(point.x,point.y,enemy.radius+7,0,Math.PI*2);ctx.fillStyle='#ffe18a44';ctx.fill();ctx.strokeStyle='#fff7c9';ctx.lineWidth=2.5;ctx.stroke();});
+  let abilityTowerExists=false;
+  if(abilityPreview)for(let towerIndex=0;towerIndex<towers.length;towerIndex++)if(towers[towerIndex].id===abilityPreview.towerId){abilityTowerExists=true;break;}
+  if(abilityPreview&&abilityTowerExists){
+    for(let enemyIndex=0;enemyIndex<enemies.length;enemyIndex++){
+      const enemy=enemies[enemyIndex];
+      if(abilityPreview.targetIds&&!abilityPreview.targetIds.includes(enemy.id))continue;
+      const point=enemyPosition(enemy,renderAlpha);ctx.beginPath();ctx.arc(point.x,point.y,enemy.radius+7,0,Math.PI*2);ctx.fillStyle='#ffe18a44';ctx.fill();ctx.strokeStyle='#fff7c9';ctx.lineWidth=2.5;ctx.stroke();
+    }
   }
   if (guardian) {
     if (guardianMoveActive && guardian.downTimer <= 0) {
@@ -768,26 +789,40 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
       const name = enemy.bossName || 'Bramble boss', labelWidth = Math.min(240*warningScale, Math.max(ctx.measureText(name).width, ctx.measureText(enemy.bossTelegraph).width) + 12*warningScale);
       const preferredX = Math.max(labelWidth / 2 + warningGap, Math.min(width - labelWidth / 2 - warningGap, point.x));
       const preferredTop = Math.max(warningGap, bodyY - radius - 41*warningScale);
-      const overlaps = (x,top) => {
-        const warningCollision=bossWarningBoxes.some(box=>Math.abs(box.x-x)<(box.width+labelWidth)/2+warningGap&&Math.abs(box.top-top)<warningHeight+warningGap);
-        const left=x-labelWidth/2-warningGap/2,right=x+labelWidth/2+warningGap/2,bottom=top+warningHeight;
-        const terrainCollision=terrainLabelBoxes.some(box=>left<box.right+warningGap&&right>box.left-warningGap&&top<box.bottom+warningGap&&bottom>box.top-warningGap);
-        const threatCollision=enemyVisuals.some(center=>{
-          const nearestX=Math.max(left,Math.min(right,center.x)),nearestY=Math.max(top,Math.min(bottom,center.y));
-          const dx=center.x-nearestX,dy=center.y-nearestY,radius=center.overlapRadius+3*warningScale;
-          return dx*dx+dy*dy<radius*radius;
-        });
-        return warningCollision||terrainCollision||threatCollision;
-      };
-      const candidates=[];
+      const candidates=bossWarningCandidateScratch;
+      candidates.length=0;
+      let candidateCount=0;
       for(let column=-4;column<=4;column++)for(let row=-Math.ceil(height/(warningHeight+warningGap));row<=Math.ceil(height/(warningHeight+warningGap));row++){
         const x=preferredX+column*(labelWidth+2*warningGap),top=preferredTop+row*(warningHeight+warningGap);
-        if(x>=labelWidth/2+warningGap&&x<=width-labelWidth/2-warningGap&&top>=warningGap&&top<=height-warningHeight-warningGap)
-          candidates.push({x,top,score:(x-preferredX)**2+(top-preferredTop)**2});
+        if(x>=labelWidth/2+warningGap&&x<=width-labelWidth/2-warningGap&&top>=warningGap&&top<=height-warningHeight-warningGap){
+          const candidate=bossWarningCandidatePool[candidateCount]||(bossWarningCandidatePool[candidateCount]={x:0,top:0,score:0});
+          candidate.x=x;candidate.top=top;candidate.score=(x-preferredX)**2+(top-preferredTop)**2;
+          candidates.push(candidate);candidateCount++;
+        }
       }
-      candidates.sort((a,b)=>a.score-b.score);
-      const placement=candidates.find(candidate=>!overlaps(candidate.x,candidate.top))||{x:preferredX,top:preferredTop};
-      const {x:labelX,top:labelTop}=placement;
+      candidates.sort(compareBossWarningCandidates);
+      let labelX=preferredX,labelTop=preferredTop;
+      for(let candidateIndex=0;candidateIndex<candidates.length;candidateIndex++){
+        const candidate=candidates[candidateIndex],x=candidate.x,top=candidate.top;
+        let collides=false;
+        for(let warningIndex=0;warningIndex<bossWarningBoxes.length;warningIndex++){
+          const box=bossWarningBoxes[warningIndex];
+          if(Math.abs(box.x-x)<(box.width+labelWidth)/2+warningGap&&Math.abs(box.top-top)<warningHeight+warningGap){collides=true;break;}
+        }
+        if(collides)continue;
+        const left=x-labelWidth/2-warningGap/2,right=x+labelWidth/2+warningGap/2,bottom=top+warningHeight;
+        for(let terrainIndex=0;terrainIndex<terrainLabelBoxes.length;terrainIndex++){
+          const box=terrainLabelBoxes[terrainIndex];
+          if(left<box.right+warningGap&&right>box.left-warningGap&&top<box.bottom+warningGap&&bottom>box.top-warningGap){collides=true;break;}
+        }
+        if(collides)continue;
+        for(let centerIndex=0;centerIndex<enemyVisuals.length;centerIndex++){
+          const center=enemyVisuals[centerIndex],nearestX=Math.max(left,Math.min(right,center.x)),nearestY=Math.max(top,Math.min(bottom,center.y));
+          const dx=center.x-nearestX,dy=center.y-nearestY,threatRadius=center.overlapRadius+3*warningScale;
+          if(dx*dx+dy*dy<threatRadius*threatRadius){collides=true;break;}
+        }
+        if(!collides){labelX=x;labelTop=top;break;}
+      }
       bossWarningBoxes.push({x:labelX,top:labelTop,width:labelWidth});
       bossWarnings.push({ x:point.x, bodyY, radius, labelX, labelTop, labelWidth, name, cue:enemy.bossTelegraph });
     }
@@ -801,28 +836,38 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if(groundSegments.length){ctx.beginPath();for(const segment of groundSegments){ctx.moveTo(segment.x1,segment.y1);ctx.lineTo(segment.x2,segment.y2);}ctx.strokeStyle='#f8ffe6';ctx.lineWidth=Math.max(3,5/(displayScale||1));ctx.setLineDash([]);ctx.stroke();}
     if(def.antiAir&&airPath)drawAirCoverage(ctx,airPath,pointer,range,displayScale);
     ctx.save();ctx.strokeStyle='#fff3a6';ctx.lineWidth=2;ctx.setLineDash([3,2]);
-    enemies.filter(enemy=>canTowerHitTarget({tower:pointer,target:enemy,range,canHitAir:Boolean(def.antiAir),positionOf:enemyPosition})).forEach(enemy=>{const target=enemyPosition(enemy);ctx.beginPath();ctx.arc(target.x,target.y,enemy.radius+4,0,Math.PI*2);ctx.stroke();});ctx.restore();
-    (valid?placementComboPreviews(selectedType,pointer):[]).forEach(({combination,counterpart})=>{
-      const style=COMBINATION_LINK_STYLES[combination.id];if(!style)return;
+    for(let enemyIndex=0;enemyIndex<enemies.length;enemyIndex++){
+      const enemy=enemies[enemyIndex];
+      if(!canTowerHitTarget({tower:pointer,target:enemy,range,canHitAir:Boolean(def.antiAir),positionOf:enemyPosition}))continue;
+      const target=enemyPosition(enemy);ctx.beginPath();ctx.arc(target.x,target.y,enemy.radius+4,0,Math.PI*2);ctx.stroke();
+    }
+    ctx.restore();
+    const combinationPreviews=valid?placementComboPreviews(selectedType,pointer):[];
+    for(let previewIndex=0;previewIndex<combinationPreviews.length;previewIndex++){
+      const {combination,counterpart}=combinationPreviews[previewIndex];
+      const style=COMBINATION_LINK_STYLES[combination.id];if(!style)continue;
       ctx.save();ctx.globalAlpha=.9;ctx.setLineDash(style.dash.map(length=>length/(displayScale||1)));ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2.5/(displayScale||1));ctx.beginPath();ctx.moveTo(counterpart.x,counterpart.y);ctx.lineTo(pointer.x,pointer.y);ctx.stroke();ctx.setLineDash([]);
       ctx.beginPath();ctx.arc(counterpart.x,counterpart.y,24,0,Math.PI*2);ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2/(displayScale||1));ctx.stroke();
-      drawTowerArt(ctx,selectedType,pointer.x,pointer.y,{level:1,branch:null,color:def.color,scaleX:.82,scaleY:.82,displayScale});
+      const artOptions=placementTowerArtOptionsScratch;artOptions.color=def.color;artOptions.displayScale=displayScale;
+      drawTowerArt(ctx,selectedType,pointer.x,pointer.y,artOptions);
       const label=`${combination.name} link`;ctx.font=`bold ${Math.max(9,10/(displayScale||1))}px system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';const labelY=Math.max(12,pointer.y-31),labelWidth=ctx.measureText(label).width+10;ctx.fillStyle='#17241bec';ctx.fillRect(pointer.x-labelWidth/2,labelY-8,labelWidth,16);ctx.fillStyle=style.color;ctx.fillText(label,pointer.x,labelY);ctx.restore();
-    });
+    }
   }
   // Draw connectors first, then opaque cards last so later enemies and placement previews cannot cover threat text.
-  bossWarnings.forEach(({x,bodyY,radius,labelX,labelTop})=>{
+  for(let warningIndex=0;warningIndex<bossWarnings.length;warningIndex++){
+    const {x,bodyY,radius,labelX,labelTop}=bossWarnings[warningIndex];
     const warningScale=1/(Number.isFinite(displayScale)&&displayScale>0?displayScale:1);
     ctx.beginPath(); ctx.moveTo(x, bodyY-radius); ctx.lineTo(labelX,labelTop+34*warningScale);
     ctx.strokeStyle = '#ffe8a6'; ctx.lineWidth = 1; ctx.stroke();
-  });
-  bossWarnings.forEach(({labelX,labelTop,labelWidth,name,cue})=>{
+  }
+  for(let warningIndex=0;warningIndex<bossWarnings.length;warningIndex++){
+    const {labelX,labelTop,labelWidth,name,cue}=bossWarnings[warningIndex];
     const warningScale=1/(Number.isFinite(displayScale)&&displayScale>0?displayScale:1);
     ctx.font = `bold ${10*warningScale}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.fillStyle = '#20271fee'; ctx.fillRect(labelX - labelWidth / 2, labelTop, labelWidth, 34*warningScale);
     ctx.fillStyle = '#fff4d2'; ctx.fillText(name, labelX, labelTop + 13*warningScale, labelWidth - 8*warningScale);
     ctx.fillStyle = '#ffe8a6'; ctx.fillText(cue, labelX, labelTop + 28*warningScale, labelWidth - 8*warningScale);
-  });
+  }
 }
 
 export { projectileStyleForTower };

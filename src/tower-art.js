@@ -92,7 +92,13 @@ export function drawTowerArt(ctx, type, x, y, { level = 1, branch = null, color 
   for (const layer of layers) {
     ctx.beginPath(); ctx.fillStyle = layer.fill || 'transparent'; ctx.strokeStyle = layer.stroke || 'transparent'; ctx.lineWidth = Math.max(layer.width || 0,minimumStroke); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (layer.kind === 'circle') ctx.arc(layer.x, layer.y, layer.r, 0, Math.PI * 2);
-    else { layer.points.forEach(([px, py], index) => index ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); if (layer.kind === 'polygon') ctx.closePath(); }
+    else {
+      for(let pointIndex=0;pointIndex<layer.points.length;pointIndex++){
+        const point=layer.points[pointIndex],px=point[0],py=point[1];
+        if(pointIndex)ctx.lineTo(px,py);else ctx.moveTo(px,py);
+      }
+      if (layer.kind === 'polygon') ctx.closePath();
+    }
     if (layer.fill && layer.fill !== 'none') ctx.fill();
     if (layer.stroke && layer.stroke !== 'none' && layer.width) ctx.stroke();
   }
