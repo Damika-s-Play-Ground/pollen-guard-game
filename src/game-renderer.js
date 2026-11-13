@@ -493,51 +493,64 @@ export function plantingSettle(animation, now, plantedAt, duration = PLANTING_SE
   return {progress,scaleX,scaleY,offsetY,outlineAlpha:0};
 }
 
-export function enemyCueStackRanks(centers) {
-  const ranks = new Map(centers.map(center => [center.id, 0]));
-  if (!centers.length) return ranks;
-  let cellSize = 0;
-  for (const center of centers) {
-    const overlapRadius=center.overlapRadius??center.radius;
-    if (!Number.isFinite(center.x) || !Number.isFinite(center.y) || !Number.isFinite(overlapRadius) || overlapRadius < 0) {
-      return countCueOverlaps(centers, ranks);
+// The returned Map is a borrowed workspace and is overwritten on the next call.
+export function createEnemyCueStackRanker() {
+  const ranks=new Map(),cellCoordinates=[],cells=new Map(),usedCells=[];
+  return function rankEnemyCueStacks(centers) {
+    ranks.clear();
+    for(const center of centers)ranks.set(center.id,0);
+    for(const cell of usedCells)cell.length=0;
+    usedCells.length=0;
+    if(!centers.length)return ranks;
+    let cellSize=0;
+    for(const center of centers){
+      const overlapRadius=center.overlapRadius??center.radius;
+      if(!Number.isFinite(center.x)||!Number.isFinite(center.y)||!Number.isFinite(overlapRadius)||overlapRadius<0)return countCueOverlaps(centers,ranks);
+      cellSize=Math.max(cellSize,overlapRadius*2+18);
     }
-    cellSize = Math.max(cellSize, overlapRadius * 2 + 18);
-  }
-  if (cellSize >= Math.sqrt(Number.MAX_VALUE)) return countCueOverlaps(centers, ranks);
+    if(cellSize>=Math.sqrt(Number.MAX_VALUE))return countCueOverlaps(centers,ranks);
 
-  const cellCoordinates = centers.map(center => ({ x: Math.floor(center.x / cellSize), y: Math.floor(center.y / cellSize) }));
-  if (cellCoordinates.some(({ x, y }) => !Number.isSafeInteger(x) || !Number.isSafeInteger(y) || Math.abs(x) >= Number.MAX_SAFE_INTEGER || Math.abs(y) >= Number.MAX_SAFE_INTEGER)) {
-    return countCueOverlaps(centers, ranks);
-  }
-  const cells = new Map();
-  for (let index = 0; index < centers.length; index++) {
-    const { x, y } = cellCoordinates[index];
-    let row = cells.get(y);
-    if (!row) { row = new Map(); cells.set(y, row); }
-    const cell = row.get(x) || [];
-    cell.push(index);
-    row.set(x,cell);
-  }
-  for (let left = 0; left < centers.length; left++) {
-    const a = centers[left], { x: cellX, y: cellY } = cellCoordinates[left];
-    for (let y = cellY - 1; y <= cellY + 1; y++) {
-      const row = cells.get(y);
-      if (!row) continue;
-      for (let x = cellX - 1; x <= cellX + 1; x++) {
-        for (const right of row.get(x) || []) {
-          if (right <= left) continue;
-          const b = centers[right];
-          if (a.id === b.id) continue;
-          const reach = (a.overlapRadius??a.radius) + (b.overlapRadius??b.radius) + 18, dx = a.x - b.x, dy = a.y - b.y;
-          if (!(Math.hypot(dx, dy) < reach)) continue;
-          const higher = a.id > b.id ? a.id : b.id;
-          ranks.set(higher, ranks.get(higher) + 1);
+    for(let index=0;index<centers.length;index++){
+      const center=centers[index],x=Math.floor(center.x/cellSize),y=Math.floor(center.y/cellSize);
+      if(!Number.isSafeInteger(x)||!Number.isSafeInteger(y)||Math.abs(x)>=Number.MAX_SAFE_INTEGER||Math.abs(y)>=Number.MAX_SAFE_INTEGER)return countCueOverlaps(centers,ranks);
+      const coordinate=cellCoordinates[index]||(cellCoordinates[index]={x:0,y:0});
+      coordinate.x=x;coordinate.y=y;
+    }
+    for(let index=0;index<centers.length;index++){
+      const {x,y}=cellCoordinates[index];
+      let row=cells.get(y);
+      if(!row){row=new Map();cells.set(y,row);}
+      let cell=row.get(x);
+      if(!cell){cell=[];row.set(x,cell);}
+      if(!cell.length)usedCells.push(cell);
+      cell.push(index);
+    }
+    for(let left=0;left<centers.length;left++){
+      const a=centers[left],{x:cellX,y:cellY}=cellCoordinates[left];
+      for(let y=cellY-1;y<=cellY+1;y++){
+        const row=cells.get(y);
+        if(!row)continue;
+        for(let x=cellX-1;x<=cellX+1;x++){
+          const cell=row.get(x);
+          if(!cell)continue;
+          for(const right of cell){
+            if(right<=left)continue;
+            const b=centers[right];
+            if(a.id===b.id)continue;
+            const reach=(a.overlapRadius??a.radius)+(b.overlapRadius??b.radius)+18,dx=a.x-b.x,dy=a.y-b.y;
+            if(!(Math.hypot(dx,dy)<reach))continue;
+            const higher=a.id>b.id?a.id:b.id;
+            ranks.set(higher,ranks.get(higher)+1);
+          }
         }
       }
     }
-  }
-  return ranks;
+    return ranks;
+  };
+}
+
+export function enemyCueStackRanks(centers) {
+  return createEnemyCueStackRanker()(centers);
 }
 
 function countCueOverlaps(centers, ranks) {
@@ -551,6 +564,10 @@ function countCueOverlaps(centers, ranks) {
   }
   return ranks;
 }
+
+// drawBattlefield is synchronous and already uses module-owned visual scratch.
+// This rank Map is consumed within the same callback before the next frame reuses it.
+const renderEnemyCueStackRanks=createEnemyCueStackRanker();
 
 export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = null) {
   const {
@@ -712,7 +729,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const labelWidth=label.length*fontSize*.62+10,labelHeight=fontSize+6;
     return {left:zone.x-labelWidth/2,right:zone.x+labelWidth/2,top:labelY-labelHeight/2,bottom:labelY+labelHeight/2};
   });
-  const cueStackRanks = enemyCueStackRanks(enemyVisuals);
+  const cueStackRanks = renderEnemyCueStackRanks(enemyVisuals);
   for(let index=0;index<enemies.length;index++){
     const enemy=enemies[index],cueCenter=enemyVisuals[index],point=cueCenter.point,bodyY=cueCenter.y,radius=cueCenter.radius;
     const stackRank=cueStackRanks.get(enemy.id)||0,cueY=bodyY-stackRank*11;
