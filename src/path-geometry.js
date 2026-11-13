@@ -36,20 +36,20 @@ function writePoint(output, x, y) {
   return { x, y };
 }
 
-export function pointOnPath(path, distance) {
-  if (!Array.isArray(path) || path.length < 2 || !Number.isFinite(distance)) return { x: 850, y: 360 };
+export function pointOnPath(path, distance, output) {
+  if (!Array.isArray(path) || path.length < 2 || !Number.isFinite(distance)) return writePoint(output,850,360);
   for (let index = 1; index < path.length; index++) {
     const [x1, y1] = path[index - 1], [x2, y2] = path[index];
     const length = Math.hypot(x2 - x1, y2 - y1);
     if (length === 0) continue;
     if (distance <= length) {
       const ratio = distance / length;
-      return { x: x1 + (x2 - x1) * ratio, y: y1 + (y2 - y1) * ratio };
+      return writePoint(output,x1 + (x2 - x1) * ratio,y1 + (y2 - y1) * ratio);
     }
     distance -= length;
   }
   const [x, y] = path.at(-1);
-  return { x, y };
+  return writePoint(output,x,y);
 }
 
 export function distanceToPath(x, y, path) {

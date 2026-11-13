@@ -32,6 +32,13 @@ const bossWarningCandidatePool = [];
 const terrainLabelBoxScratch = [];
 const towerArtOptionsScratch = [];
 const placementTowerArtOptionsScratch = {level:1,branch:null,color:'#79b85b',scale:1,scaleX:.82,scaleY:.82,displayScale:1};
+const seedRecoveryPathPointScratch={x:0,y:0};
+const burrowPathPointScratch={x:0,y:0};
+const SEED_RECOVERY_PATH_LINES=Object.freeze([
+  Object.freeze({offset:-3,color:'#69d6b7',direction:1}),
+  Object.freeze({offset:3,color:'#f1bd67',direction:-1})
+]);
+const BURROW_SOIL_OFFSETS=Object.freeze([12,25,38]);
 function compareBossWarningCandidates(a,b) { return a.score-b.score; }
 const DEFAULT_ROLE_GLYPH_STYLE = Object.freeze({});
 const EXIT_WARNING_GLYPH_STYLE = Object.freeze({ fontWeight:'bold', color:'#fff' });
@@ -83,26 +90,35 @@ function drawGateRoutePreviews(ctx,routes,selectedRoute,displayScale=1){
 function drawSeedRecoveryPaths(ctx,path,pathLength,objective,displayScale=1){
   if(!objective||!Array.isArray(path)||path.length<2||!Number.isFinite(pathLength)||pathLength<=0)return;
   const pickupDistance=pathLength*.52,step=Math.max(12,22/(displayScale||1));
-  for(const [offset,color,direction] of [[-3,'#69d6b7',1],[3,'#f1bd67',-1]]){
+  for(let lineIndex=0;lineIndex<SEED_RECOVERY_PATH_LINES.length;lineIndex++){
+    const {offset,color,direction}=SEED_RECOVERY_PATH_LINES[lineIndex];
     ctx.beginPath();
     for(let distance=0,index=0;distance<pickupDistance;distance+=step,index++){
-      const point=pointOnPath(path,distance);if(index===0)ctx.moveTo(point.x,point.y+offset);else ctx.lineTo(point.x,point.y+offset);
+      const point=pointOnPath(path,distance,seedRecoveryPathPointScratch);if(index===0)ctx.moveTo(point.x,point.y+offset);else ctx.lineTo(point.x,point.y+offset);
     }
-    const cache=pointOnPath(path,pickupDistance);ctx.lineTo(cache.x,cache.y+offset);
+    const cache=pointOnPath(path,pickupDistance,seedRecoveryPathPointScratch);ctx.lineTo(cache.x,cache.y+offset);
     ctx.strokeStyle=color;ctx.lineWidth=Math.max(2.2,3/(displayScale||1));ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);
     const arrowDistance=direction>0?pickupDistance*.78:pickupDistance*.25;
-    const tip=pointOnPath(path,arrowDistance),behind=pointOnPath(path,arrowDistance-direction*8);
-    const angle=Math.atan2(tip.y-behind.y,tip.x-behind.x);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(tip.x,tip.y+offset);
-    ctx.lineTo(tip.x-Math.cos(angle-.55)*8,tip.y+offset-Math.sin(angle-.55)*8);ctx.lineTo(tip.x-Math.cos(angle+.55)*8,tip.y+offset-Math.sin(angle+.55)*8);ctx.closePath();ctx.fill();
+    const tip=pointOnPath(path,arrowDistance,seedRecoveryPathPointScratch),tipX=tip.x,tipY=tip.y;
+    const behind=pointOnPath(path,arrowDistance-direction*8,seedRecoveryPathPointScratch);
+    const angle=Math.atan2(tipY-behind.y,tipX-behind.x);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(tipX,tipY+offset);
+    ctx.lineTo(tipX-Math.cos(angle-.55)*8,tipY+offset-Math.sin(angle-.55)*8);ctx.lineTo(tipX-Math.cos(angle+.55)*8,tipY+offset-Math.sin(angle+.55)*8);ctx.closePath();ctx.fill();
   }
-  const cache=pointOnPath(path,pickupDistance),available=objective.seeds.filter(seed=>seed.state==='available');
-  available.forEach((seed,index)=>{
-    const offset=(index-(available.length-1)/2)*14;ctx.fillStyle='#f8e18c';ctx.strokeStyle='#473b23';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(cache.x+offset,cache.y-15,5,8,-.45,0,Math.PI*2);ctx.fill();ctx.stroke();
-  });
-  objective.seeds.filter(seed=>seed.state==='dropped').forEach(seed=>{
+  const cache=pointOnPath(path,pickupDistance,seedRecoveryPathPointScratch),cacheX=cache.x,cacheY=cache.y;
+  let availableCount=0;
+  for(let index=0;index<objective.seeds.length;index++)if(objective.seeds[index].state==='available')availableCount++;
+  let availableIndex=0;
+  for(let index=0;index<objective.seeds.length;index++){
+    const seed=objective.seeds[index];
+    if(seed.state!=='available')continue;
+    const offset=(availableIndex++-(availableCount-1)/2)*14;ctx.fillStyle='#f8e18c';ctx.strokeStyle='#473b23';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(cacheX+offset,cacheY-15,5,8,-.45,0,Math.PI*2);ctx.fill();ctx.stroke();
+  }
+  for(let index=0;index<objective.seeds.length;index++){
+    const seed=objective.seeds[index];
+    if(seed.state!=='dropped')continue;
     ctx.beginPath();ctx.arc(seed.x,seed.y,10,0,Math.PI*2);ctx.fillStyle='#f2c66c55';ctx.fill();ctx.strokeStyle='#fff0a1';ctx.lineWidth=2;ctx.stroke();
     ctx.fillStyle='#fff2b5';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('✦',seed.x,seed.y);
-  });
+  }
 }
 
 function drawAirCoverage(ctx,path,center,radius,displayScale) {
@@ -702,7 +718,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     }
     const burrowed=isBurrowed(enemy);
     if (burrowed) {
-      for(const offset of [12,25,38]){const soil=pointOnPath(path,Math.max(0,enemy.progress-offset));ctx.beginPath();ctx.ellipse(soil.x,soil.y,Math.min(10,Math.max(2.5,3.5/enemyStrokeScale)),Math.min(6,Math.max(1.8,2.4/enemyStrokeScale)),0,0,Math.PI*2);ctx.fillStyle='#b88b55cc';ctx.fill();}
+      for(let soilIndex=0;soilIndex<BURROW_SOIL_OFFSETS.length;soilIndex++){const soil=pointOnPath(path,Math.max(0,enemy.progress-BURROW_SOIL_OFFSETS[soilIndex]),burrowPathPointScratch);ctx.beginPath();ctx.ellipse(soil.x,soil.y,Math.min(10,Math.max(2.5,3.5/enemyStrokeScale)),Math.min(6,Math.max(1.8,2.4/enemyStrokeScale)),0,0,Math.PI*2);ctx.fillStyle='#b88b55cc';ctx.fill();}
       ctx.fillStyle = '#8a5b28'; ctx.strokeStyle = '#4b321c'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.ellipse(point.x, point.y, enemy.radius * 1.2, enemy.radius * .58, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(point.x, point.y - 1, enemy.radius * .5, Math.PI, Math.PI * 2); ctx.strokeStyle = '#d7b77b'; ctx.stroke();
