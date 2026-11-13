@@ -51,6 +51,7 @@ export function towerArtLayers(type, level = 1, branch = null) {
 }
 
 const battlefieldArtLayerCache=Object.create(null);
+const battlefieldLayerPathCache=new WeakMap();
 function battlefieldArtLayers(type,level,branch) {
   const art=TOWER_ART_MANIFEST[type];
   if(!art)return [];
@@ -64,6 +65,24 @@ function battlefieldArtLayers(type,level,branch) {
   if(tier>=3)layers.push(crownArt[type]);
   tierCache[branchSlot]=Object.freeze(layers);
   return tierCache[branchSlot];
+}
+
+function battlefieldPathFor(layer){
+  const Path=globalThis.Path2D;
+  if(typeof Path!=='function')return null;
+  let path=battlefieldLayerPathCache.get(layer);
+  if(path)return path;
+  path=new Path();
+  if(layer.kind==='circle')path.arc(layer.x,layer.y,layer.r,0,Math.PI*2);
+  else{
+    for(let pointIndex=0;pointIndex<layer.points.length;pointIndex++){
+      const [x,y]=layer.points[pointIndex];
+      if(pointIndex)path.lineTo(x,y);else path.moveTo(x,y);
+    }
+    if(layer.kind==='polygon')path.closePath();
+  }
+  battlefieldLayerPathCache.set(layer,path);
+  return path;
 }
 
 function pointsAttr(points) { return points.map(point => point.join(',')).join(' '); }
@@ -90,7 +109,14 @@ export function drawTowerArt(ctx, type, x, y, { level = 1, branch = null, color 
   ctx.fillStyle = '#375541'; ctx.beginPath(); ctx.ellipse(0, 9, 17, 7, 0, 0, Math.PI * 2); ctx.fill();
   ctx.translate(-16, -16);
   for (const layer of layers) {
-    ctx.beginPath(); ctx.fillStyle = layer.fill || 'transparent'; ctx.strokeStyle = layer.stroke || 'transparent'; ctx.lineWidth = Math.max(layer.width || 0,minimumStroke); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const path=battlefieldPathFor(layer);
+    ctx.fillStyle = layer.fill || 'transparent'; ctx.strokeStyle = layer.stroke || 'transparent'; ctx.lineWidth = Math.max(layer.width || 0,minimumStroke); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if(path){
+      if (layer.fill && layer.fill !== 'none') ctx.fill(path);
+      if (layer.stroke && layer.stroke !== 'none' && layer.width) ctx.stroke(path);
+      continue;
+    }
+    ctx.beginPath();
     if (layer.kind === 'circle') ctx.arc(layer.x, layer.y, layer.r, 0, Math.PI * 2);
     else {
       for(let pointIndex=0;pointIndex<layer.points.length;pointIndex++){
