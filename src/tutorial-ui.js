@@ -5,9 +5,9 @@ export const TUTORIAL_STEPS = Object.freeze([
   Object.freeze(['Inspect and specialize', 'Select a placed tower to change its target priority, choose an upgrade branch, and use its ability.'])
 ]);
 
-export function shouldShowFirstActionCoach({ tutorialSeen = false, tutorialInProgress = false, hasSavedRun = false, phase = 'place' } = {}) {
+export function shouldShowFirstActionCoach({ eligible = true, tutorialSeen = false, tutorialInProgress = false, hasSavedRun = false, phase = 'place' } = {}) {
   const unfinishedAction=phase==='launch'||phase==='place-during-wave';
-  return !tutorialSeen && !tutorialInProgress && phase!=='complete' && phase!=='dismissed' && (!hasSavedRun||unfinishedAction);
+  return eligible && !tutorialSeen && !tutorialInProgress && phase!=='complete' && phase!=='dismissed' && (!hasSavedRun||unfinishedAction);
 }
 
 export function firstActionCoachHasSavedRun({ recoverableSource = 'none', storageUnavailable = false } = {}) {
