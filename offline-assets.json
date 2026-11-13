@@ -58,6 +58,7 @@
   "./src/garden-kit.js",
   "./src/gate-routes.js",
   "./src/guidance-arbitration.js",
+  "./src/healer-links.js",
   "./src/hud-announcements.js",
   "./src/hud-screen-controller.js",
   "./src/hud-ui.js",

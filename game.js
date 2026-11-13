@@ -45,6 +45,7 @@ import { bindCanvasPointerInput, bindKeyboardInput, findTowersAtPoint, movePlace
 import { bindEnterButtonKeyboard, bindInspectorBranchKeyboard, bindInspectorButtonKeyboard, focusInspectorBranch } from './src/keyboard-inspector.js';
 import { createStaticMapCache, drawBattlefield, plantingSettle, shotRecoil } from './src/game-renderer.js';
 import { createRenderSnapshots } from './src/render-snapshot.js';
+import { writeHealerLinkVisuals } from './src/healer-links.js';
 import { towerArtSvg } from './src/tower-art.js';
 import { createProfileStorage, UI_SETTINGS_STORAGE_KEY } from './src/profile-storage.js';
 import { buildBestWaveRecord, buildRunProgressEvents } from './src/profile-progression.js';
@@ -252,7 +253,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const towerRecoilAt=new Map();
   const towerPlantingAt=new Map();
   const armorImpactCues=new Map(),armorFeedbackSeen=new Map(),impactCausalityCues=new Map();
-  const healerPulses=new Map(),burrowEmergenceCues=new Map(),bossChoreoCues=new Map();
+  const healerPulses=new Map(),healerLinkScratch=[],burrowEmergenceCues=new Map(),bossChoreoCues=new Map();
   let healerInterventionObserved=false;
   const renderSnapshots=createRenderSnapshots();
   const terminalRenderGate=createTerminalRenderGate();
@@ -1288,7 +1289,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     for(const [id,pulse] of healerPulses)if(gameTime-pulse.time>=.5||!liveEnemyIds.has(id)||!liveEnemyIds.has(pulse.targetId))healerPulses.delete(id);
     for(const [id,time] of burrowEmergenceCues)if(gameTime-time>=.5||!liveEnemyIds.has(id))burrowEmergenceCues.delete(id);
     for(const [id,cue] of bossChoreoCues)if(gameTime-cue.time>=.9||!liveEnemyIds.has(id))bossChoreoCues.delete(id);
-    const healerLinks=[...healerPulses.values()].map(pulse=>{const healer=enemies.find(enemy=>enemy.id===pulse.healerId),target=enemies.find(enemy=>enemy.id===pulse.targetId);if(!healer||!target)return null;const age=gameTime-pulse.time;return{from:renderSnapshots.enemyPosition(healer,routeGeometry.pathFor,renderAlpha),to:renderSnapshots.enemyPosition(target,routeGeometry.pathFor,renderAlpha),amount:pulse.amount,progress:Math.min(1,age/.45),alpha:Math.max(.25,1-age/.5),targetId:target.id};}).filter(Boolean);
+    const healerLinks=writeHealerLinkVisuals({pulses:healerPulses,enemies,gameTime,renderAlpha,pathFor:routeGeometry.pathFor,positionAt:renderSnapshots.enemyPosition,output:healerLinkScratch});
     const liveAbilityPreview=abilityPreview&&selectedTower?.id===abilityPreview.towerId?{...abilityPreview,targetIds:towerAbilityTargets(selectedTower,enemies,towersDef[selectedTower.type],enemyPosition).map(enemy=>enemy.id)}:null;
     const targetId=getSelectedTargetId();
     const renderState=battlefieldRenderState;
