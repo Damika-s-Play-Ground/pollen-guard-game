@@ -2,7 +2,7 @@ import { renderBossWarnings } from './src/boss-warning-ui.js';
 import { petalTextMarkup } from './src/ui-icons.js';
 import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, saleRefundRate, towerUpgradeQuote, getEffectiveTowerStats, towersAreLinked, isUnsupportedRunVersion, RUN_SAVE_VERSION, assignRunEntityIds } from './src/game-core.js';
 import { DEFAULT_GAME_SPEED, toggleGameSpeed } from './src/simulation-speed.js';
-import { createGameLoop, shouldRenderBattleFrame } from './src/game-loop.js';
+import { createGameLoop, createTerminalRenderGate, shouldRenderBattleFrame } from './src/game-loop.js';
 import { createRenderGate, createRenderSignature } from './src/render-gate.js';
 import { refreshPurchaseAffordability } from './src/affordability-ui.js';
 import { modes, maps, towersDef, towerRoles, enemyCombatProfiles } from './src/game-data.js';
@@ -255,6 +255,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const healerPulses=new Map(),burrowEmergenceCues=new Map(),bossChoreoCues=new Map();
   let healerInterventionObserved=false;
   const renderSnapshots=createRenderSnapshots();
+  const terminalRenderGate=createTerminalRenderGate();
   const resumedFirstActionCoach=firstActionCoachProgress(uiSettings.firstActionCoachPhase);
   let selectedType='sprout', selectedTower=null, placementCandidate=null, abilityPreview=null, aimedSpellId=null, spellTargetStart=null, repeatBuild=true, towerFilter='all', specialistCounterTypes=[], tutorialStep=0, tutorialPractice=createTutorialPracticeState(), firstActionCoachVisible=false, firstActionCoachPlaced=resumedFirstActionCoach.placed, firstActionCoachLaunched=resumedFirstActionCoach.launched, firstActionCoachPhase=resumedFirstActionCoach.phase, tutorialReturnToSavedRun=Boolean(uiSettings.tutorialReturnToSavedRun), spawnQueue=[], spawnClock=0, waveTimelineKey='', enemyGuideWaveKey='', enemyBriefingKey='', tutorialCoachView={visible:false}, guidanceOwner=null, guidanceViewKey='', criticalWarningActive=false, currentPlacementError='', airRoutePreviewed=false;
   const aimedSpellControls=new Map();
@@ -1272,6 +1273,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     ctx.restore();
   }
   function draw(renderAlpha=1) {
+    terminalRenderGate.markRendered(runIsOver());
     const visualNow=performance.now()/1000;
     renderVisualNow=visualNow;
     criticalWarningActive=renderBossWarnings(byId('bossWarnings'),enemies,bossChoreoCues,gameTime);
@@ -1399,7 +1401,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     clock:simulationClock,
     getFrameOptions:()=>({paused:runStateStopsClock(runState)||document.hidden,speed}),
     simulateStep:dt=>{renderSnapshots.beginStep();simulate(dt);renderSnapshots.capture(enemies,shots);renderSnapshots.updateHitFlashes(enemies,dt);},
-    shouldRender:()=>shouldRenderBattleFrame({initialFramePending:!initialBattleFrameRendered,running:runIsRunning(),terminal:runIsOver(),wallClockEffects:towerPlantingAt.size>0||particles.some(particle=>particle.wallClock)}),
+    shouldRender:()=>shouldRenderBattleFrame({initialFramePending:!initialBattleFrameRendered,running:runIsRunning(),terminalFramePending:terminalRenderGate.shouldRender(runIsOver()),wallClockEffects:towerPlantingAt.size>0||particles.some(particle=>particle.wallClock)}),
     render:alpha=>{initialBattleFrameRendered=true;renderSelected();draw(alpha);}
   });
   function simulate(dt) {

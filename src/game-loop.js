@@ -1,7 +1,23 @@
 import { advanceFixedSteps, renderAlphaForClock } from './game-core.js';
 
-export function shouldRenderBattleFrame({initialFramePending=false,running=false,terminal=false,wallClockEffects=false}={}) {
-  return initialFramePending||running||terminal||wallClockEffects;
+export function shouldRenderBattleFrame({initialFramePending=false,running=false,terminalFramePending=false,wallClockEffects=false}={}) {
+  return initialFramePending||running||terminalFramePending||wallClockEffects;
+}
+
+export function createTerminalRenderGate() {
+  let terminalFrameRendered = false;
+  return {
+    shouldRender(terminal) {
+      if (!terminal) {
+        terminalFrameRendered = false;
+        return false;
+      }
+      return !terminalFrameRendered;
+    },
+    markRendered(terminal) {
+      if (terminal) terminalFrameRendered = true;
+    }
+  };
 }
 
 export function createGameLoop({ requestFrame, clock, getFrameOptions, simulateStep, render, shouldRender = () => true }) {
