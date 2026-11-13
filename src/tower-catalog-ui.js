@@ -38,6 +38,7 @@ export function syncTowerCatalogSelection(buttons, selectedType=null) {
 }
 
 export function renderTowerCatalog({ document, root, towersDef, towerRoles, selectedType, filter, challenge, challengeRules = [], researchLoadout=[],relicLoadout=[], cash=Infinity,keyBindings, keyCodeLabel, getEffectiveTowerStats, towerArtSvg, types }) {
+  const focusedType=Array.from(root.children).find(button=>button===document.activeElement)?.dataset.type??null;
   const allowed=new Set(types||Object.keys(towersDef));
   const entries = Object.entries(towersDef).filter(([id]) => allowed.has(id)&&(filter === 'all' || towerRoles[id] === filter));
   const buttons = entries.map(([id, tower]) => {
@@ -83,5 +84,9 @@ export function renderTowerCatalog({ document, root, towersDef, towerRoles, sele
     return button;
   });
   root.replaceChildren(...buttons);
+  if(focusedType!==null){
+    const replacement=buttons.find(button=>button.dataset.type===focusedType);
+    if(replacement&&!replacement.disabled)replacement.focus({preventScroll:true});
+  }
 }
 
