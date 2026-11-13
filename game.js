@@ -4,7 +4,7 @@ import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, saleRe
 import { DEFAULT_GAME_SPEED, toggleGameSpeed } from './src/simulation-speed.js';
 import { createGameLoop, createTerminalRenderGate, shouldContinueBattleLoop, shouldRenderBattleFrame } from './src/game-loop.js';
 import { createRenderGate, createRenderSignature } from './src/render-gate.js';
-import { refreshPurchaseAffordability } from './src/affordability-ui.js';
+import { refreshPurchaseAffordability, refreshSelectedUpgradeAffordability } from './src/affordability-ui.js';
 import { modes, maps, towersDef, towerRoles, enemyCombatProfiles } from './src/game-data.js';
 import { CAMPAIGN_WAVES, registerCustomWaveSchedules, validateWaveSchedules, waveSchedulesForMap, WAVE_SCHEDULE_VERSION } from './src/waves.js';
 import { COMBAT_RULES, COMBAT_INTERACTION_MATRIX, canHitTarget, canTowerHitTarget } from './src/combat-rules.js';
@@ -889,6 +889,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const supportDetail=chosen?.supportStructure==='beacon'?`buffs up to 3 eligible attackers within ${Math.round(chosenStats.range)} map units with ${Math.round((1-chosenStats.buffMultiplier)*100)}% shorter attack interval, once each; 48-unit footprint.`:chosen?.supportStructure==='trap'?`slows the first ${Math.max(0,chosen.triggerLimit-(researchLoadout.includes('compost-lattice')?1:0))} unique ground pests to enter its ${Math.round(chosenStats.range)} map units ring for ${chosen.slowDuration}s, then expires; footprint ${chosen.footprint} units.`:chosen?.role;
     byId('towerDetail').textContent=chosen?`${chosen.name} · ${chosen.supportStructure?supportDetail:chosen.income?`+${chosenStats.income} petals/wave`:`${chosenStats.damage} damage/hit · ${(1/chosenStats.rate).toFixed(1)} attacks/s · range ${Math.round(chosenStats.range)} map units`}`:'';
     updatePlacementHint();
+    refreshPurchaseAffordability({document,cash,selectedUpgrade:selectedUpgradeForHud(),force:true});
   }
   function renderCounterPicks() {
     const panel=byId('counterPicks'),root=byId('counterPickList');
@@ -908,6 +909,10 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     draw();canvas.focus({preventScroll:true});
   }
   function selectedUpgradeCost(tower) { return towerUpgradeQuote(tower,towersDef[tower.type]).cost; }
+  function selectedUpgradeForHud(){
+    if(!selectedTower)return null;
+    return {name:towersDef[selectedTower.type].name,cost:selectedUpgradeCost(selectedTower),level:selectedTower.level,branchChoice:selectedTower.branchChoice};
+  }
   function updateUpgradePreview() {
     const linked=isTowerLinkedToAnother(selectedTower,towers,towersLinked);
     const text=buildTowerUpgradePreview({tower:selectedTower,towers,challenge,challengeRules,linked,cash,wave,terrain:terrainAt(selectedTower),researchLoadout,relicLoadout});
@@ -931,6 +936,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       onChooseBranch:index=>{const result=performPlayerAction('chooseBranch',{towerId:selectedTower.id,branch:index});if(result.ok){renderSelected();saveRun();canvas.focus({preventScroll:true});announceKeyboardStatus(byId('contextUpgradeBtn').disabled?'Branch chosen. The upgrade is not affordable yet.':'Branch chosen. Press Down Arrow to focus the Upgrade action.');}}
     }):{empty:true};
     renderTowerInspector({document,canvasHost:canvas.parentElement,view});
+    refreshSelectedUpgradeAffordability({document,cash,selectedUpgrade:selectedUpgradeForHud()});
     updateUpgradePreview();updateTargetIndicator();updateSelectedAbilityDock();
   }
   function revealSelectedTower() {
@@ -1011,7 +1017,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     });
     presentHud({
       view,cash,lives,seedObjective,
-      selectedUpgrade:selectedTower?{name:towersDef[selectedTower.type].name,cost:selectedUpgradeCost(selectedTower),level:selectedTower.level,branchChoice:selectedTower.branchChoice}:null
+      selectedUpgrade:selectedUpgradeForHud()
     });
     refreshBattleSummary();
   }
