@@ -293,13 +293,18 @@ export function createStaticMapCache(createCanvas) {
   return {
     draw(ctx, state) {
       const { width, height, map, path, pathLength, airPath, showAirRoute = true, displayScale } = state;
-      const key = JSON.stringify([width, height, map.biome, map.background, map.patch, map.edge, map.trail, map.buildZones||null, path, pathLength, airPath, showAirRoute, displayScale]);
-      if (!canvas || cacheKey !== key) {
+      const buildZones=map.buildZones||null;
+      let changed=!cacheKey||width!==cacheKey.width||height!==cacheKey.height||map.biome!==cacheKey.biome||
+        map.background!==cacheKey.background||map.patch!==cacheKey.patch||map.edge!==cacheKey.edge||map.trail!==cacheKey.trail||
+        pathLength!==cacheKey.pathLength||showAirRoute!==cacheKey.showAirRoute||displayScale!==cacheKey.displayScale||
+        !samePathCoordinates(path,cacheKey.path)||!samePathCoordinates(airPath,cacheKey.airPath)||!sameBuildZoneCoordinates(buildZones,cacheKey.buildZones);
+      if (changed) {
         canvas = createCanvas(width, height);
         canvas.width = width;
         canvas.height = height;
         drawStaticMapLayer(canvas.getContext('2d'), state);
-        cacheKey = key;
+        cacheKey={width,height,biome:map.biome,background:map.background,patch:map.patch,edge:map.edge,trail:map.trail,
+          path:copyPathCoordinates(path),pathLength,airPath:copyPathCoordinates(airPath),showAirRoute,displayScale,buildZones:copyBuildZoneCoordinates(buildZones)};
       }
       ctx.drawImage(canvas, 0, 0);
     },
@@ -307,6 +312,46 @@ export function createStaticMapCache(createCanvas) {
       cacheKey = null;
     }
   };
+}
+
+function samePathCoordinates(path,snapshot) {
+  if(!Array.isArray(path))return snapshot===null;
+  if(!snapshot||snapshot.length!==path.length*2)return false;
+  for(let index=0;index<path.length;index++){
+    const point=path[index],offset=index*2;
+    if(!point||point[0]!==snapshot[offset]||point[1]!==snapshot[offset+1])return false;
+  }
+  return true;
+}
+
+function copyPathCoordinates(path) {
+  if(!Array.isArray(path))return null;
+  const snapshot=new Array(path.length*2);
+  for(let index=0;index<path.length;index++){
+    const point=path[index],offset=index*2;
+    snapshot[offset]=point?.[0];snapshot[offset+1]=point?.[1];
+  }
+  return snapshot;
+}
+
+function sameBuildZoneCoordinates(zones,snapshot) {
+  if(!Array.isArray(zones))return snapshot===null;
+  if(!snapshot||snapshot.length!==zones.length*4)return false;
+  for(let index=0;index<zones.length;index++){
+    const zone=zones[index],offset=index*4;
+    if(!zone||zone.x!==snapshot[offset]||zone.y!==snapshot[offset+1]||zone.width!==snapshot[offset+2]||zone.height!==snapshot[offset+3])return false;
+  }
+  return true;
+}
+
+function copyBuildZoneCoordinates(zones) {
+  if(!Array.isArray(zones))return null;
+  const snapshot=new Array(zones.length*4);
+  for(let index=0;index<zones.length;index++){
+    const zone=zones[index],offset=index*4;
+    snapshot[offset]=zone?.x;snapshot[offset+1]=zone?.y;snapshot[offset+2]=zone?.width;snapshot[offset+3]=zone?.height;
+  }
+  return snapshot;
 }
 
 export function traceEnemyShape(ctx, enemy, x, y, radius) {
