@@ -25,6 +25,22 @@ const enemyVisualScratch = [];
 const shotVisualScratch = [];
 // Battlefield draws are synchronous; these frame workspaces are consumed before reuse.
 const firingShotByTowerScratch = new Map();
+const scaledDashScratch = [];
+const EMPTY_DASH = Object.freeze([]);
+const DASH_2_2 = Object.freeze([2,2]);
+const DASH_2_3 = Object.freeze([2,3]);
+const DASH_2_7 = Object.freeze([2,7]);
+const DASH_3_2 = Object.freeze([3,2]);
+const DASH_3_3 = Object.freeze([3,3]);
+const DASH_4_4 = Object.freeze([4,4]);
+const DASH_4_9 = Object.freeze([4,9]);
+const DASH_5_4 = Object.freeze([5,4]);
+const DASH_5_5 = Object.freeze([5,5]);
+const DASH_6_4 = Object.freeze([6,4]);
+const DASH_7_5 = Object.freeze([7,5]);
+const DASH_8_6 = Object.freeze([8,6]);
+const DASH_8_7 = Object.freeze([8,7]);
+const DASH_3_6_LINK = Object.freeze([3,6]);
 const bossWarningBoxScratch = [];
 const bossWarningScratch = [];
 const bossWarningCandidateScratch = [];
@@ -67,13 +83,31 @@ function drawEnemyRoleGlyph(ctx, glyph, x, y, fontSize, style = DEFAULT_ROLE_GLY
 
 function tracePath(ctx, path) {
   ctx.beginPath();
-  path.forEach(([x, y], index) => index ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+  for(let index=0;index<path.length;index++){
+    const [x,y]=path[index];
+    if(index)ctx.lineTo(x,y);else ctx.moveTo(x,y);
+  }
+}
+
+function traceOffsetPath(ctx,path,offsetX,offsetY){
+  ctx.beginPath();
+  for(let index=0;index<path.length;index++){
+    const [x,y]=path[index],drawX=x+offsetX,drawY=y+offsetY;
+    if(index)ctx.lineTo(drawX,drawY);else ctx.moveTo(drawX,drawY);
+  }
+}
+
+function setScaledLineDash(ctx,pattern,scale){
+  const normalizedScale=Number.isFinite(scale)&&scale>0?scale:1;
+  scaledDashScratch.length=pattern.length;
+  for(let index=0;index<pattern.length;index++)scaledDashScratch[index]=pattern[index]/normalizedScale;
+  ctx.setLineDash(scaledDashScratch);
 }
 
 function drawAirRoute(ctx,path) {
   if (!Array.isArray(path) || path.length < 2) return;
-  tracePath(ctx,path);ctx.setLineDash([]);ctx.strokeStyle='#244e58aa';ctx.lineWidth=9;ctx.stroke();
-  tracePath(ctx,path);ctx.setLineDash([2,7]);ctx.strokeStyle='#7be0ef';ctx.lineWidth=4;ctx.stroke();ctx.setLineDash([]);
+  tracePath(ctx,path);ctx.setLineDash(EMPTY_DASH);ctx.strokeStyle='#244e58aa';ctx.lineWidth=9;ctx.stroke();
+  tracePath(ctx,path);ctx.setLineDash(DASH_2_7);ctx.strokeStyle='#7be0ef';ctx.lineWidth=4;ctx.stroke();ctx.setLineDash(EMPTY_DASH);
 }
 
 function drawGateRoutePreviews(ctx,routes,selectedRoute,displayScale=1){
@@ -81,10 +115,10 @@ function drawGateRoutePreviews(ctx,routes,selectedRoute,displayScale=1){
   const colors=['#b5f071','#72d9e8','#edc76c'];
   routes.forEach((route,index)=>{
     if(!Array.isArray(route.path)||route.path.length<2)return;
-    tracePath(ctx,route.path);ctx.strokeStyle=colors[index%colors.length]+'aa';ctx.lineWidth=Math.max(2,3/(displayScale||1));ctx.setLineDash([8,7]);ctx.stroke();ctx.setLineDash([]);
+    tracePath(ctx,route.path);ctx.strokeStyle=colors[index%colors.length]+'aa';ctx.lineWidth=Math.max(2,3/(displayScale||1));ctx.setLineDash(DASH_8_7);ctx.stroke();ctx.setLineDash(EMPTY_DASH);
     const [x,y]=route.path[Math.floor((route.path.length-1)/2)];ctx.fillStyle='#17271ee8';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle=colors[index%colors.length];ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(route.label.slice(0,1).toUpperCase(),x,y);
   });
-  ctx.setLineDash([]);ctx.globalAlpha=1;
+  ctx.setLineDash(EMPTY_DASH);ctx.globalAlpha=1;
 }
 
 function drawSeedRecoveryPaths(ctx,path,pathLength,objective,displayScale=1){
@@ -97,7 +131,7 @@ function drawSeedRecoveryPaths(ctx,path,pathLength,objective,displayScale=1){
       const point=pointOnPath(path,distance,seedRecoveryPathPointScratch);if(index===0)ctx.moveTo(point.x,point.y+offset);else ctx.lineTo(point.x,point.y+offset);
     }
     const cache=pointOnPath(path,pickupDistance,seedRecoveryPathPointScratch);ctx.lineTo(cache.x,cache.y+offset);
-    ctx.strokeStyle=color;ctx.lineWidth=Math.max(2.2,3/(displayScale||1));ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);
+    ctx.strokeStyle=color;ctx.lineWidth=Math.max(2.2,3/(displayScale||1));ctx.setLineDash(DASH_5_4);ctx.stroke();ctx.setLineDash(EMPTY_DASH);
     const arrowDistance=direction>0?pickupDistance*.78:pickupDistance*.25;
     const tip=pointOnPath(path,arrowDistance,seedRecoveryPathPointScratch),tipX=tip.x,tipY=tip.y;
     const behind=pointOnPath(path,arrowDistance-direction*8,seedRecoveryPathPointScratch);
@@ -126,7 +160,7 @@ function drawAirCoverage(ctx,path,center,radius,displayScale) {
   const segments=pathSegmentsWithinRadius(path,center,radius);
   if (!segments.length) return;
   ctx.beginPath();for(const segment of segments){ctx.moveTo(segment.x1,segment.y1);ctx.lineTo(segment.x2,segment.y2);}
-  ctx.strokeStyle='#ffdf6e';ctx.lineWidth=Math.max(3,5/(displayScale||1));ctx.setLineDash([]);ctx.stroke();
+  ctx.strokeStyle='#ffdf6e';ctx.lineWidth=Math.max(3,5/(displayScale||1));ctx.setLineDash(EMPTY_DASH);ctx.stroke();
 }
 
 function drawBiomeAccents(ctx, map, path) {
@@ -209,9 +243,9 @@ function drawTerrainZones(ctx,map,displayScale=1) {
       ctx.strokeStyle='#667d7b';ctx.lineWidth=Math.max(1.2,1/scale);
       for(const [ax,ay,bx,by] of [[-20,1,-13,5],[8,-9,15,-4],[17,7,24,10]]){ctx.beginPath();ctx.moveTo(x+ax,y+ay);ctx.lineTo(x+bx,y+by);ctx.stroke();}
     }
-    ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.setLineDash([7,5]);ctx.strokeStyle=terrain.color;ctx.lineWidth=Math.max(2,1.3/scale);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.setLineDash(DASH_7_5);ctx.strokeStyle=terrain.color;ctx.lineWidth=Math.max(2,1.3/scale);ctx.stroke();ctx.setLineDash(EMPTY_DASH);
   }
-  ctx.setLineDash([]);ctx.globalAlpha=1;
+  ctx.setLineDash(EMPTY_DASH);ctx.globalAlpha=1;
 }
 
 function drawTerrainLabels(ctx,map,displayScale=1) {
@@ -235,14 +269,14 @@ function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath
     ctx.globalAlpha = .9; ctx.fillStyle = ['#fff0bd', '#f4b8a5', '#e7f4d0'][i % 3]; ctx.beginPath(); ctx.arc((i * 137 + 21) % width, (i * 71 + 15) % height, 1.7, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  for(const zone of map.buildZones||[]){ctx.fillStyle='#d4f3a42a';ctx.fillRect(zone.x,zone.y,zone.width,zone.height);ctx.strokeStyle='#34683c88';ctx.lineWidth=1.5;ctx.setLineDash([8,6]);ctx.strokeRect(zone.x,zone.y,zone.width,zone.height);ctx.setLineDash([]);ctx.fillStyle='#294630';ctx.font=`700 ${Math.max(9,10/displayScale)}px sans-serif`;ctx.fillText('BUILD ZONE',zone.x+4,zone.y+12);}
+  for(const zone of map.buildZones||[]){ctx.fillStyle='#d4f3a42a';ctx.fillRect(zone.x,zone.y,zone.width,zone.height);ctx.strokeStyle='#34683c88';ctx.lineWidth=1.5;ctx.setLineDash(DASH_8_6);ctx.strokeRect(zone.x,zone.y,zone.width,zone.height);ctx.setLineDash(EMPTY_DASH);ctx.fillStyle='#294630';ctx.font=`700 ${Math.max(9,10/displayScale)}px sans-serif`;ctx.fillText('BUILD ZONE',zone.x+4,zone.y+12);}
   drawTerrainZones(ctx,map,displayScale);
   // A single down-right cast shadow gives the route a raised edge against the
   // garden while remaining below all moving enemies and placement feedback.
-  tracePath(ctx,path.map(([x,y])=>[x+3,y+7]));ctx.strokeStyle='#35463c';ctx.globalAlpha=.22;ctx.lineWidth=48;ctx.stroke();ctx.globalAlpha=1;
+  traceOffsetPath(ctx,path,3,7);ctx.strokeStyle='#35463c';ctx.globalAlpha=.22;ctx.lineWidth=48;ctx.stroke();ctx.globalAlpha=1;
   tracePath(ctx, path); ctx.strokeStyle = map.edge; ctx.lineWidth = 44; ctx.stroke();
   tracePath(ctx, path); ctx.strokeStyle = map.trail; ctx.lineWidth = 34; ctx.stroke();
-  tracePath(ctx, path); ctx.setLineDash([4, 9]); ctx.strokeStyle = '#af9f6c'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+  tracePath(ctx, path); ctx.setLineDash(DASH_4_9); ctx.strokeStyle = '#af9f6c'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash(EMPTY_DASH);
   if(showAirRoute)drawAirRoute(ctx,airPath);
   drawBiomeAccents(ctx, map, path);
   drawRouteLandmarks(ctx, path, pathLength);
@@ -474,11 +508,11 @@ export function drawSplashBoundary(ctx, x, y, radius, alpha = 1) {
   ctx.globalAlpha = alpha * .78;
   ctx.strokeStyle = '#fff3bd';
   ctx.lineWidth = 1.4;
-  ctx.setLineDash([4, 4]);
+  ctx.setLineDash(DASH_4_4);
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.setLineDash(EMPTY_DASH);
   ctx.restore();
 }
 
@@ -622,9 +656,9 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     if (!towersLinked(a, b)) continue;
     const focused = selectedTower === a || selectedTower === b;
     const combination = combinationForPair(a, b), style = focused && combination ? COMBINATION_LINK_STYLES[combination.id] : null;
-    ctx.setLineDash(style ? style.dash.map(length => length / linkScale) : [3, 6]); ctx.strokeStyle = style?.color || '#ffe18a77';
+    if(style)setScaledLineDash(ctx,style.dash,linkScale);else ctx.setLineDash(DASH_3_6_LINK); ctx.strokeStyle = style?.color || '#ffe18a77';
     ctx.lineWidth = style ? Math.max(2, 2.5 / linkScale) : 2;
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash(EMPTY_DASH);
   }
   for(let towerIndex=0;towerIndex<towers.length;towerIndex++){
     const tower=towers[towerIndex];
@@ -648,7 +682,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
       for(const [color,width] of [['#263d2c',6],['#fff0a8',3.5]]){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(tower.x+cos*start,tower.y+sin*start);ctx.lineTo(tipX,tipY);ctx.moveTo(backX+wingX,backY+wingY);ctx.lineTo(tipX,tipY);ctx.lineTo(backX-wingX,backY-wingY);ctx.stroke();}
       ctx.restore();
     }
-    if (isSelected) { ctx.beginPath(); ctx.arc(tower.x, tower.y, 20, 0, Math.PI * 2); ctx.setLineDash([2, 3]); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]); }
+    if (isSelected) { ctx.beginPath(); ctx.arc(tower.x, tower.y, 20, 0, Math.PI * 2); ctx.setLineDash(DASH_2_3); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash(EMPTY_DASH); }
     if (tower.level > 1) { ctx.fillStyle = '#ffe28b'; ctx.beginPath(); ctx.arc(tower.x + 11, tower.y - 11, 6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#493e20'; ctx.font = '8px DM Mono, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tower.level, tower.x + 11, tower.y - 10); }
   }
   if (abilityPreview) {
@@ -656,13 +690,13 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     for(let towerIndex=0;towerIndex<towers.length;towerIndex++)if(towers[towerIndex].id===abilityPreview.towerId){tower=towers[towerIndex];break;}
     if (tower) {
       ctx.beginPath(); ctx.arc(tower.x, tower.y, abilityPreview.radius, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffe18a20'; ctx.fill(); ctx.setLineDash([7, 5]); ctx.strokeStyle = '#fff0a9'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#ffe18a20'; ctx.fill(); ctx.setLineDash(DASH_7_5); ctx.strokeStyle = '#fff0a9'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash(EMPTY_DASH);
     }
   }
   for(let linkIndex=0;linkIndex<healerLinks.length;linkIndex++){
     const link=healerLinks[linkIndex];
     if(!link?.from||!link?.to)continue;
-    ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);ctx.setLineDash([6/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash([]);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.save();ctx.globalAlpha=link.alpha??1;ctx.strokeStyle='#c8f59a';ctx.fillStyle='#f4ffd1';ctx.lineWidth=Math.max(2,2/enemyStrokeScale);setScaledLineDash(ctx,DASH_6_4,enemyStrokeScale);ctx.beginPath();ctx.moveTo(link.from.x,link.from.y);ctx.lineTo(link.to.x,link.to.y);ctx.stroke();ctx.setLineDash(EMPTY_DASH);const pulse=link.progress??1,x=link.from.x+(link.to.x-link.from.x)*pulse,y=link.from.y+(link.to.y-link.from.y)*pulse;ctx.beginPath();ctx.arc(x,y,3.5/enemyStrokeScale,0,Math.PI*2);ctx.fill();ctx.restore();
   }
   // Threat silhouettes follow projectiles and particles; health and warning overlays follow the bodies.
   const shotVisuals=shotVisualScratch;
@@ -697,21 +731,21 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const {enemy,point,silhouette}=enemyVisuals[visualIndex];
     const altitude=enemy.flying?silhouette.radius*.85:silhouette.float,bodyY=point.y-altitude;
     const causality=impactCausalityForEnemy(enemy);
-    if(causality?.from&&causality.alpha>0){ctx.save();ctx.globalAlpha=Math.min(1,causality.alpha)*.55;ctx.strokeStyle=causality.color||'#fff0a8';ctx.lineWidth=Math.max(1.5,2/enemyStrokeScale);ctx.setLineDash([5/enemyStrokeScale,4/enemyStrokeScale]);ctx.beginPath();ctx.moveTo(causality.from.x,causality.from.y);ctx.lineTo(point.x,bodyY);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=Math.min(1,causality.alpha);ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+7,0,Math.PI*2);ctx.stroke();ctx.restore();}
+    if(causality?.from&&causality.alpha>0){ctx.save();ctx.globalAlpha=Math.min(1,causality.alpha)*.55;ctx.strokeStyle=causality.color||'#fff0a8';ctx.lineWidth=Math.max(1.5,2/enemyStrokeScale);setScaledLineDash(ctx,DASH_5_4,enemyStrokeScale);ctx.beginPath();ctx.moveTo(causality.from.x,causality.from.y);ctx.lineTo(point.x,bodyY);ctx.stroke();ctx.setLineDash(EMPTY_DASH);ctx.globalAlpha=Math.min(1,causality.alpha);ctx.beginPath();ctx.arc(point.x,bodyY,silhouette.radius+7,0,Math.PI*2);ctx.stroke();ctx.restore();}
     ctx.fillStyle = '#35503d66'; ctx.beginPath(); ctx.ellipse(point.x, point.y + (enemy.flying ? 13 : 8), silhouette.radius * 1.1, silhouette.radius * .52, 0, 0, Math.PI * 2); ctx.fill();
-    if (enemy.flying) { ctx.beginPath(); ctx.setLineDash([2, 3]); ctx.moveTo(point.x, point.y + 5); ctx.lineTo(point.x, bodyY + silhouette.radius * .65); ctx.strokeStyle = '#f9f6d0aa'; ctx.lineWidth = Math.max(1,1/enemyStrokeScale); ctx.stroke(); ctx.setLineDash([]); }
-    if (enemy.boss || enemy.shield > 0 || enemy.armor > 0) { ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(enemy.boss ? 2.5 : 1.8,1.05/enemyStrokeScale); ctx.beginPath(); ctx.arc(point.x, bodyY, silhouette.radius + (enemy.boss ? 4 : 2), 0, Math.PI * 2); if (enemy.shield > 0) ctx.setLineDash([2, 2]); ctx.stroke(); ctx.setLineDash([]); }
+    if (enemy.flying) { ctx.beginPath(); ctx.setLineDash(DASH_2_3); ctx.moveTo(point.x, point.y + 5); ctx.lineTo(point.x, bodyY + silhouette.radius * .65); ctx.strokeStyle = '#f9f6d0aa'; ctx.lineWidth = Math.max(1,1/enemyStrokeScale); ctx.stroke(); ctx.setLineDash(EMPTY_DASH); }
+    if (enemy.boss || enemy.shield > 0 || enemy.armor > 0) { ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(enemy.boss ? 2.5 : 1.8,1.05/enemyStrokeScale); ctx.beginPath(); ctx.arc(point.x, bodyY, silhouette.radius + (enemy.boss ? 4 : 2), 0, Math.PI * 2); if (enemy.shield > 0) ctx.setLineDash(DASH_2_2); ctx.stroke(); ctx.setLineDash(EMPTY_DASH); }
     if (enemy.carrierTelegraphTimer > 0 || enemy.wardFlash > 0) {
       ctx.beginPath(); ctx.arc(point.x, bodyY, enemy.radius + (enemy.carrierTelegraphTimer > 0 ? 9 : 6), 0, Math.PI * 2);
-      ctx.strokeStyle = '#a9f4ef'; ctx.lineWidth = enemy.carrierTelegraphTimer > 0 ? 2.6 : 2; ctx.setLineDash(enemy.carrierTelegraphTimer > 0 ? [3, 2] : []); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = '#a9f4ef'; ctx.lineWidth = enemy.carrierTelegraphTimer > 0 ? 2.6 : 2; ctx.setLineDash(enemy.carrierTelegraphTimer > 0 ? DASH_3_2 : EMPTY_DASH); ctx.stroke(); ctx.setLineDash(EMPTY_DASH);
     }
     if (enemy.healerTelegraphTimer > 0 || enemy.supportFlash > 0) {
       ctx.beginPath(); ctx.arc(point.x, bodyY, enemy.radius + (enemy.healerTelegraphTimer > 0 ? 8 : 5), 0, Math.PI * 2);
-      ctx.strokeStyle = '#e3ffc1'; ctx.lineWidth = enemy.healerTelegraphTimer > 0 ? 2.6 : 2; ctx.setLineDash(enemy.healerTelegraphTimer > 0 ? [3, 2] : []); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = '#e3ffc1'; ctx.lineWidth = enemy.healerTelegraphTimer > 0 ? 2.6 : 2; ctx.setLineDash(enemy.healerTelegraphTimer > 0 ? DASH_3_2 : EMPTY_DASH); ctx.stroke(); ctx.setLineDash(EMPTY_DASH);
     }
     if (enemy.burrowTelegraphTimer > 0) {
       ctx.beginPath(); ctx.arc(point.x, point.y, enemy.radius + 8, 0, Math.PI * 2);
-      ctx.strokeStyle = '#e0b878'; ctx.lineWidth = 2.6/enemyStrokeScale; ctx.setLineDash([3/enemyStrokeScale, 2/enemyStrokeScale]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = '#e0b878'; ctx.lineWidth = 2.6/enemyStrokeScale; setScaledLineDash(ctx,DASH_3_2,enemyStrokeScale); ctx.stroke(); ctx.setLineDash(EMPTY_DASH);
       for (const [dx,dy] of [[-5,-enemy.radius-5],[0,-enemy.radius-9],[5,-enemy.radius-5]]) {
         ctx.beginPath(); ctx.arc(point.x+dx/enemyStrokeScale,point.y+Math.sign(dy)*enemy.radius+dy/enemyStrokeScale,2.2/enemyStrokeScale,0,Math.PI*2); ctx.fillStyle='#c99453'; ctx.fill();
       }
@@ -750,8 +784,8 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   if (guardian) {
     if (guardianMoveActive && guardian.downTimer <= 0) {
       const safe = guardianCursor && guardianDestinationIsSafe(guardian, guardianCursor, path, width, height);
-      ctx.beginPath();ctx.arc(guardian.x,guardian.y,GUARDIAN_PULSE_RADIUS,0,Math.PI*2);ctx.fillStyle='#d9f48b12';ctx.fill();ctx.strokeStyle='#e6f5ae77';ctx.setLineDash([5,5]);ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);
-      ctx.beginPath();ctx.moveTo(guardian.x,guardian.y);ctx.lineTo(guardianCursor?.x??guardian.targetX,guardianCursor?.y??guardian.targetY);ctx.strokeStyle=safe?'#e7f3a8cc':'#f0937acc';ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(guardian.x,guardian.y,GUARDIAN_PULSE_RADIUS,0,Math.PI*2);ctx.fillStyle='#d9f48b12';ctx.fill();ctx.strokeStyle='#e6f5ae77';ctx.setLineDash(DASH_5_5);ctx.lineWidth=1;ctx.stroke();ctx.setLineDash(EMPTY_DASH);
+      ctx.beginPath();ctx.moveTo(guardian.x,guardian.y);ctx.lineTo(guardianCursor?.x??guardian.targetX,guardianCursor?.y??guardian.targetY);ctx.strokeStyle=safe?'#e7f3a8cc':'#f0937acc';ctx.setLineDash(DASH_4_4);ctx.stroke();ctx.setLineDash(EMPTY_DASH);
       if(guardianCursor){ctx.beginPath();ctx.arc(guardianCursor.x,guardianCursor.y,GUARDIAN_PATH_CLEARANCE,0,Math.PI*2);ctx.strokeStyle=safe?'#dff6a6':'#ff9c89';ctx.lineWidth=2;ctx.stroke();}
     }
     ctx.fillStyle='#26442a99';ctx.beginPath();ctx.ellipse(guardian.x,guardian.y+8,13,6,0,0,Math.PI*2);ctx.fill();
@@ -794,11 +828,11 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     drawStatusMarks(ctx, enemy, point.x, barTop - 11);
     const armorFeedback=armorFeedbackForEnemy(enemy);
     if(armorFeedback?.label){const label=armorFeedback.label,labelScale=Math.max(.35,enemyStrokeScale),fontSize=9/labelScale,labelWidth=(label.length*5.2+12)/labelScale,labelY=barTop-23/labelScale;ctx.save();ctx.globalAlpha=armorFeedback.alpha??1;ctx.fillStyle='#17271eeF';ctx.fillRect(point.x-labelWidth/2,labelY-8/labelScale,labelWidth,11/labelScale);ctx.strokeStyle=armorFeedback.kind==='blocked'?'#ff9a82':armorFeedback.kind==='bypassed'?'#b8ef83':'#ffe18a';ctx.lineWidth=1.5/labelScale;ctx.strokeRect(point.x-labelWidth/2,labelY-8/labelScale,labelWidth,11/labelScale);ctx.fillStyle=ctx.strokeStyle;ctx.font=`bold ${fontSize}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,point.x,labelY-2.5/labelScale);ctx.restore();}
-    if (enemy.progress > .82) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+7,0,Math.PI*2);ctx.setLineDash([2,2]);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.font='bold 8px sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';drawEnemyRoleGlyph(ctx,'!',point.x+radius+5,barTop-8,8,EXIT_WARNING_GLYPH_STYLE); }
-    if (enemy.id === selectedTargetId) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+9,0,Math.PI*2);ctx.setLineDash([3,2]);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);ctx.font='bold 8px sans-serif';ctx.fillStyle='#fff';ctx.fillText('TARGET',point.x,bodyY+radius+13+stackRank*9); }
-    if (enemy.telegraph || enemy.bossTelegraphTimer > 0) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+13,0,Math.PI*2);ctx.setLineDash([3,3]);ctx.strokeStyle=enemy.boss?'#ffe2a0':'#fff';ctx.lineWidth=enemy.boss?3:2;ctx.stroke();ctx.setLineDash([]); }
+    if (enemy.progress > .82) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+7,0,Math.PI*2);ctx.setLineDash(DASH_2_2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash(EMPTY_DASH);ctx.font='bold 8px sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';drawEnemyRoleGlyph(ctx,'!',point.x+radius+5,barTop-8,8,EXIT_WARNING_GLYPH_STYLE); }
+    if (enemy.id === selectedTargetId) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+9,0,Math.PI*2);ctx.setLineDash(DASH_3_2);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.setLineDash(EMPTY_DASH);ctx.font='bold 8px sans-serif';ctx.fillStyle='#fff';ctx.fillText('TARGET',point.x,bodyY+radius+13+stackRank*9); }
+    if (enemy.telegraph || enemy.bossTelegraphTimer > 0) { ctx.beginPath();ctx.arc(point.x,bodyY,radius+13,0,Math.PI*2);ctx.setLineDash(DASH_3_3);ctx.strokeStyle=enemy.boss?'#ffe2a0':'#fff';ctx.lineWidth=enemy.boss?3:2;ctx.stroke();ctx.setLineDash(EMPTY_DASH); }
     const choreography=enemy.boss?bossChoreoForEnemy(enemy):null;
-    if(choreography){const cueScale=enemyStrokeScale;ctx.save();ctx.globalAlpha=choreography.alpha??1;ctx.beginPath();ctx.arc(point.x,bodyY,radius+17,0,Math.PI*2);ctx.setLineDash(choreography.kind==='danger'?[2/cueScale,3/cueScale]:[]);ctx.strokeStyle=choreography.kind==='danger'?'#ff745f':'#b8f28a';ctx.lineWidth=3/cueScale;ctx.stroke();ctx.setLineDash([]);ctx.font=`bold ${9/cueScale}px system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle=choreography.kind==='danger'?'#ff9b82':'#c9f59c';ctx.fillText(choreography.kind==='danger'?'DANGER':'RECOVERY',point.x,bodyY+radius+19/cueScale);ctx.restore();}
+    if(choreography){const cueScale=enemyStrokeScale;ctx.save();ctx.globalAlpha=choreography.alpha??1;ctx.beginPath();ctx.arc(point.x,bodyY,radius+17,0,Math.PI*2);if(choreography.kind==='danger')setScaledLineDash(ctx,DASH_2_3,cueScale);else ctx.setLineDash(EMPTY_DASH);ctx.strokeStyle=choreography.kind==='danger'?'#ff745f':'#b8f28a';ctx.lineWidth=3/cueScale;ctx.stroke();ctx.setLineDash(EMPTY_DASH);ctx.font=`bold ${9/cueScale}px system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle=choreography.kind==='danger'?'#ff9b82':'#c9f59c';ctx.fillText(choreography.kind==='danger'?'DANGER':'RECOVERY',point.x,bodyY+radius+19/cueScale);ctx.restore();}
     if (enemy.bossTelegraphTimer > 0 && enemy.bossTelegraph) {
       const warningScale=1/(Number.isFinite(displayScale)&&displayScale>0?displayScale:1),warningHeight=34*warningScale,warningGap=4*warningScale;
       ctx.font = `bold ${10*warningScale}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
@@ -849,9 +883,9 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     const range=placementPreviewRange(selectedType,pointer);
     ctx.globalAlpha = .3; ctx.beginPath(); ctx.arc(pointer.x, pointer.y, range, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
     const groundSegments=pathSegmentsWithinRadius(path,pointer,range);
-    if(groundSegments.length){ctx.beginPath();for(const segment of groundSegments){ctx.moveTo(segment.x1,segment.y1);ctx.lineTo(segment.x2,segment.y2);}ctx.strokeStyle='#f8ffe6';ctx.lineWidth=Math.max(3,5/(displayScale||1));ctx.setLineDash([]);ctx.stroke();}
+    if(groundSegments.length){ctx.beginPath();for(const segment of groundSegments){ctx.moveTo(segment.x1,segment.y1);ctx.lineTo(segment.x2,segment.y2);}ctx.strokeStyle='#f8ffe6';ctx.lineWidth=Math.max(3,5/(displayScale||1));ctx.setLineDash(EMPTY_DASH);ctx.stroke();}
     if(def.antiAir&&airPath)drawAirCoverage(ctx,airPath,pointer,range,displayScale);
-    ctx.save();ctx.strokeStyle='#fff3a6';ctx.lineWidth=2;ctx.setLineDash([3,2]);
+    ctx.save();ctx.strokeStyle='#fff3a6';ctx.lineWidth=2;ctx.setLineDash(DASH_3_2);
     for(let enemyIndex=0;enemyIndex<enemies.length;enemyIndex++){
       const enemy=enemies[enemyIndex];
       if(!canTowerHitTarget({tower:pointer,target:enemy,range,canHitAir:Boolean(def.antiAir),positionOf:enemyPosition}))continue;
@@ -862,7 +896,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
     for(let previewIndex=0;previewIndex<combinationPreviews.length;previewIndex++){
       const {combination,counterpart}=combinationPreviews[previewIndex];
       const style=COMBINATION_LINK_STYLES[combination.id];if(!style)continue;
-      ctx.save();ctx.globalAlpha=.9;ctx.setLineDash(style.dash.map(length=>length/(displayScale||1)));ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2.5/(displayScale||1));ctx.beginPath();ctx.moveTo(counterpart.x,counterpart.y);ctx.lineTo(pointer.x,pointer.y);ctx.stroke();ctx.setLineDash([]);
+      ctx.save();ctx.globalAlpha=.9;setScaledLineDash(ctx,style.dash,displayScale);ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2.5/(displayScale||1));ctx.beginPath();ctx.moveTo(counterpart.x,counterpart.y);ctx.lineTo(pointer.x,pointer.y);ctx.stroke();ctx.setLineDash(EMPTY_DASH);
       ctx.beginPath();ctx.arc(counterpart.x,counterpart.y,24,0,Math.PI*2);ctx.strokeStyle=style.color;ctx.lineWidth=Math.max(2,2/(displayScale||1));ctx.stroke();
       const artOptions=placementTowerArtOptionsScratch;artOptions.color=def.color;artOptions.displayScale=displayScale;
       drawTowerArt(ctx,selectedType,pointer.x,pointer.y,artOptions);
