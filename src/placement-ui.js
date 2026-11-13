@@ -5,6 +5,7 @@ export function buildPlacementHintView({ selectedType, placementCandidate, error
     return {
       text:'Placement canceled. Select a defender to continue.',
       className:'placement-hint',
+      hidden:false,
       confirmHidden:true,
       previewActive:false,
       confirmDisabled:true
@@ -22,6 +23,7 @@ export function buildPlacementHintView({ selectedType, placementCandidate, error
   return {
     text:message,
     className:`placement-hint ${error ? 'invalid' : 'placing'}`,
+    hidden:!placementCandidate&&!error&&!firstAction,
     confirmHidden:!placementCandidate,
     previewActive:Boolean(placementCandidate),
     confirmDisabled:!placementCandidate || Boolean(error)
@@ -31,6 +33,7 @@ export function buildPlacementHintView({ selectedType, placementCandidate, error
 export function renderPlacementHint({ hint, confirm, board, confirmButton, view }) {
   hint.textContent = view.text;
   hint.className = view.className;
+  hint.hidden = view.hidden;
   confirm.hidden = view.confirmHidden;
   board.classList.toggle('has-placement-preview', view.previewActive);
   confirmButton.disabled = view.confirmDisabled;

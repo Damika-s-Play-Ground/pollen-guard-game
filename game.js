@@ -433,7 +433,8 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       document.querySelectorAll('.tutorial-focus').forEach(element=>element.classList.remove('tutorial-focus'));
       canvas.parentElement.classList.remove('tutorial-focus-map');
     }
-    applyGuidanceVisibility({visibility,coach,placementHint:hint,mapNoteGuidance,placementConfirm:byId('placementConfirm'),placementCandidate});
+    const placementHintActionable=Boolean(placementCandidate||placementError||(!selectedType&&!selectedTower&&!firstActionCoachVisible));
+    applyGuidanceVisibility({visibility,coach,placementHint:hint,mapNoteGuidance,placementConfirm:byId('placementConfirm'),placementCandidate,placementHintActionable});
   }
   function syncInteractionPresentation(){
     const mode=deriveInteractionMode({selectedType,selectedTower,placementCandidate,aimedSpellId,guardianMoveActive,abilityPreview,selectionChooserOpen:!byId('selectionChooser').hidden});

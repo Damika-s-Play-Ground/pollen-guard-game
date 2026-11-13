@@ -26,9 +26,9 @@ export function guidanceVisibility(owner) {
   };
 }
 
-export function applyGuidanceVisibility({ visibility, coach, placementHint, mapNoteGuidance, placementConfirm, placementCandidate }) {
+export function applyGuidanceVisibility({ visibility, coach, placementHint, mapNoteGuidance, placementConfirm, placementCandidate, placementHintActionable = true }) {
   coach.hidden=!visibility.tutorialCoach;
-  placementHint.hidden=!visibility.placementHint;
+  placementHint.hidden=!visibility.placementHint||!placementHintActionable;
   if(mapNoteGuidance)mapNoteGuidance.hidden=!visibility.mapNote;
   placementConfirm.hidden=visibility.criticalWarning||!placementCandidate;
 }
