@@ -25,6 +25,8 @@ const enemyVisualScratch = [];
 const shotVisualScratch = [];
 // Battlefield draws are synchronous; these frame workspaces are consumed before reuse.
 const firingShotByTowerScratch = new Map();
+const linkedPairRowsScratch = [];
+const linkedTowerFlagsScratch = [];
 const scaledDashScratch = [];
 const EMPTY_DASH = Object.freeze([]);
 const DASH_2_2 = Object.freeze([2,2]);
@@ -705,8 +707,20 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   drawGateRoutePreviews(ctx,gateRoutePreviews,selectedGateRoute,displayScale);
   drawSeedRecoveryPaths(ctx,path,pathLength,state.seedObjective,displayScale);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const linkedPairRows=linkedPairRowsScratch,linkedTowerFlags=linkedTowerFlagsScratch;
+  linkedTowerFlags.length=towers.length;
+  for(let towerIndex=0;towerIndex<towers.length;towerIndex++)linkedTowerFlags[towerIndex]=false;
+  for(let left=0;left<towers.length;left++){
+    const row=linkedPairRows[left]||(linkedPairRows[left]=[]),tower=towers[left];
+    row.length=towers.length;
+    for(let right=left+1;right<towers.length;right++){
+      const linked=towersLinked(tower,towers[right]);row[right]=linked;
+      if(linked){linkedTowerFlags[left]=true;linkedTowerFlags[right]=true;}
+    }
+  }
+  const selectedTowerIndex=towers.indexOf(selectedTower);
   if (selectedTower && towersDef[selectedTower.type]?.antiAir && airPath) {
-    drawAirCoverage(ctx,airPath,selectedTower,selectedTowerRange(selectedTower),displayScale);
+    drawAirCoverage(ctx,airPath,selectedTower,selectedTowerRange(selectedTower,selectedTowerIndex>=0?linkedTowerFlags[selectedTowerIndex]:undefined),displayScale);
   }
 
   const firingByTower = firingShotByTowerScratch;
@@ -715,7 +729,7 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   const linkScale = Number.isFinite(displayScale) && displayScale > 0 ? displayScale : 1;
   for (let i = 0; i < towers.length; i++) for (let j = i + 1; j < towers.length; j++) {
     const a = towers[i], b = towers[j];
-    if (!towersLinked(a, b)) continue;
+    if (!linkedPairRows[i][j]) continue;
     const focused = selectedTower === a || selectedTower === b;
     const combination = combinationForPair(a, b), style = focused && combination ? COMBINATION_LINK_STYLES[combination.id] : null;
     if(style)setScaledLineDash(ctx,style.dash,linkScale);else ctx.setLineDash(DASH_3_6_LINK); ctx.strokeStyle = style?.color || '#ffe18a77';
@@ -725,13 +739,14 @@ export function drawBattlefield(ctx, state, renderAlpha = 1, staticMapCache = nu
   for(let towerIndex=0;towerIndex<towers.length;towerIndex++){
     const tower=towers[towerIndex];
     const def = towersDef[tower.type], isSelected = tower === selectedTower;
-    const range = isSelected ? selectedTowerRange(tower) : null;
+    const linked=linkedTowerFlags[towerIndex];
+    const range = isSelected ? selectedTowerRange(tower,linked) : null;
     let artX=tower.x,artY=tower.y;
     const firingShot=firingByTower.get(tower.id);
     const recoil=Math.max(0,Math.min(1,recoilForTower(tower.id)));
     if(recoil>0){const dx=firingShot?firingShot.x-tower.x:0,dy=firingShot?firingShot.y-tower.y:0,angle=recoilAngleForTower(tower.id)??(firingShot?(Math.hypot(dx,dy)>.5?Math.atan2(dy,dx):shotAngle(firingShot,renderAlpha)):0);artX-=Math.cos(angle)*2.5*recoil;artY-=Math.sin(angle)*2.5*recoil;}
     const planting=plantingForTower(tower.id);
-    const attackCue=attackCueForTower(tower);
+    const attackCue=attackCueForTower(tower,linked);
     if(planting?.outlineAlpha>0){ctx.beginPath();ctx.arc(tower.x,tower.y,22,0,Math.PI*2);ctx.strokeStyle=`rgba(230,255,187,${planting.outlineAlpha})`;ctx.lineWidth=2.4;ctx.stroke();}
     if (range) { ctx.beginPath(); ctx.arc(tower.x, tower.y, range, 0, Math.PI * 2); ctx.fillStyle = '#efffc31b'; ctx.fill(); ctx.strokeStyle = '#f1ffd588'; ctx.lineWidth = 1.3; ctx.stroke(); }
     const artOptions=towerArtOptionsScratch[towerIndex]||(towerArtOptionsScratch[towerIndex]={});

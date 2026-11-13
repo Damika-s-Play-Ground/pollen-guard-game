@@ -1363,11 +1363,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   let gameTime=0;
   let renderVisualNow=0;
   const battlefieldRenderState={
-    selectedTowerRange(tower){
+    selectedTowerRange(tower,linkedInFrame){
       const def=towersDef[tower.type];
       if(def.supportStructure)return getEffectiveTowerStats(tower,{researchLoadout,relicLoadout},def).range;
       if(!def.range)return null;
-      const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));
+      const linked=linkedInFrame??towers.some(other=>other!==tower&&towersLinked(tower,other));
       return getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def).range;
     },
     placementComboPreviews(type,point){return previewTowerCombinations({id:'placement-preview',type,x:point.x,y:point.y},towers,towersLinked);},
@@ -1386,12 +1386,17 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
       return age<0||age>=.32?null:{from:cue.from,color:cue.color,alpha:1-age/.32};
     },
     recoilForTower(id){return shotRecoil(uiSettings.animation,gameTime,towerRecoilAt.get(id)?.time);},
-    attackCueForTower(tower){
+    attackCueForTower(tower,linkedInFrame){
       if(uiSettings.animation!=='full'||tower.cooldown<=0||tower.cooldown>ATTACK_ANTICIPATION_SECONDS)return null;
       const def=towersDef[tower.type];if(!def||def.income||def.supportStructure)return null;
-      const linked=towers.some(other=>other!==tower&&towersLinked(tower,other));
+      const linked=linkedInFrame??towers.some(other=>other!==tower&&towersLinked(tower,other));
       const stats=getEffectiveTowerStats(tower,{challenge,challengeRules,linked,terrain:terrainAt(tower),researchLoadout,relicLoadout},def);
-      const candidates=enemies.filter(enemy=>canTowerHitTarget({tower,target:enemy,range:stats.range,canHitAir:def.antiAir,positionOf:enemyPosition}));
+      const candidates=selectedTargetCandidatesScratch;candidates.length=0;
+      const query=selectedTargetQueryScratch;query.tower=tower;query.range=stats.range;query.canHitAir=def.antiAir;query.positionOf=enemyPosition;
+      for(let enemyIndex=0;enemyIndex<enemies.length;enemyIndex++){
+        const enemy=enemies[enemyIndex];query.target=enemy;
+        if(canTowerHitTarget(query))candidates.push(enemy);
+      }
       const target=chooseTargetForTower(tower,candidates,enemyPosition);
       return target?attackAnticipation(uiSettings.animation,tower,enemyPosition(target)):null;
     },
