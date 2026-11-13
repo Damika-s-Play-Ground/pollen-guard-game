@@ -1427,7 +1427,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     simulateStep:dt=>{renderSnapshots.beginStep();simulate(dt);renderSnapshots.capture(enemies,shots);renderSnapshots.updateHitFlashes(enemies,dt);},
     shouldRender:()=>shouldRenderBattleFrame({initialFramePending:!initialBattleFrameRendered,running:runIsActivelyRunning(),terminalFramePending:terminalRenderGate.shouldRender(runIsOver()),wallClockEffects:hasWallClockEffects()}),
     shouldContinue:()=>shouldContinueBattleLoop({visible:!document.hidden,paused:runStateStopsClock(runState),running:runIsRunning(),intermission,wallClockEffects:hasWallClockEffects()}),
-    render:alpha=>{initialBattleFrameRendered=true;renderSelected();draw(alpha);}
+    render:alpha=>{initialBattleFrameRendered=true;if(selectedTower||abilityPreview)renderSelected();else syncInteractionPresentation();draw(alpha);}
   });
   wakeGameLoop=()=>gameLoop.wake({visible:!document.hidden});
   document.addEventListener('visibilitychange',()=>{
