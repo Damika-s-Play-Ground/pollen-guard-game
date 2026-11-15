@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "scope": "Shipped visual/audio/font assets and source modules that procedurally generate them. Application code and configuration are hashed separately by the payload report.",
+  "assets": [
+    {
+      "id": "dm-sans-font-family",
+      "kind": "font",
+      "paths": [
+        "./assets/fonts/dm-sans-regular.ttf",
+        "./assets/fonts/dm-sans-medium.ttf",
+        "./assets/fonts/dm-sans-semibold.ttf",
+        "./assets/fonts/dm-sans-bold.ttf",
+        "./assets/fonts/dm-sans-extrabold.ttf"
+      ],
+      "creators": "The DM Sans Project Authors; commissioned type design by Colophon Foundry with creative direction from MultiAdaptor and the DeepMind team.",
+      "source": "Google Fonts CDN DM Sans v17, resolved 2026-11-10; https://github.com/google/fonts/tree/main/ofl/dmsans",
+      "sourceFiles": [
+        {"path":"./assets/fonts/dm-sans-regular.ttf","url":"https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAopxhTg.ttf"},
+        {"path":"./assets/fonts/dm-sans-medium.ttf","url":"https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAkJxhTg.ttf"},
+        {"path":"./assets/fonts/dm-sans-semibold.ttf","url":"https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAfJthTg.ttf"},
+        {"path":"./assets/fonts/dm-sans-bold.ttf","url":"https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwARZthTg.ttf"},
+        {"path":"./assets/fonts/dm-sans-extrabold.ttf","url":"https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAIpthTg.ttf"}
+      ],
+      "license": "SIL Open Font License 1.1",
+      "licensePath": "./assets/fonts/DM-Sans-OFL.txt",
+      "status": "Upstream and license documented; font binaries locally pinned and offline-cached."
+    },
+    {
+      "id": "dm-mono-font-family",
+      "kind": "font",
+      "paths": [
+        "./assets/fonts/dm-mono-regular.ttf",
+        "./assets/fonts/dm-mono-medium.ttf"
+      ],
+      "creators": "The DM Mono Project Authors; commissioned type design by Colophon Foundry with creative direction from MultiAdaptor and the DeepMind team.",
+      "source": "Google Fonts CDN DM Mono v16, resolved 2026-11-10; https://github.com/google/fonts/tree/main/ofl/dmmono",
+      "sourceFiles": [
+        {"path":"./assets/fonts/dm-mono-regular.ttf","url":"https://fonts.gstatic.com/s/dmmono/v16/aFTU7PB1QTsUX8KYhh0.ttf"},
+        {"path":"./assets/fonts/dm-mono-medium.ttf","url":"https://fonts.gstatic.com/s/dmmono/v16/aFTR7PB1QTsUX8KYvumzIYQ.ttf"}
+      ],
+      "license": "SIL Open Font License 1.1",
+      "licensePath": "./assets/fonts/DM-Mono-OFL.txt",
+      "status": "Upstream and license documented; font binaries locally pinned and offline-cached."
+    },
+    {
+      "id": "pollen-guard-tower-vector-art",
+      "kind": "procedural-vector-art",
+      "paths": ["./src/tower-art.js"],
+      "creators": "Pollen Guard project contributors; individual authorship not separately recorded.",
+      "source": "Authored polygon, line, circle, and SVG data in this repository; no third-party image assets are embedded.",
+      "license": "No per-asset license is recorded; owner confirmation is required before external reuse.",
+      "status": "Source path recorded; individual author attribution remains unverified."
+    },
+    {
+      "id": "pollen-guard-battlefield-and-enemy-art",
+      "kind": "procedural-canvas-art",
+      "paths": ["./src/game-renderer.js", "./src/enemy-silhouette.js"],
+      "creators": "Pollen Guard project contributors; individual authorship not separately recorded.",
+      "source": "Procedural canvas geometry and effects in this repository; no third-party raster art is embedded.",
+      "license": "No per-asset license is recorded; owner confirmation is required before external reuse.",
+      "status": "Source paths recorded; individual author attribution remains unverified."
+    },
+    {
+      "id": "pollen-guard-procedural-audio",
+      "kind": "procedural-audio",
+      "paths": ["./src/game-audio.js"],
+      "creators": "Pollen Guard project contributors; individual authorship not separately recorded.",
+      "source": "Web Audio oscillator and envelope recipes in this repository; no recorded samples are embedded.",
+      "license": "No per-asset license is recorded; owner confirmation is required before external reuse.",
+      "status": "Source path recorded; individual author attribution remains unverified."
+    },
+    {
+      "id": "pollen-guard-favicon",
+      "kind": "vector-icon",
+      "paths": ["./favicon.svg"],
+      "creators": "Pollen Guard repository; individual authorship not separately recorded.",
+      "source": "Standalone SVG stored in this repository.",
+      "license": "No per-asset license is recorded; owner confirmation is required before external reuse.",
+      "status": "Repository path recorded; original author and license confirmation remain open."
+    }
+  ],
+  "runtimeExternalMedia": [],
+  "notes": [
+    "The shipped CSS no longer imports fonts.googleapis.com or requests fonts.gstatic.com at runtime.",
+    "Unicode symbols and emoji use platform-provided fallback fonts and are not bundled media files.",
+    "No optional soundtrack is currently shipped; combat sounds are synthesized at runtime."
+  ]
+}
