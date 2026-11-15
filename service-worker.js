@@ -1,19 +1,31 @@
 const CACHE_PREFIX = 'pollen-guard-shell-';
 const APP_VERSION = '4169a338e6fc';
-const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
+const CACHE_NAME = `${CACHE_PREFIX}v2-${APP_VERSION}`;
 const MANIFEST = './offline-assets.json';
 const scopeUrl = new URL(self.registration.scope);
+const releaseUrl = resource => {
+  const url = new URL(resource, scopeUrl);
+  url.searchParams.set('__pollen_version', APP_VERSION);
+  return url;
+};
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    const response = await fetch(new URL(MANIFEST, scopeUrl), { cache: 'no-store' });
+    const response = await fetch(releaseUrl(MANIFEST), { cache: 'no-store' });
     if (!response.ok) throw new Error('Offline asset list is unavailable.');
     const files = await response.json();
     if (!Array.isArray(files) || files.length > 250 || files.some(file => typeof file !== 'string' || !file.startsWith('./'))) {
       throw new Error('Offline asset list is invalid.');
     }
     const cache = await caches.open(CACHE_NAME);
-    await cache.addAll(files.map(file => new URL(file, scopeUrl).href));
+    // Fetch a release-specific URL to avoid mixing CDN responses across deployments.
+    // Store under canonical URLs so relative imports and offline navigation still work.
+    await Promise.all(files.map(async file => {
+      const resource = new URL(file, scopeUrl);
+      const response = await fetch(releaseUrl(resource), { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Game file is unavailable: ${file}`);
+      await cache.put(resource.href, response);
+    }));
   })());
 });
 
