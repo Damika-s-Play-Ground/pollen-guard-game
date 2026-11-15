@@ -123,3 +123,60 @@ body[data-text-scale="125"] .app .top,body[data-text-scale="150"] .app .top{heig
 .app .counter-pick-list{grid-template-columns:1fr!important}.app .counter-picks h3{font-size:calc(12px * var(--ui-text-scale));margin:10px 0 7px;color:#d1e8a7}.app .auto-start-controls{position:relative}.app #autoStartHold:disabled{display:none}
 @media(orientation:landscape) and (max-height:540px){.app #autoStartHold:not([hidden]):not(:disabled){position:absolute;bottom:calc(100% + 6px);right:0;min-width:105px;background:#294932;z-index:8}}
 .app .pause-menu{position:absolute;bottom:calc(100% + 8px);left:12px;right:12px;width:auto;max-width:680px;max-height:65svh;margin:0 auto;padding:16px;border:1px solid #8fa370;border-radius:15px;background:#142d22f5;box-shadow:0 15px 60px #0007;overflow-y:auto;z-index:14}.app .pause-menu[hidden]{display:none}.app .pause-menu h2{font-size:calc(18px * var(--ui-text-scale));margin:0 0 6px}.app .pause-menu p{font-size:calc(12px * var(--ui-text-scale));line-height:1.4}.app .pause-menu-actions{gap:7px}.app .pause-menu-actions button{min-height:42px;font-size:calc(12px * var(--ui-text-scale))}
+
+/* Placement feedback floats above the game and never resizes the canvas. */
+#placementHint{
+ position:fixed;z-index:60;top:76px;left:50%;bottom:auto;right:auto;transform:translateX(-50%);
+ width:max-content;max-width:min(480px,calc(100vw - 28px));margin:0;padding:12px 17px;
+ border:1px solid #b4ce8d;border-radius:12px;background:#183423f5;color:#eef4d9;
+ box-shadow:0 10px 35px #0005;pointer-events:none;font-size:calc(13px * var(--ui-text-scale));line-height:1.4;
+}
+#placementHint[hidden]{display:none!important}
+#placementHint.invalid{border-color:#e5a47e;background:#3c2c24f5;color:#ffdec6}
+#placementHint.invalid::before{content:'!';display:inline-grid;place-items:center;width:19px;height:19px;margin-right:8px;border:1px solid currentColor;border-radius:50%;font-weight:800;vertical-align:middle}
+.app #battleSupport:not(:has(.placement-confirm:not([hidden]))):not(:has(.selection-chooser:not([hidden]))){display:none}
+.app,.app.compact{max-width:none}
+.app .pause-menu{position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);width:min(480px,calc(100vw - 28px));max-height:75svh;margin:0;z-index:55}
+@media(min-width:1025px),(min-width:761px) and (orientation:landscape){
+ body{padding:8px!important}
+ .app .top{height:44px;margin-bottom:8px}
+ .app .layout{height:calc(100svh - 68px);min-height:420px;grid-template-columns:minmax(0,1fr) 270px;gap:10px}
+ .app .board-card{height:100%;border-radius:16px}
+ .battle-banner{min-height:44px;padding:7px 12px}
+ .battle-banner strong{font-size:calc(14px * var(--ui-text-scale))}
+ .app .hud{height:50px;min-height:50px;padding:5px 12px}
+ .app .defender-sheet.sidebar-actions{display:flex;flex-direction:column;height:100%;max-height:none;overflow:hidden;border:1px solid #496447}
+ .sidebar-actions .sheet-content,.app .sidebar-actions.open .sheet-content{position:static;display:block;flex:1;min-height:0;height:auto;max-height:none;padding:0;overflow:hidden;border:0;box-shadow:none;background:transparent}
+ .app .sidebar-actions .sheet-content>.side{height:100%;max-height:none;overflow-y:auto;padding:8px;gap:8px}
+ .app .sidebar-actions .sheet-toggle{display:none}
+ .app .sidebar-actions .map-footer{flex:none;max-height:46%;overflow-y:auto;padding:10px;gap:7px;border:0;border-bottom:1px solid #496447;border-radius:0;background:#183425;scrollbar-width:thin}
+ .app .sidebar-actions .map-footer .actions.combat-actions{grid-template-columns:44px 50px minmax(0,1fr)!important;gap:6px}
+ .app .sidebar-actions .combat-actions #startBtn{grid-column:1/-1;min-height:44px;height:44px;font-size:calc(14px * var(--ui-text-scale))}
+ .app .sidebar-actions .combat-actions #pauseBtn,.app .sidebar-actions .combat-actions #speedBtn{height:38px;min-height:38px}
+ .app .sidebar-actions .auto-start-controls button{min-height:38px;font-size:calc(11px * var(--ui-text-scale))}
+ .app .sidebar-actions #autoStartHold:not([hidden]):not(:disabled){position:static;min-width:0;font-size:calc(10px * var(--ui-text-scale));padding:3px;flex:1}
+ .app .sidebar-actions .map-footer .ability-dock{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;overflow:visible}
+ .app .sidebar-actions .ability-dock .ability-card{max-width:none;min-width:0;width:auto;flex:none}
+ .app .sidebar-actions .ability-card>button{font-size:calc(10px * var(--ui-text-scale));min-height:39px;padding:6px 4px}
+ .app .sidebar-actions .ability-card:focus-within small{left:auto;right:0;max-width:240px}
+ .app .sidebar-actions .tutorial-coach{padding:6px;font-size:calc(10px * var(--ui-text-scale));line-height:1.4}
+ .app .sidebar-actions .tutorial-coach button{padding:3px 5px;font-size:calc(9px * var(--ui-text-scale))}
+ .app .sidebar-actions #battleSupport .placement-confirm,.app .sidebar-actions #battleSupport .selection-chooser{padding:6px;gap:5px}
+ .app .sidebar-actions .tower-list .tower-option{grid-template-columns:34px minmax(0,1fr) auto;gap:6px;padding:7px;min-height:59px}
+ .app .sidebar-actions .tower-icon{width:32px;height:32px}
+ .app .sidebar-actions .tower-copy b{font-size:calc(12px * var(--ui-text-scale))}
+ .app .sidebar-actions .side-card{padding:10px}
+}
+@media(orientation:landscape) and (max-height:540px){
+ .app .top{height:32px;margin-bottom:6px}
+ .app .layout{height:calc(100svh - 54px);min-height:0;grid-template-columns:minmax(0,1fr) 224px}
+ .app .sidebar-actions .map-footer{max-height:45%;padding:6px;gap:4px}
+ .app .sidebar-actions .combat-actions #startBtn{min-height:36px;height:36px;font-size:12px}
+ .app .sidebar-actions .combat-actions #pauseBtn,.app .sidebar-actions .combat-actions #speedBtn,.app .sidebar-actions .auto-start-controls button{min-height:32px;height:32px}
+ #placementHint{top:52px;font-size:12px;padding:8px 12px}
+}
+@media(max-width:760px),(max-width:1024px) and (orientation:portrait){
+ #placementHint{top:62px;font-size:calc(12px * var(--ui-text-scale));padding:10px 13px;max-height:25svh;overflow:hidden}
+}
+body[data-palette="high-contrast"] #placementHint{background:var(--surface-panel);color:var(--text-cream);border-color:var(--control-border)}
+body[data-palette="high-contrast"] #placementHint.invalid{color:var(--danger-coral);border-color:var(--danger-coral)}

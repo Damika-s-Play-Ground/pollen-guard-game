@@ -56,6 +56,31 @@ export function renderMapPicker({document, root, maps, profile, selectedMap, fil
   }
 }
 
+export const SIDEBAR_ACTIONS_QUERY='(min-width: 1025px), (min-width: 761px) and (orientation: landscape)';
+
+export function mountBattleActions({document,wideLayout}) {
+  const dock=document.getElementById('mapFooter');
+  const board=document.querySelector('.board-card');
+  const sidebar=document.getElementById('defenderSheet');
+  const hint=document.getElementById('placementHint');
+  // Placement feedback must never change the battlefield's dimensions.
+  document.body.append(hint);
+  hint.setAttribute('role','status');
+  hint.setAttribute('aria-live','polite');
+  hint.setAttribute('aria-atomic','true');
+  dock.setAttribute('role','region');dock.setAttribute('aria-label','Battle controls');
+  const sync=()=>{
+    const host=wideLayout.matches?sidebar:board;
+    if(dock.parentElement!==host){
+      if(wideLayout.matches)sidebar.insertBefore(dock,sidebar.firstChild);
+      else board.append(dock);
+    }
+    sidebar.classList.toggle('sidebar-actions',wideLayout.matches);
+  };
+  sync();wideLayout.addEventListener('change',sync);
+  return {sync};
+}
+
 export function createGameShell({document,maps,missions,onDialogOpen,onSelectMap,onRequestCanvas}) {
   const byId=id=>document.getElementById(id);
   let profile={}, selectedMap='meadow', filter='all';
@@ -77,6 +102,7 @@ export function createGameShell({document,maps,missions,onDialogOpen,onSelectMap
   new MutationObserver(syncResume).observe(byId('resumeBtn'),{attributes:true,attributeFilter:['disabled']});syncResume();
   const support=byId('battleSupport');
   byId('mapFooter').prepend(support);
+  mountBattleActions({document,wideLayout:document.defaultView.matchMedia(SIDEBAR_ACTIONS_QUERY)});
   const enemyGuide=byId('enemyGuide'); byId('enemyDialogBody').append(enemyGuide);
   // Reference tables remain available on request, never below the battlefield.
   for (const node of [...document.querySelectorAll('.layout .combat-matrix, .layout .wave-details, .layout .battle-summary-panel')]) byId('intelDialogBody').append(node);

@@ -31,7 +31,7 @@ export function buildPlacementHintView({ selectedType, placementCandidate, error
 }
 
 export function renderPlacementHint({ hint, confirm, board, confirmButton, view }) {
-  hint.textContent = view.text;
+  if(hint.textContent!==view.text)hint.textContent = view.text;
   hint.className = view.className;
   hint.hidden = view.hidden;
   confirm.hidden = view.confirmHidden;
