@@ -445,6 +445,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     updateTutorialCoach();updatePlacementHint();
   }
   function syncGuidanceVisibility(criticalWarning=criticalWarningActive,placementError=currentPlacementError){
+    if(selectedMap!=='meadow'&&!tutorialPractice.active)firstActionCoachVisible=false;
     const mapNoteGuidance=byId('mapNote').querySelector('.map-note-guidance');
     const owner=resolveGuidanceOwner({criticalWarning,placementFeedback:Boolean(placementCandidate||placementError),tutorialActive:tutorialPractice.active,firstAction:firstActionCoachVisible,
       placementAvailable:Boolean(selectedType),placementCancelled:!selectedType&&!selectedTower&&!firstActionCoachVisible,mapNoteAvailable:Boolean(mapNoteGuidance?.textContent.trim())});
