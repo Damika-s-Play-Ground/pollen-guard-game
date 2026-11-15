@@ -28,8 +28,9 @@ jobs:
       - name: Prepare game-only site artifact
         run: |
           mkdir -p _site
-          cp index.html game.js favicon.svg manifest.webmanifest service-worker.js offline-assets.json _site/
+          cp index.html game.js styles.css asset-provenance.json favicon.svg manifest.webmanifest service-worker.js offline-assets.json _site/
           cp -R src _site/src
+          cp -R assets _site/assets
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
