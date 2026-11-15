@@ -1,7 +1,9 @@
+import { BOSS_VARIANTS } from './boss-encounters.js';
 export function bossWarningText(enemies, cues = new Map(), now = 0) {
   const groups = new Map();
   for (const enemy of enemies) {
     let text = '';
+    const biome=BOSS_VARIANTS[enemy.bossVariant]?.biome||enemy.bossVariant;
     if (enemy.bossTelegraphTimer > 0 && enemy.bossTelegraph) text = `${enemy.bossName} · PREPARE · ${enemy.bossTelegraph} · ${Math.ceil(enemy.bossTelegraphTimer * 2) / 2}s`;
     else if (enemy.bossRushTimer > 0) text = `${enemy.bossName} · DANGER · Root rush · ${Math.ceil(enemy.bossRushTimer * 2) / 2}s`;
     else {
@@ -9,8 +11,8 @@ export function bossWarningText(enemies, cues = new Map(), now = 0) {
       if (cue && now - cue.time < .9) {
         const kind = cue.kind === 'danger' && now - cue.time < .35 ? 'DANGER' : 'RECOVERY';
         const danger=cue.phase===1
-          ? enemy.bossVariant?.startsWith('meadow')?'Mite brood summoned':enemy.bossVariant?.startsWith('creek')?'Shield pulse':enemy.bossVariant?.startsWith('ridge')?'Armor increased':'Boss phase resolved'
-          : enemy.bossVariant?.startsWith('meadow')?'Root rush':enemy.bossVariant?.startsWith('creek')?'Sky gnats summoned':enemy.bossVariant?.startsWith('ridge')?'Armored escort summoned':'Boss phase resolved';
+          ? biome==='meadow'?'Mite brood summoned':biome==='creek'?'Shield pulse':biome==='ridge'?'Armor increased':'Boss phase resolved'
+          : biome==='meadow'?'Root rush':biome==='creek'?'Sky gnats summoned':biome==='ridge'?'Armored escort summoned':'Boss phase resolved';
         text = `${enemy.bossName} · ${kind} · ${kind === 'DANGER' ? danger : 'Attack now'}`;
       }
     }

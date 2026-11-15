@@ -49,6 +49,22 @@ Object.assign(maps, {
     airPath:[[48,42],[210,42],[210,360],[360,360],[360,60],[520,60],[520,445],[670,445],[670,190],[820,190],[820,390],[850,360]] }
 });
 
+// Expeditions are available from the map picker without campaign unlocks.
+Object.assign(maps, {
+  'sunpetal-grove': { ...maps.meadow, name:'Sunpetal Grove', expedition:true, waveSource:'meadow', unlockAt:0,
+    tagline:'Generous loops · beginner friendly', scenery:'grove', background:'#a8c778', patch:'#c5d995', trail:'#f4dfab', edge:'#c6a876',
+    path:[[48,270],[155,270],[155,110],[335,110],[335,405],[535,405],[535,145],[735,145],[735,365],[850,365]],
+    airPath:[[48,220],[120,220],[120,65],[375,65],[375,450],[575,450],[575,95],[780,95],[780,365],[850,365]] },
+  'moonlit-marsh': { ...maps.creek, name:'Moonlit Marsh', expedition:true, waveSource:'creek', unlockAt:0,
+    tagline:'Wide water turns · watch the sky', scenery:'marsh', background:'#527d81', patch:'#6e9c95', trail:'#c9cfb1', edge:'#8aa09a',
+    path:[[48,155],[220,155],[220,365],[410,365],[410,100],[605,100],[605,415],[765,415],[765,255],[850,255]],
+    airPath:[[48,80],[175,80],[175,415],[455,415],[455,60],[650,60],[650,455],[805,455],[805,255],[850,255]] },
+  'amber-switchback': { ...maps.ridge, name:'Amber Switchback', expedition:true, waveSource:'ridge', unlockAt:0,
+    tagline:'Long switchbacks · expert pressure', scenery:'autumn', background:'#bd9e69', patch:'#d5b67c', trail:'#f1d7a2', edge:'#ad865a',
+    path:[[48,100],[155,100],[155,420],[330,420],[330,100],[510,100],[510,420],[690,420],[690,205],[850,205]],
+    airPath:[[48,45],[195,45],[195,465],[370,465],[370,55],[550,55],[550,465],[735,465],[735,205],[850,205]] }
+});
+
 export const towersDef = {
   sprout: { name:'Sprout Slinger', icon:'🌱', cost:55, range:120, rate:.62, damage:1, color:'#5a934d', role:'Rapid seed shots; briefly slows near Dew Bells', branches:[['Twin bloom','Rapid single-target fire; favors isolated tough pests',75],['Splitting seed','Shots fork to nearby pests; favors clustered groups',85]], ability:'Seed burst', kind:'shot' },
   dew: { name:'Dew Bell', icon:'💧', cost:80, range:108, rate:.9, damage:1, color:'#5c9eaa', role:'Slows nearby mites; primes Ember bursts and Sprout seeds', slow:1.1, ability:'Dew wave', branches:[['Long chill','Keeps one ground pest slowed longer',95],['Wide ripple','Trades slow duration for a wider ground ripple',105]], kind:'slow' },

@@ -49,15 +49,15 @@ export function renderTowerInspector({ document, canvasHost, view }) {
   else if (view.branchOptions) {
     const choices = view.branchOptions.map((option, index) => {
       const button = document.createElement('button'); button.className = 'branch-choice';
-      button.dataset.branch = String(index); button.title = option.title;
+      button.dataset.branch = String(index); button.title = `${option.title} · ${option.changes} · ${option.abilityText}`;
       button.setAttribute('aria-pressed', String(view.selectedBranch === index));
       if(option.portrait){const portrait=document.createElement('span');portrait.className='branch-evolution-preview';portrait.setAttribute('aria-hidden','true');portrait.innerHTML=option.portrait;button.append(portrait);}
       const details = document.createElement('span');
       details.append(document.createTextNode(option.name));
       appendBranchPreview(document,details,option,view.previewMotion);
-      const description = document.createElement('small'); description.textContent = option.description; details.append(description);
-      const comparison = document.createElement('small'); comparison.textContent = `Next · ${option.changes}`; details.append(comparison);
-      const ability = document.createElement('small'); ability.textContent = option.abilityText; details.append(ability);
+      const description = document.createElement('small'); description.className='branch-description'; description.textContent = option.description; details.append(description);
+      const comparison = document.createElement('small'); comparison.className='branch-comparison'; comparison.textContent = `Next · ${option.changes}`; details.append(comparison);
+      const ability = document.createElement('small'); ability.className='branch-ability-note'; ability.textContent = option.abilityText; details.append(ability);
       const price = document.createElement('span'); price.innerHTML = petalAmountMarkup(option.cost);
       const shortage=document.createElement('small');shortage.className='affordability-shortfall';shortage.dataset.cost=String(option.cost);shortage.hidden=!option.shortfall;shortage.textContent=option.shortfall?`Need ${option.shortfall} more`:'';price.append(shortage);
       button.append(details, price); button.onclick = () => view.onChooseBranch(index);

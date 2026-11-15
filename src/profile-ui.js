@@ -32,11 +32,11 @@ export function renderMapOptions({ document, select, maps, unlockedMaps, selecte
   for (const [id, map] of Object.entries(maps)) {
     const option = document.createElement('option');
     option.value = id;
-    option.disabled = !unlocked.has(id);
+    option.disabled = !unlocked.has(id)&&!map.expedition&&!map.customMap;
     const missionIndex=missions.findIndex(mission=>mission.mapId===id);
     const priorMission=missionIndex>0?missions[missionIndex-1]:null;
     const campaignLock=priorMission&&!['creek','ridge'].includes(id);
-    option.textContent = unlocked.has(id) ? map.name : campaignLock?`🔒 ${map.name} · clear ${priorMission.name}`:`🔒 ${map.name} · clear wave ${map.unlockAt}`;
+    option.textContent = !option.disabled ? map.name : campaignLock?`🔒 ${map.name} · clear ${priorMission.name}`:`🔒 ${map.name} · clear wave ${map.unlockAt}`;
     select.append(option);
   }
   select.value = selectedMap;
@@ -56,7 +56,7 @@ export function renderCampaignMap({ document, root, missions, profile, selectedM
       const card=document.createElement('article');card.className='campaign-mission';
       const button=document.createElement('button');button.type='button';button.className='campaign-mission-select';
       button.dataset.campaignMission=mission.mapId;
-      const unlocked=(profile.unlockedMissions||[]).includes(mission.id)||mission.id==='meadow';
+      const unlocked=(profile.unlockedMissions||[]).includes(mission.id)||(profile.unlockedMaps||[]).includes(mission.mapId)||mission.id==='meadow';
       card.dataset.routeState=completed.has(mission.id)?'cleared':unlocked?'next':'locked';
       button.disabled=!unlocked;
       if(mission.mapId===selectedMap)button.setAttribute('aria-current','true');

@@ -1,3 +1,4 @@
+import { createGameShell, mapIsAvailable } from './src/game-shell.js';
 import { renderBossWarnings } from './src/boss-warning-ui.js';
 import { petalTextMarkup } from './src/ui-icons.js';
 import { FixedStepClock, hashGameplayState, normalizeRunSave, saleRefund, saleRefundRate, towerUpgradeQuote, getEffectiveTowerStats, towersAreLinked, isUnsupportedRunVersion, RUN_SAVE_VERSION, assignRunEntityIds } from './src/game-core.js';
@@ -148,7 +149,11 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     cameraView=normalizeCameraView(cameraView,...cameraViewportDimensions());
     const portrait=mobileLayout.matches;
     canvas.parentElement.classList.toggle('portrait-map',portrait);
-    canvas.style.transformOrigin='center center';canvas.style.transform=portrait?`translate(-50%,-50%) ${cameraTransform(cameraView)} rotate(90deg)`:cameraTransform(cameraView);
+    const viewport=canvas.parentElement;
+    const availableWidth=viewport.clientWidth,availableHeight=viewport.clientHeight;
+    const displayWidth=Math.max(1,portrait?Math.min(availableHeight,availableWidth*canvas.width/canvas.height):Math.min(availableWidth,availableHeight*canvas.width/canvas.height));
+    canvas.style.width=`${displayWidth}px`;canvas.style.height=`${displayWidth*canvas.height/canvas.width}px`;
+    canvas.style.transformOrigin='center center';canvas.style.transform=portrait?`translate(-50%,-50%) ${cameraTransform(cameraView)} rotate(90deg)`:`translate(-50%,-50%) ${cameraTransform(cameraView)}`;
     const scale = canvas.clientWidth / canvas.width;
     canvasDisplayScale = Number.isFinite(scale) && scale > 0 ? scale*cameraView.zoom : 1;
     canvas.parentElement.classList.toggle('camera-pan-mode',cameraView.panMode);
@@ -159,7 +164,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     byId('cameraHelp').textContent=`Map zoom ${Number(cameraView.zoom.toFixed(2))}×${cameraView.panMode?' · Pan mode on. Drag the map or focus it and use arrow keys.':' · Pan mode off.'} + / - zoom · 0 reset.`;
   };
   const canvasScaleObserver = 'ResizeObserver' in window ? new ResizeObserver(syncCanvasDisplayScale) : null;
-  if (canvasScaleObserver) canvasScaleObserver.observe(canvas);
+  if (canvasScaleObserver) {canvasScaleObserver.observe(canvas.parentElement);canvasScaleObserver.observe(canvas);}
   else window.addEventListener('resize', syncCanvasDisplayScale);
   syncCanvasDisplayScale();
   mobileLayout.addEventListener('change',syncCanvasDisplayScale);
@@ -198,10 +203,15 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   const mapFooter=byId('mapFooter');
   mountTutorialCoach({coach:byId('tutorialCoach'),dock:mapFooter,anchor:mapFooter.querySelector('.actions')});
   mountBattleSupport({document});
+  const gameShell=createGameShell({document,maps,missions:CAMPAIGN_MISSIONS,
+    onDialogOpen:()=>{transitionRun({type:'DIALOG_OPEN'});updateHud();},
+    onRequestCanvas:()=>setDefenderSheetOpen(false),
+    onSelectMap:mapId=>{byId('mapSelect').value=mapId;byId('mapSelect').dispatchEvent(new Event('change',{bubbles:true}));}
+  });
   const syncCombatDockHeight=()=>document.documentElement.style.setProperty('--combat-dock-height',`${Math.ceil(mapFooter.getBoundingClientRect().height)}px`);
   if('ResizeObserver' in window)new ResizeObserver(syncCombatDockHeight).observe(mapFooter);else window.addEventListener('resize',syncCombatDockHeight);
   syncCombatDockHeight();
-  function setDefenderSheetOpen(open) { defenderSheet.classList.toggle('open',Boolean(open));defenderSheetToggle.setAttribute('aria-expanded',String(Boolean(open))); }
+  function setDefenderSheetOpen(open) { defenderSheet.classList.toggle('open',Boolean(open));defenderSheetToggle.setAttribute('aria-expanded',String(Boolean(open)));document.body.classList.toggle('defenders-open',Boolean(open));if(open){canvas.parentElement.classList.remove('view-tools-open');byId('viewToolsBtn')?.setAttribute('aria-expanded','false');} }
   setDefenderSheetOpen(!mobileLayout.matches);
   mobileLayout.addEventListener('change',event=>setDefenderSheetOpen(!event.matches));
   renderCombatReference({
@@ -420,6 +430,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function updateTutorialCoach() {
     const active=tutorialPractice.active;
+    if(!active&&selectedMap!=='meadow')firstActionCoachVisible=false;
     tutorialCoachView=active?buildTutorialCoachView({active:true,task:tutorialPractice.task}):buildFirstActionCoachView({visible:firstActionCoachVisible,phase:firstActionCoachPhase,selectedType,selectedName:towersDef[selectedType]?.name||'a defender'});
     const exit=byId('tutorialExitBtn');
     exit.textContent=active?'End practice':'Dismiss';
@@ -618,7 +629,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     enemies=restored.enemies; spawnQueue=restored.spawnQueue;
     selectedTower=null; gameTime=restored.gameTime; nextEntityId=restored.nextEntityId; shots=restored.shots;
     resetRenderSnapshots();
-    spawnClock=restored.spawnClock; intermission=restored.intermission; speed=restored.speed;transitionRun({type:'RESTORE',saved:run});
+    spawnClock=restored.spawnClock; intermission=restored.intermission; speed=restored.speed;transitionRun({type:'RESTORE',saved:run});byId('pauseMenu').hidden=!runIsPaused();cameraView=resetCameraView();syncCanvasDisplayScale();
     runSeed=restored.runSeed;simulationTick=restored.simulationTick;actionLog=restored.actionLog;actionLogComplete=restored.actionLogComplete;actionLogLimitShown=false;simulationClock.reset();
     path=maps[selectedMap].path; calcPath(); byId('mapSelect').value=selectedMap; byId('modeSelect').value=challenge;byId('difficultySelect').value=difficulty;document.querySelectorAll('[data-challenge-rule]').forEach(input=>input.checked=challengeRules.includes(input.dataset.challengeRule)); updatePlayOptionsLabel();
     setToast(selection.source==='backup'?'Recovered the previous autosave; the primary save was invalid.':'Run restored from this device.'); renderTowerOptions(); updateHud(); updatePreview(); renderSelected(); draw();
@@ -813,7 +824,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function renderMapOptions() {
     renderProfileMapOptions({document,select:byId('mapSelect'),maps,unlockedMaps:profile.unlockedMaps,selectedMap,missions:CAMPAIGN_MISSIONS});
-    for(const option of byId('mapSelect').options)if(maps[option.value]?.customMap)option.disabled=false;
+    for(const option of byId('mapSelect').options)if(mapIsAvailable(maps[option.value],option.value,profile))option.disabled=false;
     const customSelected=Boolean(maps[selectedMap]?.customMap);
     if(customSelected){challenge='classic';difficulty='standard';challengeRules=[];challengeBoardId=null;importedBoardChallenge=null;guardianMode='none';byId('modeSelect').value='classic';byId('difficultySelect').value='standard';byId('guardianLoadout').value='none';document.querySelectorAll('[data-challenge-rule]').forEach(control=>control.checked=false);}
     for(const option of byId('modeSelect').options)option.disabled=customSelected&&option.value!=='classic';
@@ -838,7 +849,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   }
   function selectCampaignMission(mapId) {
     const mission=CAMPAIGN_MISSION_BY_ID[mapId];
-    if(!mission||!profile.unlockedMaps.includes(mapId))return;
+    if(!mission||!mapIsAvailable(maps[mapId],mapId,profile))return;
     byId('mapSelect').value=mapId;
     byId('mapSelect').dispatchEvent(new Event('change',{bubbles:true}));
   }
@@ -851,6 +862,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const suddenOption=byId('modeSelect').querySelector('option[value="sudden"]');
     suddenOption.textContent=guardianMode==='ward'?'Sudden death · 3 seeds with Pollen Ward':'Sudden death · 1 seed';
     byId('playOptionsLabel').textContent=`Trail & rules · ${maps[selectedMap].name} · ${challengeDisplayLabel()} · ${DIFFICULTIES[difficulty].label}${challengeRules.length?` · ${challengeRules.map(rule=>CHALLENGE_RULES[rule].label).join(' + ')}`:''}${challengeBoardId?` · ${importedBoardChallenge?.cadence==='weekly'?'Weekly':'Daily'} ${importedBoardChallenge?.period||'challenge'} UTC`:''} · ${guardianMode==='guardian'?'Meadow Guardian':guardianMode==='ward'?'Pollen Ward':'No kit'}`;
+    gameShell.update({profile,selectedMap,difficulty:DIFFICULTIES[difficulty].label,mode:challengeDisplayLabel()});
     byId('spellLoadoutConfig').querySelector('summary').textContent=isStarterCampaignRun()?'First garden · 1 rescue shown':`Equipped spells · ${spellLoadout.length}/3`;
   }
   function createSpellControls(){
@@ -919,6 +931,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     hideTowerSelectionChooser({chooser:byId('selectionChooser'),board:canvas.parentElement});
     renderTowerOptions();renderSelected();updatePlacementHint();
     if(firstActionCoachVisible)updateTutorialCoach();
+    if(mobileLayout.matches)setDefenderSheetOpen(false);
     draw();canvas.focus({preventScroll:true});
   }
   function selectedUpgradeCost(tower) { return towerUpgradeQuote(tower,towersDef[tower.type]).cost; }
@@ -1037,7 +1050,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   function autoStartContext(){return {enabled:uiSettings.autoStart,wave,running:runIsRunning(),paused:runIsPaused()||runStateStopsClock(runState),hidden:document.hidden,
     gameOver:runIsOver(),intermission,mandatoryChoice:endlessChoiceRequired({challenge,wave,endlessChoiceWave}),held:uiSettings.autoStartHold,
     preparationSeconds:uiSettings.autoStartDelaySeconds,
-    modalOpen:[...document.querySelectorAll('dialog')].some(dialog=>dialog.open),tutorialActive:tutorialPractice.active};}
+    modalOpen:byId('settingsPanel').open||[...document.querySelectorAll('dialog')].some(dialog=>dialog.open),tutorialActive:tutorialPractice.active};}
   function renderAutoStartControls(){
     const autoButton=byId('autoStartBtn'),holdButton=byId('holdNextBtn'),status=byId('autoStartStatus');
     if(!autoButton||!holdButton||!status)return;
@@ -1112,16 +1125,18 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const guide=byId('enemyGuide'),search=byId('enemyGuideSearch');guide.open=true;
     enemyGuideReturnFocus=trigger||byId('enemyGuide').querySelector('summary');
     if(mobileLayout.matches)setDefenderSheetOpen(true);
+    gameShell.openEnemies(trigger);
     if(!type){search.focus({preventScroll:true});return;}
     search.value='';filterEnemyGuide();const card=byId('enemyGuideList').querySelector(`[data-enemy-guide="${type}"]`);
     card?.scrollIntoView({block:'nearest'});card?.focus({preventScroll:true});
   }
   function openEnemyResistance(type) {
-    const matrix=$('.combat-matrix'),row=byId('enemyProfileBody').querySelector(`[data-enemy="${type}"]`);
+    gameShell.openIntel();
+    const matrix=byId('combatRuleNote').closest('details'),row=byId('enemyProfileBody').querySelector(`[data-enemy="${type}"]`);
     matrix.open=true;row?.scrollIntoView({block:'center'});row?.focus({preventScroll:true});
   }
   byId('enemyGuideSearch').addEventListener('input',filterEnemyGuide);
-  byId('enemyGuideCloseBtn').onclick=()=>{const target=closeEnemyGuide({guide:byId('enemyGuide'),trigger:enemyGuideReturnFocus,fallback:byId('enemyGuide').querySelector('summary')});enemyGuideReturnFocus=target;requestAnimationFrame(()=>target?.focus({preventScroll:true}));};
+  byId('enemyGuideCloseBtn').onclick=()=>{gameShell.closeEnemies();const target=closeEnemyGuide({guide:byId('enemyGuide'),trigger:enemyGuideReturnFocus,fallback:byId('enemyGuide').querySelector('summary')});enemyGuideReturnFocus=target;requestAnimationFrame(()=>target?.focus({preventScroll:true}));};
   byId('enemyGuideList').addEventListener('click',event=>{const type=event.target.closest('[data-enemy-resistance]')?.dataset.enemyResistance;if(type)openEnemyResistance(type);});
   byId('enemyBriefingGuide').addEventListener('click',()=>openEnemyGuide(byId('enemyBriefing').dataset.enemyIntel,byId('enemyBriefingGuide')));
   byId('waveTimeline').addEventListener('click',event=>{const button=event.target.closest('[data-enemy-intel]');if(button)openEnemyGuide(button.dataset.enemyIntel,button);});
@@ -1323,7 +1338,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
     const liveAbilityPreview=abilityPreview&&selectedTower?.id===abilityPreview.towerId?{...abilityPreview,targetIds:towerAbilityTargets(selectedTower,enemies,towersDef[selectedTower.type],enemyPosition).map(enemy=>enemy.id)}:null;
     const targetId=getSelectedTargetId();
     const renderState=battlefieldRenderState;
-    renderState.width=canvas.width;renderState.height=canvas.height;renderState.displayScale=canvasDisplayScale;renderState.map=maps[selectedMap];renderState.path=path;renderState.pathLength=pathLength;
+    renderState.portrait=mobileLayout.matches;renderState.width=canvas.width;renderState.height=canvas.height;renderState.displayScale=canvasDisplayScale;renderState.map=maps[selectedMap];renderState.path=path;renderState.pathLength=pathLength;
     renderState.gateRoutePreviews=!runIsActivelyRunning()&&!enemies.length&&!spawnQueue.length&&maps[selectedMap].gateRoutes?Object.entries(maps[selectedMap].gateRoutes).map(([id,route])=>({id,label:route.label,path:route.path})):null;renderState.selectedGateRoute=gateRoute;
     renderState.airPath=distinctAirRoutePath(routeGeometry);renderState.showAirRoute=Boolean(uiSettings.showAirRoute||airRoutePreviewed||enemies.some(enemy=>enemy.flying)||(selectedTower&&towersDef[selectedTower.type]?.antiAir));
     renderState.towers=towers;renderState.selectedTower=selectedTower;renderState.towersDef=towersDef;renderState.towersLinked=towersLinked;renderState.placementPreviewRange=placementPreviewRange;renderState.abilityPreview=liveAbilityPreview;renderState.enemies=enemies;
@@ -1558,9 +1573,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   };
   byId('pauseLeaveBtn').onclick=()=>{
     playtestRecorder.record('quit');
-    byId('pauseMenu').hidden=true;byId('missionPreparation').open=true;
-    byId('missionPreparation').scrollIntoView({block:'start',behavior:'smooth'});
-    byId('missionPreparation').querySelector('summary').focus({preventScroll:true});
+    byId('pauseMenu').hidden=true;gameShell.openMaps(byId('pauseLeaveBtn'));
   };
   byId('speedBtn').onclick=()=>{speed=toggleGameSpeed(speed);updateHud();};
   defenderSheetToggle.onclick=()=>setDefenderSheetOpen(!defenderSheet.classList.contains('open'));
@@ -1644,7 +1657,7 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('sellBtn').onclick=()=>{if(!selectedTower)return;const tower=selectedTower,refund=saleRefund(tower.invested,towersDef[tower.type].cost,saleRefundRate(wave));requestConfirmation('Sell this defender?',`Sell ${towersDef[tower.type].name}? Investment: ${tower.invested} petals · refund: ${refund} petals.${wave===0?' Full refund before the first wave; 68% after it begins.':''}`,()=>{const result=performPlayerAction('sellTower',{towerId:tower.id,refund});if(!result.ok){setToast(result.reason);return;}queueRewardFeedback([{amount:result.refund,x:tower.x,y:tower.y}]);selectedTower=null;renderSelected();updateHud();if(tutorialPractice.active){resetRun();setToast('Practice restarted with fresh resources.');return;}saveRun();draw();},`Sell · +${refund} ✿`);};
   byId('contextUpgradeBtn').onclick=()=>byId('upgradeBtn').click();
   byId('contextSellBtn').onclick=()=>byId('sellBtn').click();
-  byId('mapSelect').onchange=event=>{const previous=selectedMap,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the trail',()=>{selectedMap=next;challengeBoardId=null;path=maps[selectedMap].path;calcPath();renderMapOptions();updatePlayOptionsLabel();applyChallenge();renderChallenges();explainFreshGarden(`${maps[selectedMap].name} selected.`);markStudyMapReady(next);});};
+  byId('mapSelect').onchange=event=>{const previous=selectedMap,next=event.target.value;event.target.value=previous;changeRulesOrTrail('the trail',()=>{if(!maps[next]||!mapIsAvailable(maps[next],next,profile))return;selectedMap=next;challengeBoardId=null;gameShell.closeMaps();cameraView=resetCameraView();syncCanvasDisplayScale();path=maps[selectedMap].path;calcPath();renderMapOptions();updatePlayOptionsLabel();applyChallenge();renderChallenges();explainFreshGarden(`${maps[selectedMap].name} selected.`);markStudyMapReady(next);});};
   byId('routeGatePanel').addEventListener('toggle',()=>{draw();});
   byId('gateRouteOptions').addEventListener('click',event=>{if(event.target.closest('.route-gate-option'))draw();});
   byId('campaignMapNodes').addEventListener('click',event=>{const mapId=event.target.closest('[data-campaign-mission]')?.dataset.campaignMission;if(mapId)selectCampaignMission(mapId);});
@@ -1703,12 +1716,14 @@ for(const [mapId,schedules] of Object.entries(CAMPAIGN_WAVES)){
   byId('resetKeyboardBindings').onclick=()=>{keyBindings={...DEFAULT_KEY_BINDINGS};uiSettings.keyBindings=keyBindings;saveUiSettings();pendingKeyBinding=null;byId('keyboardBindingStatus').textContent='Default shortcuts restored.';renderKeyboardBindings();renderTowerOptions();};
   document.addEventListener('keydown',handleBindingKeydown,true);
   document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('close',()=>{
-    if(!document.querySelector('dialog[open]'))transitionRun({type:'DIALOG_CLOSE'});
+    if(!document.querySelector('dialog[open]')&&!byId('settingsPanel').open)transitionRun({type:'DIALOG_CLOSE'});
+    if(byId('missionDialog').open)byId('missionPreparation').open=true;
     updateHud();
   }));
+  byId('settingsPanel').addEventListener('toggle',()=>{transitionRun({type:byId('settingsPanel').open||document.querySelector('dialog[open]')?'DIALOG_OPEN':'DIALOG_CLOSE'});updateHud();});
   document.addEventListener('visibilitychange',()=>transitionRun({type:document.hidden?'TAB_HIDDEN':'TAB_VISIBLE'}));
   bindKeyboardInput(document,()=>({
-    dialogOpen:Boolean(document.querySelector('dialog[open]')),
+    dialogOpen:Boolean(document.querySelector('dialog[open]'))||byId('settingsPanel').open,
     placementActive:['build','placement-preview','spell-aim'].includes(deriveInteractionMode({selectedType,selectedTower,placementCandidate,aimedSpellId,guardianMoveActive,abilityPreview,selectionChooserOpen:!byId('selectionChooser').hidden})),
     interactionMode:deriveInteractionMode({selectedType,selectedTower,placementCandidate,aimedSpellId,guardianMoveActive,abilityPreview,selectionChooserOpen:!byId('selectionChooser').hidden}),
     guardianMoveActive,

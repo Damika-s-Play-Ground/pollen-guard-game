@@ -56,6 +56,8 @@
   "./src/game-input.js",
   "./src/game-loop.js",
   "./src/game-renderer.js",
+  "./src/game-shell.css",
+  "./src/game-shell.js",
   "./src/garden-kit.js",
   "./src/gate-routes.js",
   "./src/guidance-arbitration.js",

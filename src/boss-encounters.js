@@ -1,4 +1,7 @@
 export const BOSS_PHASE_CUES = Object.freeze({
+  'sunpetal-grove': Object.freeze(['Petals gather · grove brood', 'Roots flare · sunpetal rush']),
+  'moonlit-marsh': Object.freeze(['Moon shell glows · shield pulse', 'Marsh mist rises · sky gnats']),
+  'amber-switchback': Object.freeze(['Amber plates lock · armor up', 'Ridge shakes · amber escort']),
   meadow: Object.freeze(['Roots gather · mite brood', 'Thorns flare · root rush']),
   'meadow-crossing': Object.freeze(['Roots gather · crossing brood', 'Thorns flare · crossing rush']),
   'meadow-orchard': Object.freeze(['Roots gather · orchard brood', 'Thorns flare · orchard rush']),
@@ -10,6 +13,9 @@ export const BOSS_PHASE_CUES = Object.freeze({
   'ridge-summit': Object.freeze(['Stone plates lock · summit armor', 'Ridge shakes · summit escort'])
 });
 export const BOSS_VARIANTS = Object.freeze({
+  'sunpetal-grove': Object.freeze({ name:'Sunpetal Queen', color:'#b37845', biome:'meadow' }),
+  'moonlit-marsh': Object.freeze({ name:'Moonwater Warden', color:'#7ba8c7', biome:'creek' }),
+  'amber-switchback': Object.freeze({ name:'Amber Colossus', color:'#b86b43', biome:'ridge' }),
   meadow: Object.freeze({ name:'Bramble Matriarch', color:'#794c86', biome:'meadow' }),
   'meadow-crossing': Object.freeze({ name:'Crossing Matriarch', color:'#794c86', biome:'meadow' }),
   'meadow-orchard': Object.freeze({ name:'Orchard Matriarch', color:'#794c86', biome:'meadow' }),

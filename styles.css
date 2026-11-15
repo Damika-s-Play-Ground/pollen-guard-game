@@ -61,22 +61,3 @@ canvas{cursor:default}
 .ui-icon{display:inline-block;width:1em;height:1em;vertical-align:-.16em;flex:none}.petal-amount-icon{display:inline-flex;vertical-align:-.16em;color:var(--gold)}.petal-amount-icon .ui-icon{width:1em;height:1em}.pause-icon{width:1.1em;height:1.1em}
 .tower-stats .ui-icon{margin-right:.3em}
 .logo .ui-icon{width:1.6em;height:1.6em}.petal-icon{color:var(--gold)}
-
-/* Clean battlefield presentation: keep overlays off the map while retaining view controls below it. */
-.map-note{display:none!important}
-#selectedPanel{display:none!important}
-.canvas-wrap{aspect-ratio:5/3;overflow:hidden}
-.canvas-wrap #game{display:block;width:100%;height:100%;object-fit:fill}
-@media(max-width:800px){.map-footer .map-legend,.map-footer .sheet-threat-summary,.auto-start-controls,.ability-dock{display:none!important}.map-footer .actions.combat-actions{grid-template-columns:2fr 1fr 2fr}.combat-actions #speedBtn{font-size:12px}.defender-sheet{position:static}.defender-sheet.open{height:auto}.sheet-content>.side{grid-template-columns:1fr}.defender-sheet #defenderCard{grid-column:auto}}
-@media(min-width:801px){.layout{grid-template-columns:minmax(0,1fr) 300px}.canvas-wrap{aspect-ratio:5/3}}
-@media(max-width:800px){.layout{grid-template-columns:minmax(0,1fr)}.defender-sheet{order:2}.board-card{order:1}.defender-sheet .sheet-toggle{min-height:44px}.map-footer{padding:6px 8px}.combat-actions button{min-height:44px}}
-@media(max-width:1024px) and (orientation:portrait),(pointer:coarse) and (max-width:1366px) and (orientation:portrait){.canvas-wrap.portrait-map{position:relative;width:min(100%,520px);aspect-ratio:3/5;margin-inline:auto}.canvas-wrap.portrait-map #game{position:absolute;left:50%;top:50%;width:166.667%;height:60%;object-fit:fill}}
-
-/* The play surface keeps reference material inside the journal. */
-body{padding:12px;background:radial-gradient(ellipse at top,#284430,#0c1710 75%)}
-.app{max-width:1440px}.top{margin-bottom:10px}.top .sub,.preview-status,.footer,.camera-help,.map-legend,.layout .enemy-guide,.layout .combat-matrix,.layout .terrain-guide,.layout .wave-details,.layout .battle-summary-panel,.specialist-roster-note,.inspector-label{display:none!important}
-.logo{width:36px;height:36px}.logo svg{width:24px;height:24px}.ui-icon{width:18px;height:18px;flex-shrink:0}
-.mission-preparation{margin-bottom:10px}.mission-preparation>summary{font-size:12px;padding:8px 12px}
-.layout{grid-template-columns:minmax(0,1fr) 248px;gap:10px}.board-card{border:2px solid #536e3b;box-shadow:0 16px 60px #0008}.hud{min-height:64px;background:#132319}.hud .stat b{font-size:26px;color:#ffe394}.hud .stat span{font-size:11px}.canvas-wrap{background:#263e27}.side-card{padding:12px}.side-head h2{font-size:14px}.side-head{margin-bottom:8px}.build-selection,.tower-detail{font-size:11px}.tower-option{border-radius:12px;box-shadow:inset 0 1px #ffffff12}.tower-option.active{box-shadow:0 0 0 2px #c8ed7d,inset 0 1px #ffffff20}.specialist-roster>summary{font-size:12px}.map-footer{padding:10px;background:#112218}.combat-actions .primary{background:linear-gradient(#d5f58d,#a9d758);color:#172713;font-weight:800;box-shadow:0 3px #547532}.map-camera-controls{padding:4px 8px}.map-camera-controls button{min-height:32px}.ability-card small{font-size:10px}.side-card .divider{margin:8px 0}.upcoming-threat{font-size:12px}
-@media(min-width:1000px){.canvas-wrap{max-height:calc(100vh - 270px);min-height:340px;aspect-ratio:5/3}.canvas-wrap #game{width:100%;height:100%;object-fit:contain}.board-card{position:relative}.top{height:44px}.side{gap:10px}}
-@media(max-width:999px){body{padding:8px}.top-actions{gap:4px}.top h1{font-size:17px}.layout{grid-template-columns:1fr}.canvas-wrap{min-height:0}.mission-preparation>summary{font-size:11px}.top .logo{display:none}.top-actions button{padding:7px}.hud{padding:8px 12px}.hud .stat b{font-size:22px}}

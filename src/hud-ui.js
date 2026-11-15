@@ -46,6 +46,7 @@ function hudElements(document) {
   if (elements) return elements;
   const byId = id => document.getElementById(id);
   elements = {
+    score:byId('hudScore'),
     counters: Object.fromEntries(['cash','lives','popped','wave'].map(id => [id, byId(id)])),
     lifeBar: byId('lifeBar'),
     lifeMeter: byId('lifeBar').parentElement,
@@ -79,6 +80,7 @@ export function renderHud(document, view) {
   const elements = hudElements(document);
   for (const [id, value] of Object.entries(view.counters)) setText(elements.counters[id], value);
 
+  if(elements.score)setText(elements.score,view.counters.popped);
   const lifeWidth = `${view.life.percent}%`;
   if (elements.lifeBar.style.width !== lifeWidth) elements.lifeBar.style.width = lifeWidth;
   setAttribute(elements.lifeMeter, 'aria-valuemax', view.life.max);

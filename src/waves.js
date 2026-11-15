@@ -1,3 +1,4 @@
+import { maps } from './game-data.js';
 import { AIR_ROUTE_SCHEDULE_VERSION } from './air-routes.js';
 import { adjustedSpawnGroups, tuneSpawnGroup } from './challenge-rules.js';
 import { ENDLESS_CHOICES, ENDLESS_ENEMY_CAP, ENDLESS_MIN_SPAWN_INTERVAL, ENDLESS_THREAT_BUDGET, isEndlessChoice } from './endless-mode.js';
@@ -368,7 +369,7 @@ export function waveSchedulesForMap(mapId = 'meadow', version = WAVE_SCHEDULE_VE
       version >= PRE_MIXED_TACTICAL_SCHEDULE_VERSION ? BURROWER_CAMPAIGN_WAVES :
       version >= PRE_BURROWER_SCHEDULE_VERSION ? CARRIER_CAMPAIGN_WAVES :
       version > PRE_TACTICAL_ENEMY_SCHEDULE_VERSION ? TACTICAL_CAMPAIGN_WAVES : CAMPAIGN_WAVES;
-  return schedules[mapId] || schedules.meadow;
+  return schedules[mapId] || schedules[maps[mapId]?.waveSource] || schedules.meadow;
 }
 
 export function calculateWaveBudget(queue) {

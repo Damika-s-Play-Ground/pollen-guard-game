@@ -262,18 +262,54 @@ function drawTerrainZones(ctx,map,displayScale=1) {
   ctx.setLineDash(EMPTY_DASH);ctx.globalAlpha=1;
 }
 
-function drawTerrainLabels(ctx,map,displayScale=1) {
+function drawTerrainLabels(ctx,map,displayScale=1,portrait=false) {
   const scale=Number.isFinite(displayScale)&&displayScale>0?displayScale:1;
   for(const zone of TERRAIN_ZONES[map.biome]||[]){
     const label=TERRAIN_TYPES[zone.type].label,fontSize=Math.max(9,10/scale),labelY=zone.y+zone.radius*(scale<.7&&zone.type==='waterEdge'?-2.2:scale<.7?.82:.58);
     ctx.font=`700 ${fontSize}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
     const labelWidth=label.length*fontSize*.62+10,labelHeight=fontSize+6;
-    ctx.fillStyle='#17271edc';ctx.fillRect(zone.x-labelWidth/2,labelY-labelHeight/2,labelWidth,labelHeight);
-    ctx.fillStyle='#f3f8e7';ctx.fillText(label,zone.x,labelY);
+    ctx.save();ctx.translate(zone.x,labelY);if(portrait)ctx.rotate(-Math.PI/2);
+    ctx.fillStyle='#17271edc';ctx.fillRect(-labelWidth/2,-labelHeight/2,labelWidth,labelHeight);
+    ctx.fillStyle='#f3f8e7';ctx.fillText(label,0,0);ctx.restore();
   }
 }
 
-function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath, showAirRoute = true, displayScale = 1 }) {
+function drawGardenScenery(ctx, map, path, width, height) {
+  // Deterministic scenery stays in the static cache; it never changes collision rules.
+  const autumn=map.scenery==='autumn',marsh=map.scenery==='marsh';
+  for(let index=0;index<60;index++){
+    const x=(index*181+25)%width,y=(index*113+17)%height;
+    if(distanceToPath(x,y,path)<57)continue;
+    ctx.strokeStyle=marsh?'#b4dbba33':autumn?'#6f63402e':'#4d794332';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x-3,y+3);ctx.lineTo(x-5,y-2);ctx.moveTo(x,y+3);ctx.lineTo(x+2,y-4);ctx.stroke();
+    if(index%3===0){
+      ctx.fillStyle=marsh?'#b8d5d0':autumn?'#e9bb65':'#f3ebbd';
+      ctx.beginPath();ctx.ellipse(x+4,y+2,2.5,1.4,.4,0,Math.PI*2);ctx.fill();
+    }
+  }
+  if(!map.scenery)return;
+  const colors=marsh?['#729c9b','#9bc6ad','#bcd5be']:autumn?['#ae6047','#d58c50','#d6af5c']:['#658a49','#85a755','#c5bc63'];
+  for(let index=0;index<16;index++){
+    const x=30+(index*137)%(width-60),y=index%2?height-23:23;
+    if(distanceToPath(x,y,path)<55)continue;
+    ctx.fillStyle='#243c2930';ctx.beginPath();ctx.ellipse(x+6,y+7,20,9,0,0,Math.PI*2);ctx.fill();
+    if(marsh){
+      ctx.strokeStyle='#345f57';ctx.lineWidth=2;
+      for(let reed=0;reed<4;reed++){
+        const rx=x-10+reed*6;ctx.beginPath();ctx.moveTo(rx,y+8);ctx.quadraticCurveTo(rx-3,y-2,rx+2,y-17+reed*2);ctx.stroke();
+        ctx.fillStyle=colors[reed%3];ctx.beginPath();ctx.ellipse(rx+2,y-14+reed*2,2,6,.15,0,Math.PI*2);ctx.fill();
+      }
+    }else{
+      ctx.fillStyle='#775d3d';ctx.fillRect(x-2,y-5,4,14);
+      for(let leaf=0;leaf<4;leaf++){
+        ctx.fillStyle=colors[(index+leaf)%3];ctx.beginPath();ctx.arc(x+(leaf%2?8:-7),y-7-Math.floor(leaf/2)*9,12,0,Math.PI*2);ctx.fill();
+      }
+      ctx.fillStyle='#ffffff25';ctx.beginPath();ctx.ellipse(x-8,y-16,6,3,-.6,0,Math.PI*2);ctx.fill();
+    }
+  }
+}
+
+function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath, showAirRoute = true, displayScale = 1, portrait = false }) {
   ctx.fillStyle = map.background;
   ctx.fillRect(0, 0, width, height);
   for (let i = 0; i < 34; i++) {
@@ -284,6 +320,7 @@ function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath
   }
   ctx.globalAlpha = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for(const zone of map.buildZones||[]){ctx.fillStyle='#d4f3a42a';ctx.fillRect(zone.x,zone.y,zone.width,zone.height);ctx.strokeStyle='#34683c88';ctx.lineWidth=1.5;ctx.setLineDash(DASH_8_6);ctx.strokeRect(zone.x,zone.y,zone.width,zone.height);ctx.setLineDash(EMPTY_DASH);ctx.fillStyle='#294630';ctx.font=`700 ${Math.max(9,10/displayScale)}px sans-serif`;ctx.fillText('BUILD ZONE',zone.x+4,zone.y+12);}
+  drawGardenScenery(ctx,map,path,width,height);
   drawTerrainZones(ctx,map,displayScale);
   // A single down-right cast shadow gives the route a raised edge against the
   // garden while remaining below all moving enemies and placement feedback.
@@ -294,7 +331,7 @@ function drawStaticMapLayer(ctx, { width, height, map, path, pathLength, airPath
   if(showAirRoute)drawAirRoute(ctx,airPath);
   drawBiomeAccents(ctx, map, path);
   drawRouteLandmarks(ctx, path, pathLength);
-  drawTerrainLabels(ctx,map,displayScale);
+  drawTerrainLabels(ctx,map,displayScale,portrait);
   ctx.globalAlpha = 1;
 }
 
@@ -302,10 +339,10 @@ export function createStaticMapCache(createCanvas) {
   let canvas = null, cacheKey = null;
   return {
     draw(ctx, state) {
-      const { width, height, map, path, pathLength, airPath, showAirRoute = true, displayScale } = state;
+      const { width, height, map, path, pathLength, airPath, showAirRoute = true, displayScale, portrait = false } = state;
       const buildZones=map.buildZones||null;
       let changed=!cacheKey||width!==cacheKey.width||height!==cacheKey.height||map.biome!==cacheKey.biome||
-        map.background!==cacheKey.background||map.patch!==cacheKey.patch||map.edge!==cacheKey.edge||map.trail!==cacheKey.trail||
+        portrait!==cacheKey.portrait||map.scenery!==cacheKey.scenery||map.background!==cacheKey.background||map.patch!==cacheKey.patch||map.edge!==cacheKey.edge||map.trail!==cacheKey.trail||
         pathLength!==cacheKey.pathLength||showAirRoute!==cacheKey.showAirRoute||displayScale!==cacheKey.displayScale||
         !samePathCoordinates(path,cacheKey.path)||!samePathCoordinates(airPath,cacheKey.airPath)||!sameBuildZoneCoordinates(buildZones,cacheKey.buildZones);
       if (changed) {
@@ -313,7 +350,7 @@ export function createStaticMapCache(createCanvas) {
         canvas.width = width;
         canvas.height = height;
         drawStaticMapLayer(canvas.getContext('2d'), state);
-        cacheKey={width,height,biome:map.biome,background:map.background,patch:map.patch,edge:map.edge,trail:map.trail,
+        cacheKey={width,height,portrait,biome:map.biome,scenery:map.scenery,background:map.background,patch:map.patch,edge:map.edge,trail:map.trail,
           path:copyPathCoordinates(path),pathLength,airPath:copyPathCoordinates(airPath),showAirRoute,displayScale,buildZones:copyBuildZoneCoordinates(buildZones)};
       }
       ctx.drawImage(canvas, 0, 0);

@@ -32,7 +32,10 @@ export const TERRAIN_ZONES = Object.freeze({
   'creek-ford':BASE_TERRAIN_ZONES.creek,
   'creek-floodplain':BASE_TERRAIN_ZONES.creek,
   'ridge-switchback':BASE_TERRAIN_ZONES.ridge,
-  'ridge-summit':BASE_TERRAIN_ZONES.ridge
+  'ridge-summit':BASE_TERRAIN_ZONES.ridge,
+  'sunpetal-grove':BASE_TERRAIN_ZONES.meadow,
+  'moonlit-marsh':BASE_TERRAIN_ZONES.creek,
+  'amber-switchback':BASE_TERRAIN_ZONES.ridge
 });
 
 const ATTACKERS = new Set(['sprout','puff','thorn','gust','ember','briar']);
